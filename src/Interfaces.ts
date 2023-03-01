@@ -1,166 +1,154 @@
 import { MakeGenerics } from "@tanstack/react-location";
-import {generateUid} from "./utils/uid";
+import { generateUid } from "./utils/uid";
 
-export type LocationGenerics =  MakeGenerics<{
-    LoaderData: {
-    };
-    Params: {
-    };
-    Search: {
-    };
-  }>;
+export type LocationGenerics = MakeGenerics<{
+    LoaderData: {};
+    Params: {};
+    Search: {};
+}>;
 
-export interface CommonIdentifier{
+export interface CommonIdentifier {
     id: string;
     name: string;
     code: string;
 }
 
-export  interface Category extends CommonIdentifier{
+export interface Category extends CommonIdentifier {
     mapping;
     categoryOptions: CategoryOption[];
 }
 
-export interface CategoryCombo extends CommonIdentifier{
+export interface ICategoryCombo extends CommonIdentifier {
     categoryOptionCombos: CategoryOptionCombo[];
-    categories: Category[]
+    categories: Category[];
 }
 
-export interface CategoryOption extends CommonIdentifier{
+export interface CategoryOption extends CommonIdentifier {}
 
-}
-
-export interface CategoryOptionCombo extends CommonIdentifier{
+export interface CategoryOptionCombo extends CommonIdentifier {
     categoryOptions: CategoryOption[];
-    mapping: Mapping;
-    dataElement
-    cell
-    column
-
+    mapping: IMapping;
+    dataElement;
+    cell;
+    column;
 }
 
-export interface CategoryCombo extends CommonIdentifier{
+export interface ICategoryCombo extends CommonIdentifier {}
 
-}
-
-export interface DataSet extends CommonIdentifier{
+export interface IDataSet extends CommonIdentifier {
     categoryCombo: string;
-    forms
-    aggregateId
-    selectedSheet
-    sheets
-    workbook
-    workSheeet
-    orgUnistColumn
-    periodColumn
-    dataStartColumn
-    orgUnitStrategy
-    organisationUnits
-    periodInExcel
-    organisationUnitInExcel
-    attributeCombosInExcel
-    dataElementColumn
-    categoryOptionComboColumn
-    dataValueColumn
-    headerRow
-    dataStartRow
-    uploadMessage
-    uploaded
-    page
-    rowsPerPage
-    params
-    isDhis2
-    dhis2DataSet
-    dhis2DataSets
-    mapping
-    currentData
-    dataValues
-    periodType
-    period
-    displayProgress
-    displayDhis2Progress
-    organisation
-    organisationColumn
-    periodCell
-    organisationCell
-    url
-    pulledData
-    responses
-    cell2
-    sourceOrganisationUnits
-    filterText
-    pullingErrors
-    username
-    password
-    pulling
-    templateType
-    responseKey
-    dialogOpen
-    levels
-    indicators
-    programIndicators
-    selectedIndicators
-    remoteOrganisations
-    currentLevel
-    selectedDataSet
-    template
-    fileName
+    forms;
+    aggregateId;
+    selectedSheet;
+    sheets;
+    workbook;
+    workSheeet;
+    orgUnistColumn;
+    periodColumn;
+    dataStartColumn;
+    orgUnitStrategy;
+    organisationUnits;
+    periodInExcel;
+    organisationUnitInExcel;
+    attributeCombosInExcel;
+    dataElementColumn;
+    categoryOptionComboColumn;
+    dataValueColumn;
+    headerRow;
+    dataStartRow;
+    uploadMessage;
+    uploaded;
+    page;
+    rowsPerPage;
+    params;
+    isDhis2;
+    dhis2DataSet;
+    dhis2DataSets;
+    mapping;
+    currentData;
+    dataValues;
+    periodType;
+    period;
+    displayProgress;
+    displayDhis2Progress;
+    organisation;
+    organisationColumn;
+    periodCell;
+    organisationCell;
+    url;
+    pulledData;
+    responses;
+    cell2;
+    sourceOrganisationUnits;
+    filterText;
+    pullingErrors;
+    username;
+    password;
+    pulling;
+    templateType;
+    responseKey;
+    dialogOpen;
+    levels;
+    indicators;
+    programIndicators;
+    selectedIndicators;
+    remoteOrganisations;
+    currentLevel;
+    selectedDataSet;
+    template;
+    fileName;
     mappingName;
     mappingDescription;
     completeDataSet;
     multiplePeriods;
-    startPeriod
-    endPeriod
-    itemStore
-    assignedItemStore
-    dataElementStore
-    assignedDataElementStore
-    dataIndicators
-    proIndicators
-    dataDataElements
-    message
-    scheduleServerUrl
-    useProxy
-    proxy
-    processed
-    isUploadingFromPage
-    dialogOpened
-    selectedPeriods
-    action
-    showOnlyUnmappedUnits
-    unitsFilter
-
-
+    startPeriod;
+    endPeriod;
+    itemStore;
+    assignedItemStore;
+    dataElementStore;
+    assignedDataElementStore;
+    dataIndicators;
+    proIndicators;
+    dataDataElements;
+    message;
+    scheduleServerUrl;
+    useProxy;
+    proxy;
+    processed;
+    isUploadingFromPage;
+    dialogOpened;
+    selectedPeriods;
+    action;
+    showOnlyUnmappedUnits;
+    unitsFilter;
 }
 
-export interface DataElement extends CommonIdentifier{
+export interface IDataElement extends CommonIdentifier {
     displayName: string;
     valueType: string;
-    optionSet
-
+    optionSet;
 }
 
-export interface DataSetElement extends CommonIdentifier{
+export interface IDataSetElement extends CommonIdentifier {
     open: boolean;
-    dataElement: DataElement;
+    dataElement: IDataElement;
 }
 
-export interface Element extends CommonIdentifier{
-    categoryCombo: CategoryCombo;
+export interface IElement extends CommonIdentifier {
+    categoryCombo: ICategoryCombo;
     valueType: string;
-    mapping: Mapping;
-    uniqueCategoryOptionCombos
+    mapping: IMapping;
+    uniqueCategoryOptionCombos;
 }
 
 export interface Form {
     name: string;
     categoryOptionCombo: CategoryOptionCombo[];
-    dataElements: DataElement[];
+    dataElements: IDataElement[];
     templateType: string;
-    
 }
 
-export interface Mapping {
+export interface IMapping {
     nameColumn: string;
     shortNameColum: string;
     descriptionColumn: string;
@@ -171,18 +159,18 @@ export interface Mapping {
     latitudeColumn: string;
 }
 
-export interface Option {
+export interface IOption {
     code: string;
     name: string;
     value: string;
 }
 
 export interface OptionSet {
-    options: Option[];
+    options: IOption[];
 }
 
 export interface Organisation {
-    mappings: Mapping[];
+    mappings: IMapping[];
     data: any;
     dialogOpen: boolean;
     fileName: string;
@@ -190,25 +178,25 @@ export interface Organisation {
     message: string;
 }
 
-export interface OrganisationUnit extends CommonIdentifier{
+export interface IOrganisationUnit extends CommonIdentifier {
     isSelected: boolean;
     mapping: any;
 }
 
-export interface Param {
+export interface IParam {
     param: string;
     value: string;
     isPeriod: boolean;
     periodType: string | undefined;
 }
 
-export interface Program {
+export interface IProgram {
     id: string;
     name: string;
     displayName: string;
     lastUpdated: any;
     programType: string;
-    programStages: ProgramStage[];
+    programStages: IProgramStage[];
     categoryCombo: string;
     programTrackedEntityAttributes: any;
     trackedEntityType: any;
@@ -220,9 +208,9 @@ export interface Program {
         value: "auto";
         label: "auto";
     };
-    organisationUnits: OrganisationUnit[];
-    headerRow: 1
-    dataStartRow: 2
+    organisationUnits: IOrganisationUnit[];
+    headerRow: 1;
+    dataStartRow: 2;
     createNewEnrollments: false;
     createEntities: false;
     updateEntities: false;
@@ -304,12 +292,12 @@ export interface Program {
     remoteTrackedEntityTypes: {};
 }
 
-export interface ProgramStage {
+export interface IProgramStage {
     id: string;
-    name:string;
+    name: string;
     displayName: string;
     repeatable: boolean;
-    programStageDataElements: ProgramStageDataElement[];
+    programStageDataElements: IProgramStageDataElement[];
     dataElementsFilter: string;
     page: number;
     rowsPerPage: number;
@@ -326,15 +314,14 @@ export interface ProgramStage {
     eventsByDataElement: {};
 }
 
-export interface ProgramStageDataElement {
-    compulsory: boolean
-    dataElement: string
-    column: string
-    open: false
-
+export interface IProgramStageDataElement {
+    compulsory: boolean;
+    dataElement: string;
+    column: string;
+    open: false;
 }
 
-export interface ProgramTrackedEntityAttribute {
+export interface IProgramTrackedEntityAttribute {
     valueType: string;
     mandatory: boolean;
     trackedEntityAttribute: string;
@@ -342,7 +329,7 @@ export interface ProgramTrackedEntityAttribute {
     open: false;
 }
 
-export interface Schedule {
+export interface ISchedule {
     name: string;
     type: string;
     value: string;
@@ -356,20 +343,20 @@ export interface Schedule {
     upstream: string;
 }
 
-export interface TrackedEntityAttribute extends CommonIdentifier{
+export interface ITrackedEntityAttribute extends CommonIdentifier {
     displayName: string;
     optionSet: string;
     optionSetValue: string;
     unique: boolean;
 }
 
-export interface TrackedEntityType{
+export interface ITrackedEntityType {
     id: string;
 }
 
-export interface IntegrationStore {
-    programs: Program[];
-    dataSets: DataSet[];
+export interface IIntegrationStore {
+    programs: IProgram[];
+    dataSets: IDataSet[];
     program: string;
     dataSet: string;
     trackedEntityInstances: any[];
@@ -384,12 +371,12 @@ export interface IntegrationStore {
     totalSteps: number;
     totalAggregateSteps: number;
     multipleCma: any;
-    mappings: Mapping[];
-    tracker : any;
-    dataElements: DataElement[];
+    mappings: IMapping[];
+    tracker: any;
+    dataElements: IDataElement[];
     userGroups: string[];
     search: string;
-    params: Param[];
+    params: IParam[];
     programsFilter: "";
     expanded;
     hasMappingsNameSpace;
@@ -402,15 +389,15 @@ export interface IntegrationStore {
     uploadData: boolean;
     importData: boolean;
     scheduled: boolean;
-    schedules: Schedule[];
-    currentSchedule: Schedule;
-    scheduleTypes: {[key: string]: any}[];
+    schedules: ISchedule[];
+    currentSchedule: ISchedule;
+    scheduleTypes: { [key: string]: any }[];
     jump: boolean;
     aggregateJump: boolean;
     loading: boolean;
     open: boolean;
     totalDataSets: number;
     totalPrograms: number;
-    paging: {[key: string]: any};
+    paging: { [key: string]: any };
     programSchedule: any[];
 }
