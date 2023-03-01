@@ -2,6 +2,7 @@ import { Step, Steps, useSteps } from "chakra-ui-steps";
 import {VStack, Flex, Box, Button, HStack, Stack, Text} from "@chakra-ui/react";
 import {useState} from "react";
 import Wizard from "./components/Wizard";
+import Step2 from "./components/program/step2";
 
 interface step {
     label: string;
@@ -15,7 +16,7 @@ const Stepper = () => {
 
     const steps: step[] = [
         {label: "Saved Mapping", content: <Text>Saved Mapping</Text>},
-        {label: "Select Program", content: <Text>Select Program</Text>},
+        {label: "Select Program", content: <Step2/>},
         {label: "Import Type", content: <Text> Import Type </Text>},
         {label: "Data Options", content: <Text>Data Options</Text>},
         {label: "Map Program Attributes", content: <Text>Map Program Attributes</Text>},

@@ -18,6 +18,8 @@
     "@chakra-ui/react": "1.8.3",
     "@chakra-ui/react-context": "^2.0.6",
     "@dhis2/app-runtime": "^3.8.0",
+    "@dhis2/d2-ui-table": "^7.4.1",
+    "@dhis2/ui": "^8.11.2",
     "@emotion/react": "11.7.1",
     "@emotion/styled": "^11.6.0",
     "@tanstack/react-location": "^3.7.4",

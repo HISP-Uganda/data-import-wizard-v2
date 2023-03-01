@@ -17,11 +17,13 @@ export interface CommonIdentifier{
 }
 
 export  interface Category extends CommonIdentifier{
-
+    mapping;
+    categoryOptions: CategoryOption[];
 }
 
 export interface CategoryCombo extends CommonIdentifier{
-
+    categoryOptionCombos: CategoryOptionCombo[];
+    categories: Category[]
 }
 
 export interface CategoryOption extends CommonIdentifier{
@@ -30,6 +32,11 @@ export interface CategoryOption extends CommonIdentifier{
 
 export interface CategoryOptionCombo extends CommonIdentifier{
     categoryOptions: CategoryOption[];
+    mapping: Mapping;
+    dataElement
+    cell
+    column
+
 }
 
 export interface CategoryCombo extends CommonIdentifier{
@@ -37,19 +44,112 @@ export interface CategoryCombo extends CommonIdentifier{
 }
 
 export interface DataSet extends CommonIdentifier{
+    categoryCombo: string;
+    forms
+    aggregateId
+    selectedSheet
+    sheets
+    workbook
+    workSheeet
+    orgUnistColumn
+    periodColumn
+    dataStartColumn
+    orgUnitStrategy
+    organisationUnits
+    periodInExcel
+    organisationUnitInExcel
+    attributeCombosInExcel
+    dataElementColumn
+    categoryOptionComboColumn
+    dataValueColumn
+    headerRow
+    dataStartRow
+    uploadMessage
+    uploaded
+    page
+    rowsPerPage
+    params
+    isDhis2
+    dhis2DataSet
+    dhis2DataSets
+    mapping
+    currentData
+    dataValues
+    periodType
+    period
+    displayProgress
+    displayDhis2Progress
+    organisation
+    organisationColumn
+    periodCell
+    organisationCell
+    url
+    pulledData
+    responses
+    cell2
+    sourceOrganisationUnits
+    filterText
+    pullingErrors
+    username
+    password
+    pulling
+    templateType
+    responseKey
+    dialogOpen
+    levels
+    indicators
+    programIndicators
+    selectedIndicators
+    remoteOrganisations
+    currentLevel
+    selectedDataSet
+    template
+    fileName
+    mappingName;
+    mappingDescription;
+    completeDataSet;
+    multiplePeriods;
+    startPeriod
+    endPeriod
+    itemStore
+    assignedItemStore
+    dataElementStore
+    assignedDataElementStore
+    dataIndicators
+    proIndicators
+    dataDataElements
+    message
+    scheduleServerUrl
+    useProxy
+    proxy
+    processed
+    isUploadingFromPage
+    dialogOpened
+    selectedPeriods
+    action
+    showOnlyUnmappedUnits
+    unitsFilter
+
 
 }
 
 export interface DataElement extends CommonIdentifier{
+    displayName: string;
+    valueType: string;
+    optionSet
 
 }
 
 export interface DataSetElement extends CommonIdentifier{
-
+    open: boolean;
+    dataElement: DataElement;
 }
 
 export interface Element extends CommonIdentifier{
-    
+    categoryCombo: CategoryCombo;
+    valueType: string;
+    mapping: Mapping;
+    uniqueCategoryOptionCombos
 }
 
 export interface Form {
@@ -69,6 +169,16 @@ export interface Mapping {
     level: string;
     longitudeColumn: string;
     latitudeColumn: string;
+}
+
+export interface Option {
+    code: string;
+    name: string;
+    value: string;
+}
+
+export interface OptionSet {
+    options: Option[];
 }
 
 export interface Organisation {
@@ -204,7 +314,7 @@ export interface ProgramStage {
     page: number;
     rowsPerPage: number;
     orderBy: "compulsory";
-    order: "desc";
+    order: "asc" | "desc";
     eventDateIdentifiesEvent: false;
     completeEvents: false;
     longitudeColumn: string;
@@ -253,11 +363,15 @@ export interface TrackedEntityAttribute extends CommonIdentifier{
     unique: boolean;
 }
 
+export interface TrackedEntityType{
+    id: string;
+}
+
 export interface IntegrationStore {
     programs: Program[];
     dataSets: DataSet[];
-    program: Program;
-    dataSet: DataSet;
+    program: string;
+    dataSet: string;
     trackedEntityInstances: any[];
     error: string;
     activeStep: number;
@@ -281,15 +395,15 @@ export interface IntegrationStore {
     hasMappingsNameSpace;
     aggregate;
     aggregates: [];
-    schedulerEnabled: true;
+    schedulerEnabled: boolean;
     organisation: Organisation;
-    isFull: true;
+    isFull: boolean;
     dialogOpen: boolean;
     uploadData: boolean;
     importData: boolean;
     scheduled: boolean;
     schedules: Schedule[];
-    currentSchedule: Schedule
+    currentSchedule: Schedule;
     scheduleTypes: {[key: string]: any}[];
     jump: boolean;
     aggregateJump: boolean;

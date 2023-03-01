@@ -16,3 +16,11 @@ export function encodeToBinary(str: string): string {
         .join("")
     );
   }
+
+export const convertDataToURL = (objs) => {
+    return objs
+        .map((s) => {
+            return s.param + "=" + s.value;
+        })
+        .join("&");
+};
