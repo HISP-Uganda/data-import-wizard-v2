@@ -13,20 +13,20 @@ export interface CommonIdentifier {
     code: string;
 }
 
-export interface Category extends CommonIdentifier {
+export interface ICategory extends CommonIdentifier {
     mapping;
-    categoryOptions: CategoryOption[];
+    categoryOptions: ICategoryOption[];
 }
 
 export interface ICategoryCombo extends CommonIdentifier {
     categoryOptionCombos: CategoryOptionCombo[];
-    categories: Category[];
+    categories: ICategory[];
 }
 
-export interface CategoryOption extends CommonIdentifier {}
+export interface ICategoryOption extends CommonIdentifier {}
 
 export interface CategoryOptionCombo extends CommonIdentifier {
-    categoryOptions: CategoryOption[];
+    categoryOptions: ICategoryOption[];
     mapping: IMapping;
     dataElement;
     cell;

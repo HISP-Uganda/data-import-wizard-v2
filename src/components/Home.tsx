@@ -1,9 +1,11 @@
-import {Text} from "@chakra-ui/react";
+import React from "react";
 
-export default  function Home(){
+import { Text } from "@chakra-ui/react";
+
+export default function Home() {
     return (
         <>
             <Text>Home Component</Text>
         </>
     );
-};
+}
