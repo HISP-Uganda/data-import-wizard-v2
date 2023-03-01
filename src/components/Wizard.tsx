@@ -1,3 +1,4 @@
+import React from "react";
 // Chakra imports
 import {
     Avatar,
@@ -17,7 +18,7 @@ import {
     TabPanels,
     Tabs,
     Text,
-    useColorModeValue
+    useColorModeValue,
 } from "@chakra-ui/react";
 // Custom components
 import { useRef, useState } from "react";
@@ -33,13 +34,13 @@ function Wizard() {
     const [activeBullets, setActiveBullets] = useState({
         about: true,
         account: false,
-        address: false
+        address: false,
     });
 
     const [checkboxes, setCheckboxes] = useState({
         design: false,
         code: false,
-        develop: false
+        develop: false,
     });
 
     const aboutTab = useRef();
@@ -49,8 +50,6 @@ function Wizard() {
     return (
         <Flex
             direction="column"
-
-
             minH="100vh"
             align="center"
             pt={{ sm: "125px", lg: "75px" }}
@@ -76,20 +75,21 @@ function Wizard() {
                     This information will let us know more about you.
                 </Text>
             </Flex>
-            <Tabs variant="unstyled" mt="24px" display="flex" flexDirection="column">
-                <TabList
-                    display="flex"
-                    alignSelf="center"
-                    justifySelf="center"
-                >
+            <Tabs
+                variant="unstyled"
+                mt="24px"
+                display="flex"
+                flexDirection="column"
+            >
+                <TabList display="flex" alignSelf="center" justifySelf="center">
                     <Tab
-                        ref={aboutTab}
+                        // ref={aboutTab}
                         w={{ sm: "120px", md: "250px", lg: "300px" }}
                         onClick={() =>
                             setActiveBullets({
                                 about: true,
                                 account: false,
-                                address: false
+                                address: false,
                             })
                         }
                     >
@@ -100,27 +100,43 @@ function Wizard() {
                             position="relative"
                             _before={{
                                 content: "''",
-                                width: { sm: "120px", md: "250px", lg: "300px" },
+                                width: {
+                                    sm: "120px",
+                                    md: "250px",
+                                    lg: "300px",
+                                },
                                 height: "3px",
-                                bg: activeBullets.account ? textColor : "gray.200",
+                                bg: activeBullets.account
+                                    ? textColor
+                                    : "gray.200",
                                 left: { sm: "12px", md: "26px" },
-                                top: { sm: activeBullets.about ? "6px" : "4px", md: null },
+                                top: {
+                                    sm: activeBullets.about ? "6px" : "4px",
+                                },
                                 position: "absolute",
                                 bottom: activeBullets.about ? "40px" : "38px",
                                 zIndex: -1,
-                                transition: "all .3s ease"
+                                transition: "all .3s ease",
                             }}
                         >
                             <Icon
                                 as={BsCircleFill}
-                                color={activeBullets.about ? textColor : "gray.300"}
+                                color={
+                                    activeBullets.about ? textColor : "gray.300"
+                                }
                                 w={activeBullets.about ? "16px" : "12px"}
                                 h={activeBullets.about ? "16px" : "12px"}
                                 mb="8px"
                             />
                             <Text
-                                color={activeBullets.about ? { textColor } : "gray.300"}
-                                fontWeight={activeBullets.about ? "bold" : "normal"}
+                                color={
+                                    activeBullets.about
+                                        ? { textColor }
+                                        : "gray.300"
+                                }
+                                fontWeight={
+                                    activeBullets.about ? "bold" : "normal"
+                                }
                                 display={{ sm: "none", md: "block" }}
                                 fontSize="sm"
                             >
@@ -129,13 +145,13 @@ function Wizard() {
                         </Flex>
                     </Tab>
                     <Tab
-                        ref={accountTab}
+                        // ref={accountTab}
                         w={{ sm: "120px", md: "250px", lg: "300px" }}
                         onClick={() =>
                             setActiveBullets({
                                 about: true,
                                 account: true,
-                                address: false
+                                address: false,
                             })
                         }
                     >
@@ -146,27 +162,45 @@ function Wizard() {
                             position="relative"
                             _before={{
                                 content: "''",
-                                width: { sm: "120px", md: "250px", lg: "300px" },
+                                width: {
+                                    sm: "120px",
+                                    md: "250px",
+                                    lg: "300px",
+                                },
                                 height: "3px",
-                                bg: activeBullets.address ? textColor : "gray.200",
+                                bg: activeBullets.address
+                                    ? textColor
+                                    : "gray.200",
                                 left: { sm: "12px", md: "28px" },
-                                top: { sm: activeBullets.account ? "6px" : "4px", md: null },
+                                top: {
+                                    sm: activeBullets.account ? "6px" : "4px",
+                                },
                                 position: "absolute",
                                 bottom: activeBullets.account ? "40px" : "38px",
                                 zIndex: -1,
-                                transition: "all .3s ease"
+                                transition: "all .3s ease",
                             }}
                         >
                             <Icon
                                 as={BsCircleFill}
-                                color={activeBullets.account ? textColor : "gray.300"}
+                                color={
+                                    activeBullets.account
+                                        ? textColor
+                                        : "gray.300"
+                                }
                                 w={activeBullets.account ? "16px" : "12px"}
                                 h={activeBullets.account ? "16px" : "12px"}
                                 mb="8px"
                             />
                             <Text
-                                color={activeBullets.account ? { textColor } : "gray.300"}
-                                fontWeight={activeBullets.account ? "bold" : "normal"}
+                                color={
+                                    activeBullets.account
+                                        ? { textColor }
+                                        : "gray.300"
+                                }
+                                fontWeight={
+                                    activeBullets.account ? "bold" : "normal"
+                                }
                                 transition="all .3s ease"
                                 fontSize="sm"
                                 _hover={{ color: textColor }}
@@ -177,13 +211,13 @@ function Wizard() {
                         </Flex>
                     </Tab>
                     <Tab
-                        ref={addressTab}
+                        // ref={addressTab}
                         w={{ sm: "120px", md: "250px", lg: "300px" }}
                         onClick={() =>
                             setActiveBullets({
                                 about: true,
                                 account: true,
-                                address: true
+                                address: true,
                             })
                         }
                     >
@@ -194,27 +228,43 @@ function Wizard() {
                             position="relative"
                             _before={{
                                 content: "''",
-                                width: { sm: "120px", md: "250px", lg: "300px" },
+                                width: {
+                                    sm: "120px",
+                                    md: "250px",
+                                    lg: "300px",
+                                },
                                 height: "3px",
                                 // bg: activeBullets.profile ? textColor : "gray.200",
                                 left: { sm: "12px", md: "32px" },
-                                top: { sm: activeBullets.address ? "6px" : "4px", md: null },
+                                top: {
+                                    sm: activeBullets.address ? "6px" : "4px",
+                                },
                                 position: "absolute",
                                 bottom: activeBullets.address ? "40px" : "38px",
                                 zIndex: -1,
-                                transition: "all .3s ease"
+                                transition: "all .3s ease",
                             }}
                         >
                             <Icon
                                 as={BsCircleFill}
-                                color={activeBullets.address ? textColor : "gray.300"}
+                                color={
+                                    activeBullets.address
+                                        ? textColor
+                                        : "gray.300"
+                                }
                                 w={activeBullets.address ? "16px" : "12px"}
                                 h={activeBullets.address ? "16px" : "12px"}
                                 mb="8px"
                             />
                             <Text
-                                color={activeBullets.address ? { textColor } : "gray.300"}
-                                fontWeight={activeBullets.address ? "bold" : "normal"}
+                                color={
+                                    activeBullets.address
+                                        ? { textColor }
+                                        : "gray.300"
+                                }
+                                fontWeight={
+                                    activeBullets.address ? "bold" : "normal"
+                                }
                                 transition="all .3s ease"
                                 fontSize="sm"
                                 _hover={{ color: textColor }}
@@ -226,7 +276,10 @@ function Wizard() {
                     </Tab>
                 </TabList>
                 <TabPanels mt="24px" maxW={{ md: "90%", lg: "100%" }} mx="auto">
-                    <TabPanel w={{ sm: "330px", md: "700px", lg: "850px" }} mx="auto">
+                    <TabPanel
+                        w={{ sm: "330px", md: "700px", lg: "850px" }}
+                        mx="auto"
+                    >
                         <Box>
                             <Flex mb="40px">
                                 <Flex
@@ -245,9 +298,14 @@ function Wizard() {
                                     >
                                         Let's start with the basic information
                                     </Text>
-                                    <Text color="gray.400" fontWeight="normal" fontSize="sm">
-                                        Let us know your name and email address. Use an address you
-                                        don't mind other users contacting you at
+                                    <Text
+                                        color="gray.400"
+                                        fontWeight="normal"
+                                        fontSize="sm"
+                                    >
+                                        Let us know your name and email address.
+                                        Use an address you don't mind other
+                                        users contacting you at
                                     </Text>
                                 </Flex>
                             </Flex>
@@ -262,12 +320,24 @@ function Wizard() {
                                             position="relative"
                                             minW={{ sm: "110px", xl: "150px" }}
                                             h={{ sm: "110px", xl: "150px" }}
-                                            mx={{ sm: "auto", md: "40px", xl: "85px" }}
+                                            mx={{
+                                                sm: "auto",
+                                                md: "40px",
+                                                xl: "85px",
+                                            }}
                                             mb={{ sm: "25px" }}
                                         >
-                                            <Avatar w="100%" h="100%" borderRadius="12px" />
+                                            <Avatar
+                                                w="100%"
+                                                h="100%"
+                                                borderRadius="12px"
+                                            />
                                         </Box>
-                                        <Stack direction="column" spacing="20px" w="100%">
+                                        <Stack
+                                            direction="column"
+                                            spacing="20px"
+                                            w="100%"
+                                        >
                                             <FormControl>
                                                 <FormLabel
                                                     color={textColor}
@@ -324,7 +394,11 @@ function Wizard() {
                                             // return "";
                                         }}
                                     >
-                                        <Text fontSize="xs" color="#fff" fontWeight="bold">
+                                        <Text
+                                            fontSize="xs"
+                                            color="#fff"
+                                            fontWeight="bold"
+                                        >
                                             NEXT
                                         </Text>
                                     </Button>
@@ -332,7 +406,10 @@ function Wizard() {
                             </Box>
                         </Box>
                     </TabPanel>
-                    <TabPanel w={{ sm: "330px", md: "700px", lg: "850px" }} mx="auto">
+                    <TabPanel
+                        w={{ sm: "330px", md: "700px", lg: "850px" }}
+                        mx="auto"
+                    >
                         <Box>
                             <Flex mb="40px">
                                 <Flex
@@ -351,9 +428,13 @@ function Wizard() {
                                     >
                                         What are you doing? (checkboxes)
                                     </Text>
-                                    <Text color="gray.400" fontWeight="normal" fontSize="sm">
-                                        Give us more details about you. What do you enjoy doing in
-                                        your spare time?
+                                    <Text
+                                        color="gray.400"
+                                        fontWeight="normal"
+                                        fontSize="sm"
+                                    >
+                                        Give us more details about you. What do
+                                        you enjoy doing in your spare time?
                                     </Text>
                                 </Flex>
                             </Flex>
@@ -367,7 +448,12 @@ function Wizard() {
                                         mb="24px"
                                     >
                                         <Flex direction="column" align="center">
-                                            <FormLabel w="150px" h="150px" cursor="pointer" mb="16px">
+                                            <FormLabel
+                                                w="150px"
+                                                h="150px"
+                                                cursor="pointer"
+                                                mb="16px"
+                                            >
                                                 <Flex
                                                     w="100%"
                                                     h="100%"
@@ -376,17 +462,25 @@ function Wizard() {
                                                     transition=".5s all ease"
                                                     border="1px solid lightgray"
                                                     align="center"
-                                                    bg={checkboxes.design ? "teal.300" : "#fff"}
+                                                    bg={
+                                                        checkboxes.design
+                                                            ? "teal.300"
+                                                            : "#fff"
+                                                    }
                                                     _hover={{ opacity: "0.8" }}
                                                 >
                                                     <Checkbox
                                                         onChange={() =>
-                                                            setCheckboxes((prevCheckboxes) => {
-                                                                return {
-                                                                    ...prevCheckboxes,
-                                                                    design: !prevCheckboxes.design
-                                                                };
-                                                            })
+                                                            setCheckboxes(
+                                                                (
+                                                                    prevCheckboxes
+                                                                ) => {
+                                                                    return {
+                                                                        ...prevCheckboxes,
+                                                                        design: !prevCheckboxes.design,
+                                                                    };
+                                                                }
+                                                            )
                                                         }
                                                         display="none"
                                                     />
@@ -394,16 +488,29 @@ function Wizard() {
                                                         as={AiFillSetting}
                                                         w="54px"
                                                         h="54px"
-                                                        color={checkboxes.design ? "#fff" : iconColor}
+                                                        color={
+                                                            checkboxes.design
+                                                                ? "#fff"
+                                                                : iconColor
+                                                        }
                                                     />
                                                 </Flex>
                                             </FormLabel>
-                                            <Text color={textColor} fontWeight="bold" fontSize="md">
+                                            <Text
+                                                color={textColor}
+                                                fontWeight="bold"
+                                                fontSize="md"
+                                            >
                                                 Design
                                             </Text>
                                         </Flex>
                                         <Flex direction="column" align="center">
-                                            <FormLabel w="150px" h="150px" cursor="pointer" mb="16px">
+                                            <FormLabel
+                                                w="150px"
+                                                h="150px"
+                                                cursor="pointer"
+                                                mb="16px"
+                                            >
                                                 <Flex
                                                     w="100%"
                                                     h="100%"
@@ -412,17 +519,25 @@ function Wizard() {
                                                     transition=".5s all ease"
                                                     border="1px solid lightgray"
                                                     align="center"
-                                                    bg={checkboxes.code ? "teal.300" : "#fff"}
+                                                    bg={
+                                                        checkboxes.code
+                                                            ? "teal.300"
+                                                            : "#fff"
+                                                    }
                                                     _hover={{ opacity: "0.8" }}
                                                 >
                                                     <Checkbox
                                                         onChange={() =>
-                                                            setCheckboxes((prevCheckboxes) => {
-                                                                return {
-                                                                    ...prevCheckboxes,
-                                                                    code: !prevCheckboxes.code
-                                                                };
-                                                            })
+                                                            setCheckboxes(
+                                                                (
+                                                                    prevCheckboxes
+                                                                ) => {
+                                                                    return {
+                                                                        ...prevCheckboxes,
+                                                                        code: !prevCheckboxes.code,
+                                                                    };
+                                                                }
+                                                            )
                                                         }
                                                         display="none"
                                                     />
@@ -430,16 +545,29 @@ function Wizard() {
                                                         as={FaCube}
                                                         w="54px"
                                                         h="54px"
-                                                        color={checkboxes.code ? "#fff" : iconColor}
+                                                        color={
+                                                            checkboxes.code
+                                                                ? "#fff"
+                                                                : iconColor
+                                                        }
                                                     />
                                                 </Flex>
                                             </FormLabel>
-                                            <Text color={textColor} fontWeight="bold" fontSize="md">
+                                            <Text
+                                                color={textColor}
+                                                fontWeight="bold"
+                                                fontSize="md"
+                                            >
                                                 Code
                                             </Text>
                                         </Flex>
                                         <Flex direction="column" align="center">
-                                            <FormLabel w="150px" h="150px" cursor="pointer" mb="16px">
+                                            <FormLabel
+                                                w="150px"
+                                                h="150px"
+                                                cursor="pointer"
+                                                mb="16px"
+                                            >
                                                 <Flex
                                                     w="100%"
                                                     h="100%"
@@ -448,28 +576,45 @@ function Wizard() {
                                                     transition=".5s all ease"
                                                     border="1px solid lightgray"
                                                     align="center"
-                                                    bg={checkboxes.develop ? "teal.300" : "#fff"}
+                                                    bg={
+                                                        checkboxes.develop
+                                                            ? "teal.300"
+                                                            : "#fff"
+                                                    }
                                                     _hover={{ opacity: "0.8" }}
                                                 >
                                                     <Checkbox
                                                         onChange={() =>
-                                                            setCheckboxes((prevCheckboxes) => {
-                                                                return {
-                                                                    ...prevCheckboxes,
-                                                                    develop: !prevCheckboxes.develop
-                                                                };
-                                                            })
+                                                            setCheckboxes(
+                                                                (
+                                                                    prevCheckboxes
+                                                                ) => {
+                                                                    return {
+                                                                        ...prevCheckboxes,
+                                                                        develop:
+                                                                            !prevCheckboxes.develop,
+                                                                    };
+                                                                }
+                                                            )
                                                         }
                                                         display="none"
                                                     />
                                                     <Icon
                                                         w="54px"
                                                         h="54px"
-                                                        color={checkboxes.develop ? "#fff" : iconColor}
+                                                        color={
+                                                            checkboxes.develop
+                                                                ? "#fff"
+                                                                : iconColor
+                                                        }
                                                     />
                                                 </Flex>
                                             </FormLabel>
-                                            <Text color={textColor} fontWeight="bold" fontSize="md">
+                                            <Text
+                                                color={textColor}
+                                                fontWeight="bold"
+                                                fontSize="md"
+                                            >
                                                 Develop
                                             </Text>
                                         </Flex>
@@ -488,7 +633,11 @@ function Wizard() {
                                                 return "";
                                             }}
                                         >
-                                            <Text fontSize="xs" color="gray.700" fontWeight="bold">
+                                            <Text
+                                                fontSize="xs"
+                                                color="gray.700"
+                                                fontWeight="bold"
+                                            >
                                                 PREV
                                             </Text>
                                         </Button>
@@ -504,7 +653,11 @@ function Wizard() {
                                                 return "";
                                             }}
                                         >
-                                            <Text fontSize="xs" color="#fff" fontWeight="bold">
+                                            <Text
+                                                fontSize="xs"
+                                                color="#fff"
+                                                fontWeight="bold"
+                                            >
                                                 NEXT
                                             </Text>
                                         </Button>
@@ -513,7 +666,10 @@ function Wizard() {
                             </Box>
                         </Box>
                     </TabPanel>
-                    <TabPanel w={{ sm: "330px", md: "700px", lg: "850px" }} mx="auto">
+                    <TabPanel
+                        w={{ sm: "330px", md: "700px", lg: "850px" }}
+                        mx="auto"
+                    >
                         <Box>
                             <Flex mb="40px">
                                 <Flex
@@ -532,9 +688,14 @@ function Wizard() {
                                     >
                                         Are you living in a nice area?
                                     </Text>
-                                    <Text color="gray.400" fontWeight="normal" fontSize="sm">
-                                        One thing I love about the later sunsets is the chance to go
-                                        for a walk through the neighborhood woods before dinner
+                                    <Text
+                                        color="gray.400"
+                                        fontWeight="normal"
+                                        fontSize="sm"
+                                    >
+                                        One thing I love about the later sunsets
+                                        is the chance to go for a walk through
+                                        the neighborhood woods before dinner
                                     </Text>
                                 </Flex>
                             </Flex>
@@ -570,10 +731,18 @@ function Wizard() {
                                             />
                                         </FormControl>
                                         <Grid
-                                            templateColumns={{ sm: "1fr 1fr", lg: "2fr 1fr 1fr" }}
+                                            templateColumns={{
+                                                sm: "1fr 1fr",
+                                                lg: "2fr 1fr 1fr",
+                                            }}
                                             gap="30px"
                                         >
-                                            <FormControl gridColumn={{ sm: "1 / 3", lg: "auto" }}>
+                                            <FormControl
+                                                gridColumn={{
+                                                    sm: "1 / 3",
+                                                    lg: "auto",
+                                                }}
+                                            >
                                                 <FormLabel
                                                     color={textColor}
                                                     fontWeight="bold"
@@ -630,7 +799,11 @@ function Wizard() {
                                                 return "";
                                             }}
                                         >
-                                            <Text fontSize="xs" color="gray.700" fontWeight="bold">
+                                            <Text
+                                                fontSize="xs"
+                                                color="gray.700"
+                                                fontWeight="bold"
+                                            >
                                                 PREV
                                             </Text>
                                         </Button>
@@ -642,7 +815,11 @@ function Wizard() {
                                             w={{ sm: "75px", lg: "100px" }}
                                             h="35px"
                                         >
-                                            <Text fontSize="xs" color="#fff" fontWeight="bold">
+                                            <Text
+                                                fontSize="xs"
+                                                color="#fff"
+                                                fontWeight="bold"
+                                            >
                                                 SEND
                                             </Text>
                                         </Button>

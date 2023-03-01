@@ -1,41 +1,44 @@
 import { domain } from "./Domain";
 import {
-     Schedule,
-     Mapping,
-     Program,
-     DataSet,
-     CategoryOption,
-     CategoryCombo,
-     Category
-} from "./Interfaces"
+    ISchedule,
+    IMapping,
+    IProgram,
+    IDataSet,
+    ICategoryOption,
+    ICategoryCombo,
+    ICategory,
+} from "./Interfaces";
 import aggregate from "./components/Aggregate";
 
 export const loadDefaults = domain.createEvent<{
-     mappings: string[], schedules: string[], aggregates:  string[]}>();
+    mappings: string[];
+    schedules: string[];
+    aggregates: string[];
+}>();
 export const setDialogOpen = domain.createEvent<boolean>();
 export const setTotalDataSets = domain.createEvent<number>();
 export const setTotalPrograms = domain.createEvent<number>();
 export const openDialog = domain.createEvent();
 export const closeDialog = domain.createEvent();
 export const setScheduled = domain.createEvent();
-export const setCurrentSchedule = domain.createEvent<Schedule>();
+export const setCurrentSchedule = domain.createEvent<ISchedule>();
 export const setNextAggregateStep = domain.createEvent<number>();
 export const setNext = domain.createEvent<number>();
 export const setOpen = domain.createEvent<boolean>();
-export const createSchedule = domain.createEvent<Schedule>();
+export const createSchedule = domain.createEvent<ISchedule>();
 export const handleDrawerOpen = domain.createEvent<boolean>();
 export const handleDrawerClose = domain.createEvent<boolean>();
-export const saveSchedules = domain.createEvent<Schedule[]>();
-export const saveSchedule = domain.createEvent<Schedule>();
-export const updateSchedule = domain.createEvent<Schedule>();
+export const saveSchedules = domain.createEvent<ISchedule[]>();
+export const saveSchedule = domain.createEvent<ISchedule>();
+export const updateSchedule = domain.createEvent<ISchedule>();
 export const startSchedule = domain.createEvent<string>();
-export const deleteSchedule = domain.createEvent<Schedule>();
+export const deleteSchedule = domain.createEvent<ISchedule>();
 
-export const setPrograms = domain.createEvent<Program[]>();
-export const setDataSets = domain.createEvent<DataSet[]>();
-export const setDataSet = domain.createEvent<DataSet>();
+export const setPrograms = domain.createEvent<IProgram[]>();
+export const setDataSets = domain.createEvent<IDataSet[]>();
+export const setDataSet = domain.createEvent<IDataSet>();
 export const setSearch = domain.createEvent<string>();
-export const setMappings = domain.createEvent<Mapping[]>();
+export const setMappings = domain.createEvent<IMapping[]>();
 // export const setSchedules = domain.createEvent<>();
 // export const setAggregate = domain.createEvent<>();
 // export const setAggregates = domain.createEvent<>();
@@ -49,17 +52,17 @@ export const changeElementPage = domain.createEvent<string>();
 
 // Category Events
 export const setCategoryProperty = domain.createEvent<{
-     attribute: keyof Category;
-     value: Category[keyof Category] // this references all value types in Category
+    attribute: keyof ICategory;
+    value: ICategory[keyof ICategory]; // this references all value types in Category
 }>();
-export const setCategoryMapping = domain.createEvent<Mapping>();
-export const setCategoryOptions = domain.createEvent<CategoryOption[]>();
+export const setCategoryMapping = domain.createEvent<IMapping>();
+export const setCategoryOptions = domain.createEvent<ICategoryOption[]>();
 
 // CategoryCombo Events
 export const setCategoryComboProperty = domain.createEvent<{
-     attribute: keyof CategoryCombo,
-     value: CategoryCombo[keyof CategoryCombo]
+    attribute: keyof ICategoryCombo;
+    value: ICategoryCombo[keyof ICategoryCombo];
 }>();
-export const setCategoryComboOptions = domain.createEvent<CategoryOption[]>();
+export const setCategoryComboOptions = domain.createEvent<ICategoryOption[]>();
 
 // CategoryOptionCombo Events

@@ -1,5 +1,5 @@
-// import React from "react";
-import { ReactNode } from 'react';
+import React from "react";
+import { ReactNode } from "react";
 import {
     Box,
     Spinner,
@@ -9,7 +9,7 @@ import {
     Text,
     Button,
     // Link,
-    useColorModeValue
+    useColorModeValue,
 } from "@chakra-ui/react";
 import {
     createHashHistory,
@@ -21,7 +21,7 @@ import {
     Router,
     stringifySearchWith,
     useSearch,
-  } from "@tanstack/react-location";
+} from "@tanstack/react-location";
 
 import { LocationGenerics } from "../Interfaces";
 import { decodeFromBinary, encodeToBinary } from "../utils/utils";
@@ -34,29 +34,29 @@ import { useEffect } from "react";
 import NavBar from "./NavBar";
 
 const Links = [
-    {path: "/program", name: "Tracker", icon:""},
-    {path: "/aggregate", name: "Aggregate", icon:""},
-    {path: "/schedule", name: "Schedule", icon:""},
-    {path: "/organisation", name: "Organisation", icon:""},
+    { path: "/program", name: "Tracker", icon: "" },
+    { path: "/aggregate", name: "Aggregate", icon: "" },
+    { path: "/schedule", name: "Schedule", icon: "" },
+    { path: "/organisation", name: "Organisation", icon: "" },
 ];
 
 type NavLinkProps = {
-    href?: string,
-    children: ReactNode,
-    onClick?: (params: any) => any
-}
+    href?: string;
+    children: ReactNode;
+    onClick?: (params: any) => any;
+};
 const NavLink = ({ href, children, onClick }: NavLinkProps) => (
     <Button
         px={2}
         py={1}
-        rounded={'md'}
+        rounded={"md"}
         fontWeight={"small"}
         _hover={{
-            textDecoration: 'none',
-            bg: useColorModeValue('gray.200', 'gray.700'),
+            textDecoration: "none",
+            bg: useColorModeValue("gray.200", "gray.700"),
         }}
         onClick={onClick}
-        >
+    >
         {children}
     </Button>
 );
@@ -64,9 +64,11 @@ const NavLink = ({ href, children, onClick }: NavLinkProps) => (
 const history = createHashHistory();
 const location = new ReactLocation<LocationGenerics>({
     history,
-    parseSearch: parseSearchWith((value) => JSON.parse(decodeFromBinary(value))),
+    parseSearch: parseSearchWith((value) =>
+        JSON.parse(decodeFromBinary(value))
+    ),
     stringifySearch: stringifySearchWith((value) =>
-      encodeToBinary(JSON.stringify(value))
+        encodeToBinary(JSON.stringify(value))
     ),
 });
 
@@ -77,46 +79,44 @@ const routes: Route<LocationGenerics>[] = [
         loader: async () => {
             console.log("Load");
             return {};
-        }
+        },
     },
     {
         path: "/aggregate",
-        children:[
+        children: [
             {
                 path: "/",
-                element: <Aggregate />
-
-            }
-        ]
+                element: <Aggregate />,
+            },
+        ],
     },
     {
         path: "/program",
         children: [
             {
                 path: "/",
-                element: <Program />
-            }
-        ]
+                element: <Program />,
+            },
+        ],
     },
     {
         path: "/organisation",
         children: [
             {
                 path: "/",
-                element: <Organisation />
-            }
-        ]
+                element: <Organisation />,
+            },
+        ],
     },
     {
         path: "/schedules",
-        children:[
+        children: [
             {
                 path: "/",
-                element: <Schedule />
-            }
-        ]
-    }
-
+                element: <Schedule />,
+            },
+        ],
+    },
 ];
 const App = () => {
     // const { isLoading, isSuccess, isError, error } = useInitials();
@@ -124,11 +124,16 @@ const App = () => {
 
     return (
         <>
-            <Router location={location} routes={routes} defaultPendingElement={<Spinner/>}>
+            <Router
+                location={location}
+                routes={routes}
+                defaultPendingElement={<Spinner />}
+            >
                 <NavBar />
-                <Outlet/>
+                <Outlet />
             </Router>
-        </>);
-}
+        </>
+    );
+};
 
 export default App;

@@ -1,34 +1,39 @@
-import {Button, Flex, Text} from "@chakra-ui/react";
-import {Step, Steps, useSteps} from "chakra-ui-steps";
-import {useState} from "react";
+import React from "react";
+import { Button, Flex, Text } from "@chakra-ui/react";
+import { Step, Steps, useSteps } from "chakra-ui-steps";
+import { useState } from "react";
 import Step2 from "./program/step2";
-
 
 interface step {
     label: string;
-    content: JSX.Element
+    content: JSX.Element;
 }
 const Program = () => {
     const { nextStep, prevStep, reset, activeStep } = useSteps({
-        initialStep: 0
+        initialStep: 0,
     });
     const [nextStepActive, setNextStepActive] = useState(false);
 
     const steps: step[] = [
-        {label: "Saved Mapping", content: <Text>Saved Mapping</Text>},
-        {label: "Select Program", content: <Step2/>},
-        {label: "Import Type", content: <Text> Import Type </Text>},
-        {label: "Data Options", content: <Text>Data Options</Text>},
-        {label: "Map Program Attributes", content: <Text>Map Program Attributes</Text>},
-        {label: "Map Program Stages", content: <Text>Map Program Stages</Text>},
-        {label: "Import Data", content: <Text>Import Data</Text>},
-        {label: "Import Summary", content: <Text>Import Summary</Text>},
+        { label: "Saved Mapping", content: <Text>Saved Mapping</Text> },
+        { label: "Select Program", content: <Step2 /> },
+        { label: "Import Type", content: <Text> Import Type </Text> },
+        { label: "Data Options", content: <Text>Data Options</Text> },
+        {
+            label: "Map Program Attributes",
+            content: <Text>Map Program Attributes</Text>,
+        },
+        {
+            label: "Map Program Stages",
+            content: <Text>Map Program Stages</Text>,
+        },
+        { label: "Import Data", content: <Text>Import Data</Text> },
+        { label: "Import Summary", content: <Text>Import Summary</Text> },
     ];
 
     return (
         <Flex flexDir="column" width="100%">
-            <Steps activeStep={activeStep} >
-
+            <Steps activeStep={activeStep}>
                 {steps.map(({ label, content }) => (
                     <Step label={label} key={label}>
                         {content}
@@ -65,12 +70,13 @@ const Program = () => {
                         onClick={nextStep}
                     >
                         <Text fontSize="xs" color="#fff" fontWeight="bold">
-                            {activeStep === steps.length - 1 ? "FINISH" : "NEXT"}
+                            {activeStep === steps.length - 1
+                                ? "FINISH"
+                                : "NEXT"}
                         </Text>
                     </Button>
                 </Flex>
             )}
-
         </Flex>
     );
 };
