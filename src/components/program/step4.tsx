@@ -1,11 +1,13 @@
-import {Text} from "@chakra-ui/react";
+import React from "react";
 
-const Step4 = () =>{
+import { Text } from "@chakra-ui/react";
+
+const Step4 = () => {
     return (
         <>
             <Text> Step 4</Text>
         </>
     );
-}
+};
 
 export default Step4;

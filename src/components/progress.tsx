@@ -1,19 +1,22 @@
+import React from "react";
+
 import {
     Modal,
     ModalBody,
     ModalContent,
     ModalOverlay,
     useDisclosure,
+    Text,
 } from "@chakra-ui/react";
 import { useStore } from "effector-react";
-import {$iStore} from "../stores/Store";
+import { $iStore } from "../stores/Store";
 
 type ProgressProps = {
     isOpen: boolean;
     onClose: () => any;
     message: string;
-}
-const Progress = (props: ProgressProps) =>{
+};
+const Progress = ({ message }: ProgressProps) => {
     const store = useStore($iStore);
     const { isOpen, onOpen, onClose } = useDisclosure();
     return (
@@ -21,14 +24,13 @@ const Progress = (props: ProgressProps) =>{
             <ModalOverlay />
             <ModalContent>
                 <ModalBody>
-                    <Text fontWeight='bold' mb='1rem'>
+                    <Text fontWeight="bold" mb="1rem">
                         &nbsp;&nbsp;{message}
                     </Text>
                 </ModalBody>
-
             </ModalContent>
         </Modal>
     );
-}
+};
 
 export default Progress;
