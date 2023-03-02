@@ -1,9 +1,8 @@
-import {
-    Text,
-    Box
-} from "@chakra-ui/react";
+import React from "react";
 
-const Organisation = () =>{
+import { Text, Box } from "@chakra-ui/react";
+
+const Organisation = () => {
     return (
         <>
             <Box p={4}>
@@ -11,6 +10,6 @@ const Organisation = () =>{
             </Box>
         </>
     );
-}
+};
 
 export default Organisation;

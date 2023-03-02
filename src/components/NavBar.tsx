@@ -1,52 +1,65 @@
+import React from "react";
+
 import {
     Box,
-    Button, Flex, HStack, useColorModeValue, useDisclosure
+    Button,
+    Flex,
+    HStack,
+    useColorModeValue,
+    useDisclosure,
 } from "@chakra-ui/react";
-import {useSearch, useNavigate} from "@tanstack/react-location";
-import {LocationGenerics} from "../Interfaces";
+import { useSearch, useNavigate } from "@tanstack/react-location";
+import { LocationGenerics } from "../Interfaces";
 
-const NavBar = () =>{
+const NavBar = () => {
     const search = useSearch<LocationGenerics>();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const navigate = useNavigate();
 
     return (
         <>
-            <Box bg={useColorModeValue('gray.100', 'gray.900')} px={4}>
-                <Flex h={12} alignItems={'center'} justifyContent={'space-between'}>
-                    <HStack spacing={8} alignItems={'center'}>
+            <Box bg={useColorModeValue("gray.100", "gray.900")} px={4}>
+                <Flex
+                    h={12}
+                    alignItems={"center"}
+                    justifyContent={"space-between"}
+                >
+                    <HStack spacing={8} alignItems={"center"}>
                         <HStack
-                            as={'nav'}
+                            as={"nav"}
                             spacing={4}
-                            display={{ base: 'none', md: 'flex' }}>
+                            display={{ base: "none", md: "flex" }}
+                        >
                             <Button
                                 fontWeight={"small"}
                                 onClick={() => {
-                                    navigate({to: '/program', search})
-                                    }
-                                }>
+                                    navigate({ to: "/program", search });
+                                }}
+                            >
                                 Tracker
                             </Button>
-                            <Button fontWeight={"small"}
-                                    onClick={() => {
-                                        navigate({to: '/aggregate', search})
-                                    }
-                                    }>
+                            <Button
+                                fontWeight={"small"}
+                                onClick={() => {
+                                    navigate({ to: "/aggregate", search });
+                                }}
+                            >
                                 Aggregate
                             </Button>
                             <Button
                                 fontWeight={"small"}
                                 onClick={() => {
-                                    navigate({to: '/schedules', search})
-                                }
-                                }>
+                                    navigate({ to: "/schedules", search });
+                                }}
+                            >
                                 Schedule
                             </Button>
-                            <Button fontWeight={"small"}
-                                    onClick={() => {
-                                        navigate({to: '/organisation', search})
-                                    }
-                                    }>
+                            <Button
+                                fontWeight={"small"}
+                                onClick={() => {
+                                    navigate({ to: "/organisation", search });
+                                }}
+                            >
                                 Organisation
                             </Button>
                         </HStack>
@@ -55,6 +68,6 @@ const NavBar = () =>{
             </Box>
         </>
     );
-}
+};
 
 export default NavBar;
