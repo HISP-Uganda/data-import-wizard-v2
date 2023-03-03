@@ -1,14 +1,13 @@
 import { domain } from "./Domain";
 import {
-    ISchedule,
     IMapping,
-    IProgram,
-    IDataSet,
     ICategoryOption,
     ICategoryCombo,
     ICategory,
 } from "./Interfaces";
-import aggregate from "./components/Aggregate";
+import {ISchedule} from "./pages/schedules/Interfaces";
+import {IProgram} from "./pages/program/Interfaces";
+import {IDataSet} from "./pages/aggregate/Interfaces";
 
 export const loadDefaults = domain.createEvent<{
     mappings: string[];

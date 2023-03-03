@@ -1,6 +1,6 @@
 // import { combine } from "effector";
 import { domain } from "../Domain";
-import { IIntegrationStore, Organisation, ISchedule } from "../Interfaces";
+import { IIntegrationStore, Organisation} from "../Interfaces";
 import {
     closeDialog,
     openDialog,
@@ -23,7 +23,7 @@ import {
     setPrograms,
     changeElementPage,
 } from "../Events";
-import { usePrograms } from "../Queries";
+import {ISchedule} from "../pages/schedules/Interfaces";
 export const $store = domain.createStore({
     // put some default states here
 });
@@ -96,7 +96,7 @@ export const $iStore = domain
         search: "",
         params: [],
         programsFilter: "",
-        expanded: "",
+        expanded: false,
         hasMappingsNameSpace: false,
 
         aggregate: false,
@@ -198,7 +198,7 @@ export const $iStore = domain
     .on(handleDrawerOpen, () => {})
     .on(handleDrawerClose, () => {})
     .on(saveSchedule, (state, schedule) => {
-        return { ...state };
+        return { ...state, currentSchedule: schedule };
     })
     .on(saveSchedules, () => {})
     .on(updateSchedule, (state, currentSchedule) => {
@@ -210,7 +210,7 @@ export const $iStore = domain
         return { ...state, programs };
     })
     .on(changeElementPage, (state, what) => {
-        const current = state.paging[what];
+        // const current = state.paging[what];
         // const change = {};
         // if (current) {
         //     change.page = page;
