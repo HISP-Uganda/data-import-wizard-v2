@@ -1,5 +1,7 @@
 import { MakeGenerics } from "@tanstack/react-location";
-import { generateUid } from "./utils/uid";
+import {IProgram} from "./pages/program/Interfaces";
+import {IDataSet} from "./pages/aggregate/Interfaces";
+import {ISchedule} from "./pages/schedules/Interfaces";
 
 export type LocationGenerics = MakeGenerics<{
     LoaderData: {};
@@ -14,7 +16,7 @@ export interface CommonIdentifier {
 }
 
 export interface ICategory extends CommonIdentifier {
-    mapping;
+    mapping: IMapping;
     categoryOptions: ICategoryOption[];
 }
 
@@ -28,105 +30,18 @@ export interface ICategoryOption extends CommonIdentifier {}
 export interface CategoryOptionCombo extends CommonIdentifier {
     categoryOptions: ICategoryOption[];
     mapping: IMapping;
-    dataElement;
-    cell;
-    column;
+    dataElement: IDataElement;
+    cell: string;
+    column: string;
 }
 
 export interface ICategoryCombo extends CommonIdentifier {}
 
-export interface IDataSet extends CommonIdentifier {
-    categoryCombo: string;
-    forms;
-    aggregateId;
-    selectedSheet;
-    sheets;
-    workbook;
-    workSheeet;
-    orgUnistColumn;
-    periodColumn;
-    dataStartColumn;
-    orgUnitStrategy;
-    organisationUnits;
-    periodInExcel;
-    organisationUnitInExcel;
-    attributeCombosInExcel;
-    dataElementColumn;
-    categoryOptionComboColumn;
-    dataValueColumn;
-    headerRow;
-    dataStartRow;
-    uploadMessage;
-    uploaded;
-    page;
-    rowsPerPage;
-    params;
-    isDhis2;
-    dhis2DataSet;
-    dhis2DataSets;
-    mapping;
-    currentData;
-    dataValues;
-    periodType;
-    period;
-    displayProgress;
-    displayDhis2Progress;
-    organisation;
-    organisationColumn;
-    periodCell;
-    organisationCell;
-    url;
-    pulledData;
-    responses;
-    cell2;
-    sourceOrganisationUnits;
-    filterText;
-    pullingErrors;
-    username;
-    password;
-    pulling;
-    templateType;
-    responseKey;
-    dialogOpen;
-    levels;
-    indicators;
-    programIndicators;
-    selectedIndicators;
-    remoteOrganisations;
-    currentLevel;
-    selectedDataSet;
-    template;
-    fileName;
-    mappingName;
-    mappingDescription;
-    completeDataSet;
-    multiplePeriods;
-    startPeriod;
-    endPeriod;
-    itemStore;
-    assignedItemStore;
-    dataElementStore;
-    assignedDataElementStore;
-    dataIndicators;
-    proIndicators;
-    dataDataElements;
-    message;
-    scheduleServerUrl;
-    useProxy;
-    proxy;
-    processed;
-    isUploadingFromPage;
-    dialogOpened;
-    selectedPeriods;
-    action;
-    showOnlyUnmappedUnits;
-    unitsFilter;
-}
 
 export interface IDataElement extends CommonIdentifier {
     displayName: string;
     valueType: string;
-    optionSet;
+    optionSet: OptionSet;
 }
 
 export interface IDataSetElement extends CommonIdentifier {
@@ -138,7 +53,7 @@ export interface IElement extends CommonIdentifier {
     categoryCombo: ICategoryCombo;
     valueType: string;
     mapping: IMapping;
-    uniqueCategoryOptionCombos;
+    uniqueCategoryOptionCombos: any;
 }
 
 export interface Form {
@@ -190,108 +105,6 @@ export interface IParam {
     periodType: string | undefined;
 }
 
-export interface IProgram {
-    id: string;
-    name: string;
-    displayName: string;
-    lastUpdated: any;
-    programType: string;
-    programStages: IProgramStage[];
-    categoryCombo: string;
-    programTrackedEntityAttributes: any;
-    trackedEntityType: any;
-    trackedEntity: string;
-    mappingId: string;
-    isRunning: boolean;
-    orgUnitColumn: string;
-    orgUnitStrategy: {
-        value: "auto";
-        label: "auto";
-    };
-    organisationUnits: IOrganisationUnit[];
-    headerRow: 1;
-    dataStartRow: 2;
-    createNewEnrollments: false;
-    createEntities: false;
-    updateEntities: false;
-    enrollmentDateColumn: string;
-    incidentDateColumn: "";
-    url: "";
-    dateFilter: "";
-    dateEndFilter: "";
-    lastRun: "";
-    uploaded: "";
-    uploadMessage: "";
-    page: 0;
-    rowsPerPage: 5;
-    dialogOpen: false;
-    orderBy: "mandatory";
-    order: "desc";
-    attributesFilter: "";
-
-    trackedEntityInstances: [];
-    d2;
-    fetchingEntities: 0;
-
-    responses: any[];
-
-    increment: 0;
-
-    errors: any[];
-    conflicts: any[];
-    duplicates: any[];
-
-    longitudeColumn;
-    latitudeColumn;
-
-    pulling: false;
-
-    workbook: null;
-
-    selectedSheet: null;
-
-    pulledData: null;
-
-    sheets: any[];
-
-    dataSource: "xlsx";
-
-    scheduleTime: 0;
-
-    percentages: any[];
-
-    total: 0;
-    displayProgress: false;
-
-    username: "";
-    password: "";
-    params: any[];
-    responseKey: "";
-    fileName;
-    mappingName;
-    mappingDescription;
-    templateType;
-    sourceOrganisationUnits: [];
-    message: "";
-    incidentDateProvided: false;
-    processed;
-    data: [];
-    isUploadingFromPage;
-
-    selectIncidentDatesInFuture;
-    selectEnrollmentDatesInFuture;
-    isDHIS2: false;
-    attributes: true;
-    remotePrograms: [];
-    remoteProgram: {};
-    remoteId: string;
-
-    enrollments: boolean;
-    events: false;
-    remoteStage: null;
-    remoteTrackedEntityTypes: {};
-}
-
 export interface IProgramStage {
     id: string;
     name: string;
@@ -329,20 +142,6 @@ export interface IProgramTrackedEntityAttribute {
     open: false;
 }
 
-export interface ISchedule {
-    name: string;
-    type: string;
-    value: string;
-    schedule: string;
-    created: string;
-    next: string;
-    last: string;
-    additionalDays: number;
-    url: string;
-    immediate: boolean;
-    upstream: string;
-}
-
 export interface ITrackedEntityAttribute extends CommonIdentifier {
     displayName: string;
     optionSet: string;
@@ -378,9 +177,9 @@ export interface IIntegrationStore {
     search: string;
     params: IParam[];
     programsFilter: "";
-    expanded;
-    hasMappingsNameSpace;
-    aggregate;
+    expanded: boolean;
+    hasMappingsNameSpace: boolean;
+    aggregate: any;
     aggregates: [];
     schedulerEnabled: boolean;
     organisation: Organisation;

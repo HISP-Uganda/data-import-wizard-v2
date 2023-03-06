@@ -1,12 +1,8 @@
 import { useDataEngine } from "@dhis2/app-runtime";
-import axios, { AxiosRequestConfig } from "axios";
 import { fromPairs, pick, groupBy, map } from "lodash";
 import { useQuery } from "react-query";
 import {
-    setPrograms,
     setTotalPrograms,
-    openDialog,
-    setDataSet,
     setTotalDataSets,
     closeDialog, setDataSets,
 
@@ -64,7 +60,7 @@ export const useNamespaceKey = (namespace: string, key: string) => {
         },
     };
     return useQuery<boolean, Error>(["namespace", namespace, key], async () => {
-        const { storedValue }: any = await engine.query(namespaceQuery);
+        // const { storedValue }: any = await engine.query(namespaceQuery);
         // do something with storedValue
         return true;
     });
@@ -167,11 +163,11 @@ export const useDataSets = (page: number, pageSize: number, searchQuery = "",) =
             }: any = await engine.query(dataSetsQuery);
             setTotalDataSets(totalDataSets);
 
-            const des = dataSets.map((dataSet) => {
-                const processed = dataSet.dataSetElements.map((dataSetElement) => {
+            const des = dataSets.map((dataSet:any) => {
+                const processed = dataSet.dataSetElements.map((dataSetElement:any) => {
                     if (!dataSetElement.dataElement.categoryCombo.isDefault) {
                         const newCombo = dataSetElement.dataElement.dataSetElements.find(
-                            (dse) => {
+                            (dse:any) => {
                                 return (
                                     dse.dataSet.id === dataSet.id &&
                                     dse.categoryCombo &&
@@ -218,6 +214,9 @@ export const useDataSets = (page: number, pageSize: number, searchQuery = "",) =
                     };
                 });
                 const organisationUnits = dataSet["organisationUnits"];
+                setDataSets(des);
+                setTotalDataSets(totalDataSets);
+                closeDialog();
                 return {
                     ...pick(dataSet, [
                         "id",
@@ -230,10 +229,8 @@ export const useDataSets = (page: number, pageSize: number, searchQuery = "",) =
                     forms,
                 };
             return dataSets;
-    });
-            setDataSets(des);
-            setTotalDataSets(totalDataSets);
-            closeDialog();
+    })
+
     })
 }
 
