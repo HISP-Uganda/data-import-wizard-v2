@@ -1,4 +1,4 @@
-import {IOrganisationUnit, IProgramStage} from "../../Interfaces";
+import {CommonIdentifier, IOrganisationUnit} from "../../Interfaces";
 
 export interface IProgram {
     id: string;
@@ -99,4 +99,48 @@ export interface IProgram {
     events: boolean;
     remoteStage: string;
     remoteTrackedEntityTypes: {};
+}
+
+export interface IProgramStage {
+    id: string;
+    name: string;
+    displayName: string;
+    repeatable: boolean;
+    programStageDataElements: IProgramStageDataElement[];
+    dataElementsFilter: string;
+    page: number;
+    rowsPerPage: number;
+    orderBy: "compulsory";
+    order: "asc" | "desc";
+    eventDateIdentifiesEvent: false;
+    completeEvents: false;
+    longitudeColumn: string;
+    latitudeColumn: string;
+    createNewEvents: false;
+    updateEvents: boolean;
+    eventDateColumn: string;
+    eventsByDate: {};
+    eventsByDataElement: {};
+}
+
+export interface IProgramStageDataElement {
+    compulsory: boolean;
+    dataElement: string;
+    column: string;
+    open: false;
+}
+
+export interface IProgramTrackedEntityAttribute {
+    valueType: string;
+    mandatory: boolean;
+    trackedEntityAttribute: string;
+    column: string;
+    open: false;
+}
+
+export interface ITrackedEntityAttribute extends CommonIdentifier {
+    displayName: string;
+    optionSet: string;
+    optionSetValue: string;
+    unique: boolean;
 }
