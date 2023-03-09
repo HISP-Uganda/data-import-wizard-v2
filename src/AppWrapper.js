@@ -1,11 +1,9 @@
 // import i18n from '@dhis2/d2-i18n'
-import App from './components/App'
+import App from "./components/App";
 
-import { ChakraProvider, extendTheme} from "@chakra-ui/react";
+import { ChakraProvider, extendTheme } from "@chakra-ui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { StepsStyleConfig as Steps } from "chakra-ui-steps";
-
-
 
 const CustomSteps = {
     ...Steps,
@@ -19,58 +17,59 @@ const CustomSteps = {
             },
         };
     },
-    sizes: {...Steps.sizes,
+    sizes: {
+        ...Steps.sizes,
         sm: {
             ...Steps.sizes.sm,
-            icon:{
+            icon: {
                 ...Steps.sizes.sm.icon,
-                width: '10px',
-                height: '10px'
+                width: "10px",
+                height: "10px",
             },
             label: {
                 ...Steps.sizes.sm.label,
-                fontWeight:"small"
-            }
+                fontWeight: "small",
+            },
         },
         md: {
             ...Steps.sizes.md,
-            icon:{
+            icon: {
                 ...Steps.sizes.md.icon,
-                width: '10px',
-                height: '10px'
+                width: "10px",
+                height: "10px",
             },
             label: {
                 ...Steps.sizes.md.label,
-                fontWeight: "medium"
+                fontWeight: "medium",
             },
             stepIconContainer: {
-                width: '25px',
-                height: '25px',
-                borderWidth: '2px',
+                width: "25px",
+                height: "25px",
+                borderWidth: "2px",
             },
-        }
-    }
+        },
+    },
 };
 
 const theme = extendTheme({
     components: {
-        Steps: CustomSteps
-    }
+        Steps: CustomSteps,
+    },
 });
 const queryClient = new QueryClient({
     defaultOptions: {
-      queries: {
-        refetchOnWindowFocus: false,
-        retry: false,
-      },
+        queries: {
+            refetchOnWindowFocus: false,
+            retry: false,
+        },
     },
-  });
+});
 
 const AppWrapper = () => (
     <ChakraProvider theme={theme}>
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+            <App />
+        </QueryClientProvider>
     </ChakraProvider>
-  );
-  export default AppWrapper;
+);
+export default AppWrapper;

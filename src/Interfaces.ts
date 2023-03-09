@@ -1,7 +1,8 @@
 import { MakeGenerics } from "@tanstack/react-location";
-import {IProgram} from "./pages/program/Interfaces";
-import {IDataSet} from "./pages/aggregate/Interfaces";
-import {ISchedule} from "./pages/schedules/Interfaces";
+import { OptionBase } from "chakra-react-select";
+import { IProgram } from "./pages/program/Interfaces";
+import { IDataSet } from "./pages/aggregate/Interfaces";
+import { ISchedule } from "./pages/schedules/Interfaces";
 
 export type LocationGenerics = MakeGenerics<{
     LoaderData: {};
@@ -37,7 +38,6 @@ export interface CategoryOptionCombo extends CommonIdentifier {
 
 export interface ICategoryCombo extends CommonIdentifier {}
 
-
 export interface IDataElement extends CommonIdentifier {
     displayName: string;
     valueType: string;
@@ -64,14 +64,9 @@ export interface Form {
 }
 
 export interface IMapping {
-    nameColumn: string;
-    shortNameColum: string;
-    descriptionColumn: string;
-    codeColumn: string;
-    idColumn: string;
-    level: string;
-    longitudeColumn: string;
-    latitudeColumn: string;
+    id: string;
+    name: string;
+    description: string;
 }
 
 export interface IOption {
@@ -104,8 +99,6 @@ export interface IParam {
     isPeriod: boolean;
     periodType: string | undefined;
 }
-
-
 
 export interface ITrackedEntityType {
     id: string;
@@ -157,4 +150,10 @@ export interface IIntegrationStore {
     totalPrograms: number;
     paging: { [key: string]: any };
     programSchedule: any[];
+}
+
+export interface Option extends OptionBase {
+    label: string;
+    value: string;
+    id?: string;
 }

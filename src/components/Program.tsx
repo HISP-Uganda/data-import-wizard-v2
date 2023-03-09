@@ -1,49 +1,89 @@
-import React from "react";
-import { Button, Flex, Text } from "@chakra-ui/react";
-import { Step, Steps, useSteps } from "chakra-ui-steps";
-import { useState } from "react";
+import { Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Step } from "chakra-ui-steps";
+import { useStore } from "effector-react";
+import { setNext, setPrevious } from "../Events";
+import { setMapping } from "../pages/program/Events";
+import { $disabled } from "../pages/program/Store";
+import { $steps } from "../Store";
+import { generateUid } from "../utils/uid";
+import Step0 from "./program/step0";
+import Step1 from "./program/step1";
 import Step2 from "./program/step2";
+import Step3 from "./program/step3";
+import Step4 from "./program/step4";
+import Step5 from "./program/step5";
+import Step6 from "./program/step6";
 
-interface step {
+interface Step {
     label: string;
     content: JSX.Element;
 }
 const Program = () => {
-    const { nextStep, prevStep, reset, activeStep } = useSteps({
-        initialStep: 0,
-    });
-    const [nextStepActive, setNextStepActive] = useState(false);
-
-    const steps: step[] = [
-        { label: "Saved Mapping", content: <Text>Saved Mapping</Text> },
-        { label: "Select Program", content: <Step2 /> },
-        { label: "Import Type", content: <Text> Import Type </Text> },
-        { label: "Data Options", content: <Text>Data Options</Text> },
+    const activeStep = useStore($steps);
+    const disabled = useStore($disabled);
+    const steps: Step[] = [
+        { label: "Saved Mapping", content: <Step0 /> },
+        { label: "Select Program", content: <Step1 /> },
+        { label: "Import Type", content: <Step2 /> },
+        { label: "Data Options", content: <Step3 /> },
         {
             label: "Map Program Attributes",
-            content: <Text>Map Program Attributes</Text>,
+            content: <Step4 />,
         },
         {
             label: "Map Program Stages",
-            content: <Text>Map Program Stages</Text>,
+            content: <Step5 />,
         },
-        { label: "Import Data", content: <Text>Import Data</Text> },
+        { label: "Import Data", content: <Step6 /> },
         { label: "Import Summary", content: <Text>Import Summary</Text> },
     ];
 
+    const onNextClick = () => {
+        if (activeStep === 0) {
+            setMapping({ id: generateUid() });
+        }
+        setNext();
+    };
+
     return (
-        <Flex flexDir="column" width="100%">
-            <Steps activeStep={activeStep}>
-                {steps.map(({ label, content }) => (
-                    <Step label={label} key={label}>
-                        {content}
-                    </Step>
+        <Stack p="10px">
+            <Stack
+                direction="row"
+                justifyItems="space-between"
+                justifyContent="space-between"
+                alignItems=""
+                spacing="0"
+            >
+                {steps.map((step, index) => (
+                    <Stack
+                        alignItems="center"
+                        justifyItems="center"
+                        alignContent="center"
+                        justifyContent="center"
+                        flex={1}
+                    >
+                        <Text
+                            borderRadius="50%"
+                            borderColor="blue"
+                            borderWidth="1px"
+                            bg="red.100"
+                            h="40px"
+                            lineHeight="40px"
+                            w="40px"
+                        >
+                            <Text textAlign="center">{index + 1}</Text>
+                        </Text>
+                        <Text bg={index === activeStep ? "yellow" : ""}>
+                            {step.label}
+                        </Text>
+                    </Stack>
                 ))}
-            </Steps>
+            </Stack>
+            <Stack>{steps[activeStep].content}</Stack>
             {activeStep === steps.length ? (
                 <Flex p={4}>
-                    <Button mx="auto" size="sm" onClick={reset}>
-                        <Text>RESET</Text>
+                    <Button mx="auto" size="sm">
+                        <Text>Reset</Text>
                     </Button>
                 </Flex>
             ) : (
@@ -54,7 +94,7 @@ const Program = () => {
                         mt="24px"
                         w={{ sm: "75px", lg: "100px" }}
                         h="35px"
-                        onClick={prevStep}
+                        onClick={() => setPrevious()}
                     >
                         <Text fontSize="xs" color="gray.700" fontWeight="bold">
                             PREV
@@ -67,17 +107,16 @@ const Program = () => {
                         mt="24px"
                         w={{ sm: "75px", lg: "100px" }}
                         h="35px"
-                        onClick={nextStep}
+                        onClick={onNextClick}
+                        isDisabled={disabled}
                     >
                         <Text fontSize="xs" color="#fff" fontWeight="bold">
-                            {activeStep === steps.length - 1
-                                ? "FINISH"
-                                : "NEXT"}
+                            Next
                         </Text>
                     </Button>
                 </Flex>
             )}
-        </Flex>
+        </Stack>
     );
 };
 

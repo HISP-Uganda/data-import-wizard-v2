@@ -1,36 +1,32 @@
 import { useDataEngine } from "@dhis2/app-runtime";
-import { fromPairs, pick, groupBy, map } from "lodash";
+import { fromPairs, groupBy, map, pick } from "lodash";
 import { useQuery } from "react-query";
-import {
-    setTotalPrograms,
-    setTotalDataSets,
-    closeDialog, setDataSets,
+import { closeDialog, setDataSets, setTotalDataSets } from "./Events";
+import { IProgram } from "./pages/program/Interfaces";
+import { convertDataToURL } from "./utils/utils";
 
-} from "./Events"
-import {
-    convertDataToURL
-} from "./utils/utils";
-
-export const useInitials = () =>{
+export const useInitials = () => {
     const engine = useDataEngine();
 
     const query = {
         mappings: {
-            resource: "/dataStore/iw-mappings"
+            resource: "/dataStore/iw-mappings",
         },
         aggregate: {
-            resource: "/dataStore/iw-aggregate"
+            resource: "/dataStore/iw-aggregate",
         },
         schedules: {
-            resource: "/dataStore/iw-schedules"
-        }
-    }
+            resource: "/dataStore/iw-schedules",
+        },
+    };
 
     return useQuery<any, Error>(["initials"], async () => {
-        const {mappings, aggregate, schedules}: any = await engine.query(query);
+        const { mappings, aggregate, schedules }: any = await engine.query(
+            query
+        );
         console.log(JSON.stringify(mappings, null, 2));
-    })
-}
+    });
+};
 export const useNamespace = (namespace: string) => {
     const engine = useDataEngine();
     const namespaceQuery = {
@@ -66,7 +62,11 @@ export const useNamespaceKey = (namespace: string, key: string) => {
     });
 };
 
-export const usePrograms = (page: number, pageSize: number, searchQuery = "",) => {
+export const usePrograms = (
+    page: number,
+    pageSize: number,
+    searchQuery = ""
+) => {
     const engine = useDataEngine();
     let params: { [key: string]: any } = {
         page,
@@ -77,7 +77,8 @@ export const usePrograms = (page: number, pageSize: number, searchQuery = "",) =
     let parameters = [params];
     if (searchQuery !== "") {
         parameters = [
-            ...parameters, {
+            ...parameters,
+            {
                 param: "filter",
                 value: `name:ilike:${searchQuery}`,
             },
@@ -89,32 +90,53 @@ export const usePrograms = (page: number, pageSize: number, searchQuery = "",) =
                 param: "rootJunction",
                 value: "OR",
             },
-        ]
+        ];
     }
     const stringParams = convertDataToURL(parameters);
     const programsQuery = {
-        data:{
+        data: {
             resource: `programs.json?${stringParams}`,
-            params: params
-        }
+            params: params,
+        },
     };
 
-    return useQuery<any, Error>(["programs", page, pageSize, searchQuery],
-        async ()=>{
-        const {
-            data: {
-                pager: {total: totalPrograms},
-                programs,
-            },
-        }: any = await engine.query(programsQuery);
-        setTotalPrograms(totalPrograms);
-            return programs;
+    return useQuery<{ programs: Partial<IProgram>[]; total: number }, Error>(
+        ["programs", page, pageSize, searchQuery],
+        async () => {
+            const {
+                data: {
+                    pager: { total },
+                    programs,
+                },
+            }: any = await engine.query(programsQuery);
+            return { programs, total };
+        }
+    );
+};
 
-    })
+export const useProgram = (id: string) => {
+    const engine = useDataEngine();
 
-}
+    const programQuery = {
+        data: {
+            resource: `programs/${id}.json`,
+        },
+    };
 
-export const useDataSets = (page: number, pageSize: number, searchQuery = "",) => {
+    return useQuery<{ programs: Partial<IProgram> }, Error>(
+        ["programs", id],
+        async () => {
+            const { data }: any = await engine.query(programQuery);
+            return data;
+        }
+    );
+};
+
+export const useDataSets = (
+    page: number,
+    pageSize: number,
+    searchQuery = ""
+) => {
     let params: { [key: string]: any } = {
         page,
         pageSize,
@@ -139,55 +161,61 @@ export const useDataSets = (page: number, pageSize: number, searchQuery = "",) =
     }
     const stringParams = convertDataToURL(parameters);
     const dataSetsQuery = {
-        dataSets:{
+        dataSets: {
             resource: `dataSets.json?${stringParams}`,
-            params:{
-                fields: "id,name,code,periodType,categoryCombo[id,name,categories[id,name,code,categoryOptions[id,name,code]]," +
+            params: {
+                fields:
+                    "id,name,code,periodType,categoryCombo[id,name,categories[id,name,code,categoryOptions[id,name,code]]," +
                     "categoryOptionCombos[id,name,categoryOptions[id,name]]],dataSetElements[dataElement[id,name,code,valueType," +
                     "dataSetElements[dataSet,categoryCombo[id,name,isDefault,categoryOptionCombos[id,name]]]," +
                     "categoryCombo[id,name,isDefault,categoryOptionCombos[id,name]]]],organisationUnits[id,name,code]",
                 order: "name:ASC",
-            }
+            },
         },
-    }
+    };
     const engine = useDataEngine();
 
-
-    return useQuery<any, Error>(["datasets", page, pageSize, searchQuery],
-        async ()=>{
+    return useQuery<any, Error>(
+        ["datasets", page, pageSize, searchQuery],
+        async () => {
             const {
                 dataSets: {
-                    pager: {total: totalDataSets},
+                    pager: { total: totalDataSets },
                     dataSets,
                 },
             }: any = await engine.query(dataSetsQuery);
             setTotalDataSets(totalDataSets);
 
-            const des = dataSets.map((dataSet:any) => {
-                const processed = dataSet.dataSetElements.map((dataSetElement:any) => {
-                    if (!dataSetElement.dataElement.categoryCombo.isDefault) {
-                        const newCombo = dataSetElement.dataElement.dataSetElements.find(
-                            (dse:any) => {
-                                return (
-                                    dse.dataSet.id === dataSet.id &&
-                                    dse.categoryCombo &&
-                                    dse.categoryCombo.isDefault
+            const des = dataSets.map((dataSet: any) => {
+                const processed = dataSet.dataSetElements.map(
+                    (dataSetElement: any) => {
+                        if (
+                            !dataSetElement.dataElement.categoryCombo.isDefault
+                        ) {
+                            const newCombo =
+                                dataSetElement.dataElement.dataSetElements.find(
+                                    (dse: any) => {
+                                        return (
+                                            dse.dataSet.id === dataSet.id &&
+                                            dse.categoryCombo &&
+                                            dse.categoryCombo.isDefault
+                                        );
+                                    }
                                 );
-                            }
-                        );
 
-                        if (newCombo) {
-                            dataSetElement = {
-                                ...dataSetElement,
-                                dataElement: {
-                                    ...dataSetElement.dataElement,
-                                    categoryCombo: newCombo.categoryCombo,
-                                },
-                            };
+                            if (newCombo) {
+                                dataSetElement = {
+                                    ...dataSetElement,
+                                    dataElement: {
+                                        ...dataSetElement.dataElement,
+                                        categoryCombo: newCombo.categoryCombo,
+                                    },
+                                };
+                            }
                         }
+                        return dataSetElement;
                     }
-                    return dataSetElement;
-                });
+                );
 
                 dataSet = { ...dataSet, dataSetElements: processed };
 
@@ -205,7 +233,9 @@ export const useDataSets = (page: number, pageSize: number, searchQuery = "",) =
                         };
                     });
                     const categoryOptionCombos =
-                        v[0]["dataElement"]["categoryCombo"]["categoryOptionCombos"];
+                        v[0]["dataElement"]["categoryCombo"][
+                            "categoryOptionCombos"
+                        ];
                     const name = v[0]["dataElement"]["categoryCombo"]["name"];
                     return {
                         name,
@@ -228,16 +258,12 @@ export const useDataSets = (page: number, pageSize: number, searchQuery = "",) =
                     organisationUnits,
                     forms,
                 };
-            return dataSets;
-    })
+                return dataSets;
+            });
+        }
+    );
+};
 
-    })
-}
+export const useDataElements = () => {};
 
-export const useDataElements = () =>{
-
-}
-
-export const useUserGroups = () =>{
-
-}
+export const useUserGroups = () => {};

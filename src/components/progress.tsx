@@ -9,7 +9,7 @@ import {
     Text,
 } from "@chakra-ui/react";
 import { useStore } from "effector-react";
-import { $iStore } from "../stores/Store";
+import { $iStore } from "../Store";
 
 type ProgressProps = {
     isOpen: boolean;

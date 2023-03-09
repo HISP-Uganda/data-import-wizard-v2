@@ -1,6 +1,6 @@
 // import { combine } from "effector";
-import { domain } from "../Domain";
-import { IIntegrationStore, Organisation} from "../Interfaces";
+import { domain } from "./Domain";
+import { IIntegrationStore, Organisation } from "./Interfaces";
 import {
     closeDialog,
     openDialog,
@@ -22,8 +22,10 @@ import {
     deleteSchedule,
     setPrograms,
     changeElementPage,
-} from "../Events";
-import {ISchedule} from "../pages/schedules/Interfaces";
+    setPrevious,
+    setStep,
+} from "./Events";
+import { ISchedule } from "./pages/schedules/Interfaces";
 export const $store = domain.createStore({
     // put some default states here
 });
@@ -38,6 +40,12 @@ export const createOrganisation = (): Organisation => {
         message: "",
     };
 };
+
+export const $steps = domain
+    .createStore<number>(0)
+    .on(setNext, (state) => state + 1)
+    .on(setPrevious, (state) => state - 1)
+    .on(setStep, (state, step) => state + step);
 
 export const createNewSchedule = (): ISchedule => {
     return {
