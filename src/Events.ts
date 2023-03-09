@@ -5,9 +5,9 @@ import {
     ICategoryCombo,
     ICategory,
 } from "./Interfaces";
-import {ISchedule} from "./pages/schedules/Interfaces";
-import {IProgram} from "./pages/program/Interfaces";
-import {IDataSet} from "./pages/aggregate/Interfaces";
+import { ISchedule } from "./pages/schedules/Interfaces";
+import { IProgram } from "./pages/program/Interfaces";
+import { IDataSet } from "./pages/aggregate/Interfaces";
 
 export const loadDefaults = domain.createEvent<{
     mappings: string[];
@@ -22,7 +22,9 @@ export const closeDialog = domain.createEvent();
 export const setScheduled = domain.createEvent();
 export const setCurrentSchedule = domain.createEvent<ISchedule>();
 export const setNextAggregateStep = domain.createEvent<number>();
-export const setNext = domain.createEvent<number>();
+export const setNext = domain.createEvent<void>();
+export const setPrevious = domain.createEvent<void>();
+export const setStep = domain.createEvent<number>();
 export const setOpen = domain.createEvent<boolean>();
 export const createSchedule = domain.createEvent<ISchedule>();
 export const handleDrawerOpen = domain.createEvent<boolean>();
