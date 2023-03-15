@@ -34,18 +34,22 @@ export const useNamespace = (namespace: string) => {
             resource: `dataStore/${namespace}`,
         },
     };
-    return useQuery<any, Error>(["namespaces", namespace], async () => {
-        const { namespaceKeys }: any = await engine.query(namespaceQuery);
-        const query: any = fromPairs(
-            namespaceKeys.map((n: string) => [
-                n,
-                {
-                    resource: `dataStore/${namespace}/${n}`,
-                },
-            ])
-        );
-        return await engine.query(query);
-    });
+    return useQuery<{ [key: string]: { [key: string]: any } }, Error>(
+        ["namespaces", namespace],
+        async () => {
+            const { namespaceKeys }: any = await engine.query(namespaceQuery);
+            const query: any = fromPairs(
+                namespaceKeys.map((n: string) => [
+                    n,
+                    {
+                        resource: `dataStore/${namespace}/${n}`,
+                    },
+                ])
+            );
+            const response: any = await engine.query(query);
+            return response;
+        }
+    );
 };
 
 export const useNamespaceKey = (namespace: string, key: string) => {
@@ -55,10 +59,10 @@ export const useNamespaceKey = (namespace: string, key: string) => {
             resource: `dataStore/${namespace}/${key}`,
         },
     };
-    return useQuery<boolean, Error>(["namespace", namespace, key], async () => {
-        // const { storedValue }: any = await engine.query(namespaceQuery);
+    return useQuery<any, Error>(["namespace", namespace, key], async () => {
+        const { storedValue }: any = await engine.query(namespaceQuery);
         // do something with storedValue
-        return true;
+        return storedValue;
     });
 };
 
@@ -114,22 +118,25 @@ export const usePrograms = (
     );
 };
 
-export const useProgram = (id: string) => {
+export const useProgram = (id: string | undefined) => {
     const engine = useDataEngine();
 
     const programQuery = {
         data: {
             resource: `programs/${id}.json`,
+            params: {
+                fields: "organisationUnits[id,code,name],programStages[id,name,code,programStageDataElements[id,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,valueType,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+            },
         },
     };
 
-    return useQuery<{ programs: Partial<IProgram> }, Error>(
-        ["programs", id],
-        async () => {
+    return useQuery<Partial<IProgram>, Error>(["programs", id], async () => {
+        if (id) {
             const { data }: any = await engine.query(programQuery);
             return data;
         }
-    );
+        return {};
+    });
 };
 
 export const useDataSets = (

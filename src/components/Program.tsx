@@ -1,4 +1,4 @@
-import { Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { Step } from "chakra-ui-steps";
 import { useStore } from "effector-react";
 import { setNext, setPrevious } from "../Events";
@@ -8,6 +8,7 @@ import { $steps } from "../Store";
 import { generateUid } from "../utils/uid";
 import Step0 from "./program/step0";
 import Step1 from "./program/step1";
+import Step10 from "./program/Step10";
 import Step2 from "./program/step2";
 import Step3 from "./program/step3";
 import Step4 from "./program/step4";
@@ -25,6 +26,7 @@ const Program = () => {
         { label: "Saved Mapping", content: <Step0 /> },
         { label: "Select Program", content: <Step1 /> },
         { label: "Import Type", content: <Step2 /> },
+        { label: "Mapping Options", content: <Step10 /> },
         { label: "Data Options", content: <Step3 /> },
         {
             label: "Map Program Attributes",
@@ -46,7 +48,7 @@ const Program = () => {
     };
 
     return (
-        <Stack p="10px">
+        <Stack p="10px" spacing="30px">
             <Stack
                 direction="row"
                 justifyItems="space-between"
@@ -61,8 +63,9 @@ const Program = () => {
                         alignContent="center"
                         justifyContent="center"
                         flex={1}
+                        key={step.label}
                     >
-                        <Text
+                        <Box
                             borderRadius="50%"
                             borderColor="blue"
                             borderWidth="1px"
@@ -72,7 +75,7 @@ const Program = () => {
                             w="40px"
                         >
                             <Text textAlign="center">{index + 1}</Text>
-                        </Text>
+                        </Box>
                         <Text bg={index === activeStep ? "yellow" : ""}>
                             {step.label}
                         </Text>

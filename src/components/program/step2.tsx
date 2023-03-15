@@ -4,23 +4,25 @@ import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
 import { Option } from "../../Interfaces";
 import { updateMapping } from "../../pages/program/Events";
-import { $program } from "../../pages/program/Store";
+import { $programMapping } from "../../pages/program/Store";
 import APICredentials from "../APICredentials";
+import FileUpload from "../FileUpload";
 
 const importTypes: Option[] = [
     { label: "api", value: "api" },
     { label: "xlsx", value: "xlsx" },
     { label: "csv", value: "csv" },
+    { label: "json", value: "json" },
 ];
 
 const Step2 = () => {
-    const program = useStore($program);
+    const programMapping = useStore($programMapping);
     return (
         <Stack spacing="30px">
             <Stack>
                 <Text>Mapping Name</Text>
                 <Input
-                    value={program.name}
+                    value={programMapping.name}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         updateMapping({
                             attribute: "name",
@@ -32,7 +34,7 @@ const Step2 = () => {
             <Stack>
                 <Text>Description</Text>
                 <Textarea
-                    value={program.description}
+                    value={programMapping.description}
                     onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                         updateMapping({
                             attribute: "description",
@@ -46,7 +48,7 @@ const Step2 = () => {
                 <Text>Import Type</Text>
                 <Select<Option, false, GroupBase<Option>>
                     value={importTypes.find(
-                        (pt) => pt.value === program.dataSource
+                        (pt) => pt.value === programMapping.dataSource
                     )}
                     onChange={(e) =>
                         updateMapping({
@@ -58,13 +60,16 @@ const Step2 = () => {
                     isClearable
                 />
             </Stack>
-            {program.dataSource === "api" && (
+            {programMapping.dataSource === "api" && (
                 <APICredentials
                     updateMapping={updateMapping}
-                    mapping={program}
+                    mapping={programMapping}
                 />
             )}
-            <pre>{JSON.stringify(program, null, 2)}</pre>
+
+            {programMapping.dataSource &&
+                ["xlsx", "json", "csv"].indexOf(programMapping.dataSource) !==
+                    -1 && <FileUpload />}
         </Stack>
     );
 };
