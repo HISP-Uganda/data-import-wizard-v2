@@ -1,32 +1,29 @@
-import React from "react";
-
 import {
     Modal,
     ModalBody,
     ModalContent,
     ModalOverlay,
-    useDisclosure,
+    Spinner,
+    Stack,
     Text,
 } from "@chakra-ui/react";
-import { useStore } from "effector-react";
-import { $iStore } from "../Store";
 
 type ProgressProps = {
+    onOpen: () => void;
     isOpen: boolean;
-    onClose: () => any;
+    onClose: () => void;
     message: string;
 };
-const Progress = ({ message }: ProgressProps) => {
-    const store = useStore($iStore);
-    const { isOpen, onOpen, onClose } = useDisclosure();
+const Progress = ({ message, onClose, isOpen }: ProgressProps) => {
     return (
-        <Modal isOpen={isOpen} onClose={onClose} size="xl">
+        <Modal onClose={onClose} isOpen={isOpen} isCentered>
             <ModalOverlay />
-            <ModalContent>
-                <ModalBody>
-                    <Text fontWeight="bold" mb="1rem">
-                        &nbsp;&nbsp;{message}
-                    </Text>
+            <ModalContent w="100%" boxShadow="none" bg="none">
+                <ModalBody m="0" p="10px">
+                    <Stack alignItems="center" color="white">
+                        <Spinner />
+                        <Text fontSize="18px">{message}</Text>
+                    </Stack>
                 </ModalBody>
             </ModalContent>
         </Modal>

@@ -1,14 +1,12 @@
 import React from "react";
 
-import { Text, Box } from "@chakra-ui/react";
+import { Text, Stack } from "@chakra-ui/react";
 
 const Organisation = () => {
     return (
-        <>
-            <Box p={4}>
-                <Text>Organisation</Text>
-            </Box>
-        </>
+        <Stack p="10px">
+            <Text>Organisations</Text>
+        </Stack>
     );
 };
 

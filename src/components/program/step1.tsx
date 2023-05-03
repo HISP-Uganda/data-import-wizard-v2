@@ -1,4 +1,5 @@
 import {
+    Box,
     Spinner,
     Stack,
     Table,
@@ -8,19 +9,31 @@ import {
     Th,
     Thead,
     Tr,
+    useDisclosure,
 } from "@chakra-ui/react";
+import { useDataEngine } from "@dhis2/app-runtime";
 import {
     createColumnHelper,
     flexRender,
     getCoreRowModel,
     useReactTable,
 } from "@tanstack/react-table";
-import { setNext } from "../../Events";
-import { updateMapping } from "../../pages/program/Events";
-import { IProgram } from "../../pages/program/Interfaces";
-import { usePrograms } from "../../Queries";
+import { useStore } from "effector-react";
+import { getOr } from "lodash/fp";
+import { IProgram } from "diw-utils";
+import {
+    $programMapping,
+    programApi,
+    programMappingApi,
+} from "../../pages/program/Store";
+import { loadProgram, usePrograms } from "../../Queries";
+import { stepper } from "../../Store";
+import Progress from "../Progress";
 
 function TableDisplay({ data }: { data: Partial<IProgram>[] }) {
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const programMapping = useStore($programMapping);
+    const engine = useDataEngine();
     const columnHelper = createColumnHelper<Partial<IProgram>>();
     const columns = [
         columnHelper.accessor("id", {
@@ -41,56 +54,97 @@ function TableDisplay({ data }: { data: Partial<IProgram>[] }) {
         columns,
         getCoreRowModel: getCoreRowModel(),
     });
-    const onProgramSelect = (id: string) => {
-        updateMapping({ attribute: "program", value: id });
-        setNext();
+    const onProgramSelect = async (id: string) => {
+        onOpen();
+        const data = await loadProgram(engine, id);
+        programMappingApi.update({ attribute: "program", value: id });
+        programMappingApi.update({
+            attribute: "trackedEntityType",
+            value: getOr("", "trackedEntityType.id", data),
+        });
+        programApi.set(data);
+        onClose();
+        stepper.next();
     };
     return (
-        <Table border={1}>
-            <Thead>
-                {table.getHeaderGroups().map((headerGroup) => (
-                    <Tr key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                            <Th key={header.id}>
-                                {header.isPlaceholder
-                                    ? null
-                                    : flexRender(
-                                          header.column.columnDef.header,
-                                          header.getContext()
-                                      )}
-                            </Th>
-                        ))}
-                    </Tr>
-                ))}
-            </Thead>
-            <Tbody>
-                {table.getRowModel().rows.map((row) => (
-                    <Tr
-                        key={row.id}
-                        cursor="pointer"
-                        onClick={() => onProgramSelect(row.getValue("id"))}
-                    >
-                        {row.getVisibleCells().map((cell) => (
-                            <Td key={cell.id}>
-                                {flexRender(
-                                    cell.column.columnDef.cell,
-                                    cell.getContext()
-                                )}
-                            </Td>
-                        ))}
-                    </Tr>
-                ))}
-            </Tbody>
-        </Table>
+        <Stack>
+            <Table>
+                <Thead>
+                    {table.getHeaderGroups().map((headerGroup) => (
+                        <Tr key={headerGroup.id}>
+                            {headerGroup.headers.map((header) => (
+                                <Th key={header.id}>
+                                    {header.isPlaceholder
+                                        ? null
+                                        : flexRender(
+                                              header.column.columnDef.header,
+                                              header.getContext()
+                                          )}
+                                </Th>
+                            ))}
+                        </Tr>
+                    ))}
+                </Thead>
+                <Tbody>
+                    {table.getRowModel().rows.map((row) => (
+                        <Tr
+                            key={row.id}
+                            cursor="pointer"
+                            onClick={() => onProgramSelect(row.getValue("id"))}
+                            bg={
+                                row.getValue("id") === programMapping.program
+                                    ? "yellow"
+                                    : ""
+                            }
+                        >
+                            {row.getVisibleCells().map((cell) => (
+                                <Td key={cell.id}>
+                                    {flexRender(
+                                        cell.column.columnDef.cell,
+                                        cell.getContext()
+                                    )}
+                                </Td>
+                            ))}
+                        </Tr>
+                    ))}
+                </Tbody>
+            </Table>
+            <Progress
+                onClose={onClose}
+                isOpen={isOpen}
+                message="Loading Selected Program"
+                onOpen={onOpen}
+            />
+        </Stack>
     );
 }
 const Step1 = () => {
     const { isLoading, isError, isSuccess, error, data } = usePrograms(1, 100);
     return (
         <Stack>
-            {isLoading && <Spinner />}
-            {isSuccess && <TableDisplay data={data.programs} />}
-            {isError && JSON.stringify(error)}
+            <Box m="auto" w="100%">
+                <Box
+                    position="relative"
+                    overflow="auto"
+                    whiteSpace="nowrap"
+                    h="calc(100vh - 300px)"
+                >
+                    {isLoading && (
+                        <Stack
+                            h="100%"
+                            alignItems="center"
+                            justifyContent="center"
+                            justifyItems="center"
+                            alignContent="center"
+                        >
+                            <Spinner />
+                        </Stack>
+                    )}
+                    {isLoading && <Spinner />}
+                    {isSuccess && <TableDisplay data={data.programs} />}
+                    {isError && JSON.stringify(error)}
+                </Box>
+            </Box>
         </Stack>
     );
 };

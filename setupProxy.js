@@ -17,11 +17,10 @@ const onProxyRes = (proxyRes) => {
 };
 // proxy middleware options
 const options = {
-    // target: "http://localhost:8080", // target host
-    target: "https://emisuganda.org/emis",
+    target: "http://localhost:8080",
     onProxyReq,
     onProxyRes,
-    changeOrigin: true, // needed for virtual hosted sites
+    changeOrigin: true,
     auth: undefined,
     logLevel: "debug",
 };

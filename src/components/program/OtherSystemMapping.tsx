@@ -1,147 +1,117 @@
 import {
+    Box,
     Checkbox,
     Input,
     Stack,
     Table,
     Tbody,
     Td,
+    Text,
     Th,
     Thead,
     Tr,
-    Text,
-    Box,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
+import { Option } from "diw-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
-import { ChangeEvent, useEffect } from "react";
-import { Option } from "diw-utils";
+import { ChangeEvent } from "react";
 import {
     $attributeMapping,
+    $flattenedProgramKeys,
     $metadata,
     $programMapping,
     attributeMappingApi,
     programMappingApi,
 } from "../../pages/program/Store";
 
-const Step4 = () => {
-    const attributeMapping = useStore($attributeMapping);
+export function OtherSystemMapping() {
     const programMapping = useStore($programMapping);
+    const flattenedProgramKeys = useStore($flattenedProgramKeys);
     const metadata = useStore($metadata);
-    const updateAttribute = (
-        attributes: { attribute: string; value: any }[]
-    ) => {
-        for (const { attribute, value } of attributes) {
-            attributeMappingApi.update({
-                attribute,
-                value,
-            });
-        }
-    };
-
-    useEffect(() => {
-        for (const {
-            value: destinationValue,
-        } of metadata.destinationAttributes) {
-            console.log(destinationValue);
-            if (!attributeMapping[destinationValue]) {
-                const search = metadata.sourceAttributes.find(
-                    ({ value }) => value === destinationValue
-                );
-                if (search) {
-                    attributeMappingApi.update({
-                        attribute: `${destinationValue}.value`,
-                        value: search.value,
-                    });
-                }
-            }
-        }
-    }, []);
+    const attributeMapping = useStore($attributeMapping);
 
     return (
         <Stack>
-            <Stack spacing="20px">
-                <Text>Tracked Entity Instance Column</Text>
+            {programMapping.dataSource === "api" && (
                 <Stack direction="row" spacing="20px">
-                    <Checkbox
-                        isChecked={
-                            programMapping.trackedEntityInstanceColumnIsManual
-                        }
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            programMappingApi.update({
-                                attribute: `trackedEntityInstanceColumnIsManual`,
-                                value: e.target.checked,
-                            })
-                        }
-                    >
-                        Map Manually
-                    </Checkbox>
-                    <Box w="500px">
-                        {programMapping.trackedEntityInstanceColumnIsManual ? (
-                            <Input
-                                value={
-                                    programMapping.trackedEntityInstanceColumn
-                                }
-                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                    programMappingApi.update({
-                                        attribute:
-                                            "trackedEntityInstanceColumn",
-                                        value: e.target.value,
-                                    })
-                                }
-                            />
-                        ) : (
+                    <Stack direction="row" alignItems="center" flex={1}>
+                        <Text>ID Field</Text>
+                        <Box flex={1}>
                             <Select<Option, false, GroupBase<Option>>
-                                value={metadata.sourceColumns.find(
-                                    (val) =>
-                                        val.value ===
-                                        programMapping.trackedEntityInstanceColumn
-                                )}
-                                options={metadata.sourceColumns}
+                                options={flattenedProgramKeys}
                                 isClearable
+                                value={flattenedProgramKeys.find((value) => {
+                                    return (
+                                        value.value ===
+                                        getOr(
+                                            "",
+                                            "metadataOptions.idField",
+                                            programMapping
+                                        )
+                                    );
+                                })}
                                 onChange={(e) =>
                                     programMappingApi.update({
-                                        attribute:
-                                            "trackedEntityInstanceColumn",
+                                        attribute: "metadataOptions.idField",
                                         value: e?.value || "",
                                     })
                                 }
                             />
-                        )}
-                    </Box>
+                        </Box>
+                    </Stack>
+                    <Stack direction="row" alignItems="center" flex={1}>
+                        <Text>Required Field</Text>
+                        <Box flex={1}>
+                            <Select<Option, false, GroupBase<Option>>
+                                options={flattenedProgramKeys}
+                                isClearable
+                                value={flattenedProgramKeys.find((value) => {
+                                    return (
+                                        value.value ===
+                                        getOr(
+                                            "",
+                                            "metadataOptions.requiredField",
+                                            programMapping
+                                        )
+                                    );
+                                })}
+                                onChange={(e) =>
+                                    programMappingApi.update({
+                                        attribute:
+                                            "metadataOptions.requiredField",
+                                        value: e?.value || "",
+                                    })
+                                }
+                            />
+                        </Box>
+                    </Stack>
                 </Stack>
-            </Stack>
-            <Table size="sm">
+            )}
+            <Table colorScheme="facebook" size="sm">
                 <Thead>
                     <Tr>
-                        <Th py="20px">Destination Attribute</Th>
-                        <Th textAlign="center" py="20px">
+                        <Th py="20px">Destination</Th>
+                        <Th py="20px" w="100px" textAlign="center">
                             Mandatory
                         </Th>
-                        <Th textAlign="center" py="20px">
+                        <Th py="20px" w="100px" textAlign="center">
                             Unique
                         </Th>
-                        <Th textAlign="center" w="200px" py="20px">
+                        <Th py="20px" w="200px" textAlign="center">
                             Manually Map
                         </Th>
-                        <Th py="20px">Source Attribute</Th>
+                        <Th py="20px">Source</Th>
                         <Th w="100px" py="20px">
                             Mapped?
                         </Th>
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {metadata.destinationAttributes.map(
-                        ({
-                            value,
-                            label,
-                            unique,
-                            optionSetValue,
-                            code,
-                            mandatory,
-                        }) => (
-                            <Tr key={value} borderColor="green.100">
-                                <Td w="400px">{label}</Td>
+                    {metadata.destinationColumns.map(
+                        ({ value, label, unique, mandatory }) => (
+                            <Tr>
+                                <Td>{label}</Td>
                                 <Td textAlign="center">
                                     <Checkbox
                                         isChecked={
@@ -230,7 +200,7 @@ const Step4 = () => {
                                             false,
                                             GroupBase<Option>
                                         >
-                                            value={metadata.sourceAttributes.find(
+                                            value={metadata.sourceColumns.find(
                                                 (val) =>
                                                     val.value ===
                                                     getOr(
@@ -239,24 +209,27 @@ const Step4 = () => {
                                                         attributeMapping
                                                     )
                                             )}
-                                            options={metadata.sourceAttributes}
+                                            options={metadata.sourceColumns}
                                             isClearable
                                             onChange={(e) =>
-                                                updateAttribute([
-                                                    {
-                                                        attribute: `${value}.value`,
-                                                        value: e?.value || "",
-                                                    },
-                                                    {
-                                                        attribute: `${value}.unique`,
-                                                        value:
-                                                            !!getOr(
-                                                                false,
-                                                                `${value}.unique`,
-                                                                attributeMapping
-                                                            ) || unique,
-                                                    },
-                                                ])
+                                                attributeMappingApi.updateMany(
+                                                    attributeMappingApi.updateMany(
+                                                        {
+                                                            attribute: value,
+                                                            update: {
+                                                                value:
+                                                                    e?.value ||
+                                                                    "",
+                                                                unique:
+                                                                    !!getOr(
+                                                                        false,
+                                                                        `${value}.unique`,
+                                                                        attributeMapping
+                                                                    ) || unique,
+                                                            },
+                                                        }
+                                                    )
+                                                )
                                             }
                                         />
                                     )}
@@ -267,9 +240,7 @@ const Step4 = () => {
                     )}
                 </Tbody>
             </Table>
-            {/* <pre>{JSON.stringify(attributeMapping, null, 2)}</pre> */}
+            <pre>{JSON.stringify(attributeMapping, null, 2)}</pre>
         </Stack>
     );
-};
-
-export default Step4;
+}

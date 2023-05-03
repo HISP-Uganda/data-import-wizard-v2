@@ -1,64 +1,95 @@
 import { useDataEngine } from "@dhis2/app-runtime";
+import { AxiosInstance } from "axios";
 import { fromPairs, groupBy, map, pick } from "lodash";
 import { useQuery } from "react-query";
 import { closeDialog, setDataSets, setTotalDataSets } from "./Events";
 import { IProgram } from "./pages/program/Interfaces";
+import { versionApi } from "./Store";
 import { convertDataToURL } from "./utils/utils";
 
 export const useInitials = () => {
     const engine = useDataEngine();
-
     const query = {
-        mappings: {
-            resource: "/dataStore/iw-mappings",
-        },
-        aggregate: {
-            resource: "/dataStore/iw-aggregate",
-        },
-        schedules: {
-            resource: "/dataStore/iw-schedules",
+        info: {
+            resource: "system/info",
         },
     };
 
-    return useQuery<any, Error>(["initials"], async () => {
-        const { mappings, aggregate, schedules }: any = await engine.query(
-            query
-        );
-        console.log(JSON.stringify(mappings, null, 2));
+    return useQuery<boolean, Error>(["initials"], async () => {
+        const {
+            info: { version },
+        }: any = await engine.query(query);
+        const versionNumbers = String(version).split(".");
+        versionApi.set(Number(versionNumbers[1]));
+        return true;
     });
 };
-export const useNamespace = (namespace: string) => {
+export const useNamespace = <IData>(namespace: string) => {
     const engine = useDataEngine();
     const namespaceQuery = {
         namespaceKeys: {
             resource: `dataStore/${namespace}`,
         },
     };
-    return useQuery<any, Error>(["namespaces", namespace], async () => {
-        const { namespaceKeys }: any = await engine.query(namespaceQuery);
-        const query: any = fromPairs(
-            namespaceKeys.map((n: string) => [
-                n,
-                {
-                    resource: `dataStore/${namespace}/${n}`,
-                },
-            ])
-        );
-        return await engine.query(query);
+    return useQuery<IData[], Error>(["namespaces", namespace], async () => {
+        try {
+            const { namespaceKeys }: any = await engine.query(namespaceQuery);
+            const query: any = fromPairs(
+                namespaceKeys.map((n: string) => [
+                    n,
+                    {
+                        resource: `dataStore/${namespace}/${n}`,
+                    },
+                ])
+            );
+            const response: any = await engine.query(query);
+            return Object.values<IData>(response);
+        } catch (error) {
+            console.log(error);
+        }
+        return [];
     });
 };
 
-export const useNamespaceKey = (namespace: string, key: string) => {
+export const loadPreviousMapping = async (
+    engine: any,
+    namespaces: string[],
+    namespaceKey: string
+) => {
+    const query = namespaces.map((namespace) => [
+        namespace,
+        {
+            resource: `dataStore/${namespace}/${namespaceKey}`,
+        },
+    ]);
+    return await engine.query(fromPairs(query));
+};
+
+export const loadProgram = async (engine: any, id: string) => {
+    const query = {
+        data: {
+            resource: `programs/${id}.json`,
+            params: {
+                fields: "trackedEntityType,organisationUnits[id,code,name],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+            },
+        },
+    };
+
+    const { data }: any = await engine.query(query);
+
+    return data as Partial<IProgram>;
+};
+
+export const useNamespaceKey = <IData>(namespace: string, key: string) => {
     const engine = useDataEngine();
     const namespaceQuery = {
         storedValue: {
             resource: `dataStore/${namespace}/${key}`,
         },
     };
-    return useQuery<boolean, Error>(["namespace", namespace, key], async () => {
-        // const { storedValue }: any = await engine.query(namespaceQuery);
-        // do something with storedValue
-        return true;
+    return useQuery<IData, Error>(["namespace", namespace, key], async () => {
+        const { storedValue } = await engine.query(namespaceQuery);
+        return storedValue as IData;
     });
 };
 
@@ -113,23 +144,86 @@ export const usePrograms = (
         }
     );
 };
+export const fetchRemote = async <IData>(
+    api: AxiosInstance | undefined,
+    url: string = "",
+    params?: URLSearchParams
+) => {
+    if (api && params) {
+        const { data } = await api.get<IData>(url, { params });
+        return data;
+    }
+    if (api) {
+        const { data } = await api.get<IData>(url);
+        return data;
+    }
+    return undefined;
+};
 
-export const useProgram = (id: string) => {
+export const makeQueryKeys = (params?: {
+    [key: string]: Partial<{
+        param: string;
+        value: string;
+        forUpdates: boolean;
+    }>;
+}) => {
+    if (params) {
+        let allParams = new URLSearchParams();
+        Object.values(params).forEach(({ param, value }) => {
+            if (param && value) {
+                allParams.append(param, value);
+            }
+        });
+        const keys = Array.from(allParams.entries())
+            .map(([key, value]) => `${key}${value}`)
+            .join("");
+        return { params: allParams, keys };
+    }
+    return { params: undefined, keys: "" };
+};
+
+export const useRemoteGet = <IData>(
+    api: AxiosInstance | undefined,
+    url: string = "",
+    queryParams?: {
+        [key: string]: Partial<{
+            param: string;
+            value: string;
+            forUpdates: boolean;
+        }>;
+    }
+) => {
+    const { keys, params } = makeQueryKeys(queryParams);
+    return useQuery<IData | undefined, Error>(
+        ["remote", url, keys],
+        async () => {
+            if (api && url) {
+                return await fetchRemote<IData>(api, url, params);
+            }
+            return undefined;
+        }
+    );
+};
+
+export const useProgram = (id: string | undefined) => {
     const engine = useDataEngine();
 
     const programQuery = {
         data: {
             resource: `programs/${id}.json`,
+            params: {
+                fields: "organisationUnits[id,code,name],programStages[id,name,code,programStageDataElements[id,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,valueType,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+            },
         },
     };
 
-    return useQuery<{ programs: Partial<IProgram> }, Error>(
-        ["programs", id],
-        async () => {
+    return useQuery<Partial<IProgram>, Error>(["programs", id], async () => {
+        if (id) {
             const { data }: any = await engine.query(programQuery);
             return data;
         }
-    );
+        return {};
+    });
 };
 
 export const useDataSets = (
