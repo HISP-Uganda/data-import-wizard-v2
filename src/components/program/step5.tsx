@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 
 import {
     Box,
@@ -17,20 +17,20 @@ import {
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
 import { useStore } from "effector-react";
-import { Option } from "../../Interfaces";
-import { updateProgramStageMapping } from "../../pages/program/Events";
+import { Option } from "diw-utils";
 import {
-    $columns,
+    $metadata,
     $program,
     $programMapping,
     $programStageMapping,
+    stageMappingApi,
 } from "../../pages/program/Store";
 
 const Step5 = () => {
-    const programMapping = useStore($programMapping);
     const programStageMapping = useStore($programStageMapping);
-    const columns = useStore($columns);
+    const programMapping = useStore($programMapping);
     const program = useStore($program);
+    const metadata = useStore($metadata);
     const [active, setActive] = useState<string>(
         program.programStages?.[0].id || ""
     );
@@ -40,13 +40,17 @@ const Step5 = () => {
         stage: string
     ) => {
         for (const { attribute, value } of attributes) {
-            updateProgramStageMapping({
+            stageMappingApi.update({
                 attribute,
                 stage,
                 value,
             });
         }
     };
+
+    useEffect(() => {
+        // if()
+    }, []);
 
     return (
         <Stack spacing="30px">
@@ -70,7 +74,7 @@ const Step5 = () => {
                 ))}
             </Flex>
             {program.programStages?.map(
-                ({ id: psId, programStageDataElements }) => {
+                ({ id: psId, programStageDataElements, repeatable }) => {
                     const isChecked =
                         programStageMapping[psId]?.["info"]?.manual || false;
 
@@ -83,10 +87,20 @@ const Step5 = () => {
                     const eventDateIsUnique =
                         programStageMapping[psId]?.["info"]
                             ?.eventDateIsUnique || false;
+                    const eventIdColumnIsManual =
+                        programStageMapping[psId]?.["info"]
+                            ?.eventIdColumnIsManual || false;
 
                     const value =
                         programStageMapping[psId]?.["info"]?.eventDateColumn ||
                         "";
+                    const stage =
+                        programStageMapping[psId]?.["info"]?.stage || "";
+
+                    const eventIdColumn =
+                        programStageMapping[psId]?.["info"]?.eventIdColumn ||
+                        "";
+
                     return (
                         psId === active && (
                             <Stack key={psId} spacing="20px">
@@ -100,7 +114,7 @@ const Step5 = () => {
                                         onChange={(
                                             e: ChangeEvent<HTMLInputElement>
                                         ) =>
-                                            updateProgramStageMapping({
+                                            stageMappingApi.update({
                                                 stage: psId,
                                                 attribute: `info.createEvents`,
                                                 value: e.target.checked,
@@ -116,7 +130,7 @@ const Step5 = () => {
                                         onChange={(
                                             e: ChangeEvent<HTMLInputElement>
                                         ) =>
-                                            updateProgramStageMapping({
+                                            stageMappingApi.update({
                                                 stage: psId,
                                                 attribute: `info.updateEvents`,
                                                 value: e.target.checked,
@@ -132,78 +146,181 @@ const Step5 = () => {
                                         onChange={(
                                             e: ChangeEvent<HTMLInputElement>
                                         ) =>
-                                            updateProgramStageMapping({
+                                            stageMappingApi.update({
                                                 stage: psId,
                                                 attribute: `info.eventDateIsUnique`,
                                                 value: e.target.checked,
                                             })
                                         }
                                     >
-                                        Event Date Is Unique
+                                        Mark Event Date As Unique
                                     </Checkbox>
                                 </Stack>
-                                <Stack spacing="20px">
-                                    <Text>Event Date Column</Text>
-                                    <Stack direction="row" spacing="20px">
-                                        <Checkbox
-                                            isChecked={isChecked}
-                                            onChange={(
-                                                e: ChangeEvent<HTMLInputElement>
-                                            ) =>
-                                                updateProgramStageMapping({
-                                                    attribute: `info.manual`,
-                                                    stage: psId,
-                                                    value: e.target.checked,
-                                                })
-                                            }
-                                        >
-                                            Map Manually
-                                        </Checkbox>
-                                        <Box w="500px">
-                                            {isChecked ? (
-                                                <Input
-                                                    value={value}
-                                                    onChange={(
-                                                        e: ChangeEvent<HTMLInputElement>
-                                                    ) =>
-                                                        updateProgramStageMapping(
-                                                            {
-                                                                stage: psId,
-                                                                attribute: `info.eventDateColumn`,
-                                                                value: e.target
-                                                                    .value,
-                                                            }
-                                                        )
-                                                    }
-                                                />
-                                            ) : (
+                                <Stack direction="row" spacing="40px">
+                                    <Stack spacing="20px" flex={1}>
+                                        <Text>Event Date Column</Text>
+                                        <Stack direction="row" spacing="20px">
+                                            <Checkbox
+                                                isChecked={isChecked}
+                                                onChange={(
+                                                    e: ChangeEvent<HTMLInputElement>
+                                                ) =>
+                                                    stageMappingApi.update({
+                                                        attribute: `info.manual`,
+                                                        stage: psId,
+                                                        value: e.target.checked,
+                                                    })
+                                                }
+                                            >
+                                                Map Manually
+                                            </Checkbox>
+                                            <Box flex={1}>
+                                                {isChecked ? (
+                                                    <Input
+                                                        value={value}
+                                                        onChange={(
+                                                            e: ChangeEvent<HTMLInputElement>
+                                                        ) =>
+                                                            stageMappingApi.update(
+                                                                {
+                                                                    stage: psId,
+                                                                    attribute: `info.eventDateColumn`,
+                                                                    value: e
+                                                                        .target
+                                                                        .value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <Select<
+                                                        Option,
+                                                        false,
+                                                        GroupBase<Option>
+                                                    >
+                                                        value={metadata.sourceColumns.find(
+                                                            (val) =>
+                                                                val.value ===
+                                                                value
+                                                        )}
+                                                        options={
+                                                            metadata.sourceColumns
+                                                        }
+                                                        isClearable
+                                                        onChange={(e) =>
+                                                            stageMappingApi.update(
+                                                                {
+                                                                    stage: psId,
+                                                                    attribute: `info.eventDateColumn`,
+                                                                    value:
+                                                                        e?.value ||
+                                                                        "",
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Stack>
+                                    </Stack>
+
+                                    <Stack spacing="20px" flex={1}>
+                                        <Text>Event Id Column</Text>
+                                        <Stack direction="row" spacing="20px">
+                                            <Checkbox
+                                                isChecked={
+                                                    eventIdColumnIsManual
+                                                }
+                                                onChange={(
+                                                    e: ChangeEvent<HTMLInputElement>
+                                                ) =>
+                                                    stageMappingApi.update({
+                                                        attribute: `info.eventIdColumnIsManual`,
+                                                        stage: psId,
+                                                        value: e.target.checked,
+                                                    })
+                                                }
+                                            >
+                                                Map Manually
+                                            </Checkbox>
+                                            <Box flex={1}>
+                                                {eventIdColumnIsManual ? (
+                                                    <Input
+                                                        value={eventIdColumn}
+                                                        onChange={(
+                                                            e: ChangeEvent<HTMLInputElement>
+                                                        ) =>
+                                                            stageMappingApi.update(
+                                                                {
+                                                                    stage: psId,
+                                                                    attribute: `info.eventIdColumn`,
+                                                                    value: e
+                                                                        .target
+                                                                        .value,
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                ) : (
+                                                    <Select<
+                                                        Option,
+                                                        false,
+                                                        GroupBase<Option>
+                                                    >
+                                                        value={metadata.sourceColumns.find(
+                                                            (val) =>
+                                                                val.value ===
+                                                                eventIdColumn
+                                                        )}
+                                                        options={
+                                                            metadata.sourceColumns
+                                                        }
+                                                        isClearable
+                                                        onChange={(e) =>
+                                                            stageMappingApi.update(
+                                                                {
+                                                                    stage: psId,
+                                                                    attribute: `info.eventIdColumn`,
+                                                                    value:
+                                                                        e?.value ||
+                                                                        "",
+                                                                }
+                                                            )
+                                                        }
+                                                    />
+                                                )}
+                                            </Box>
+                                        </Stack>
+                                    </Stack>
+                                    {programMapping.isDHIS2 && (
+                                        <Stack spacing="20px" flex={1}>
+                                            <Text>Specific Stage</Text>
+                                            <Box w="100%">
                                                 <Select<
                                                     Option,
                                                     false,
                                                     GroupBase<Option>
                                                 >
-                                                    value={columns.find(
+                                                    value={metadata.stages.find(
                                                         (val) =>
-                                                            val.value === value
+                                                            val.value === stage
                                                     )}
-                                                    options={columns}
+                                                    options={metadata.stages}
                                                     isClearable
-                                                    onChange={(e) =>
-                                                        updateProgramStageMapping(
-                                                            {
-                                                                stage: psId,
-                                                                attribute: `info.eventDateColumn`,
-                                                                value:
-                                                                    e?.value ||
-                                                                    "",
-                                                            }
-                                                        )
-                                                    }
+                                                    onChange={(e) => {
+                                                        stageMappingApi.update({
+                                                            stage: psId,
+                                                            attribute: `info.stage`,
+                                                            value:
+                                                                e?.value || "",
+                                                        });
+                                                    }}
                                                 />
-                                            )}
-                                        </Box>
-                                    </Stack>
+                                            </Box>
+                                        </Stack>
+                                    )}
                                 </Stack>
+
                                 <Table size="sm">
                                     <Thead>
                                         <Tr>
@@ -278,7 +395,7 @@ const Step5 = () => {
                                                                 onChange={(
                                                                     e: ChangeEvent<HTMLInputElement>
                                                                 ) =>
-                                                                    updateProgramStageMapping(
+                                                                    stageMappingApi.update(
                                                                         {
                                                                             attribute: `${id}.manual`,
                                                                             stage: psId,
@@ -309,9 +426,11 @@ const Step5 = () => {
                                                                                 },
                                                                                 {
                                                                                     attribute: `info.compulsory`,
-                                                                                    value: String(
-                                                                                        compulsory
-                                                                                    ),
+                                                                                    value: compulsory,
+                                                                                },
+                                                                                {
+                                                                                    attribute: `info.repeatable`,
+                                                                                    value: repeatable,
                                                                                 },
                                                                             ],
                                                                             psId
@@ -324,14 +443,28 @@ const Step5 = () => {
                                                                     false,
                                                                     GroupBase<Option>
                                                                 >
-                                                                    value={columns.find(
+                                                                    value={metadata.sourceColumns.find(
                                                                         (val) =>
                                                                             val.value ===
                                                                             value
                                                                     )}
-                                                                    options={
-                                                                        columns
-                                                                    }
+                                                                    options={metadata.sourceColumns.filter(
+                                                                        ({
+                                                                            value,
+                                                                        }) => {
+                                                                            if (
+                                                                                stage
+                                                                            ) {
+                                                                                return (
+                                                                                    value.indexOf(
+                                                                                        stage
+                                                                                    ) !==
+                                                                                    -1
+                                                                                );
+                                                                            }
+                                                                            return true;
+                                                                        }
+                                                                    )}
                                                                     isClearable
                                                                     onChange={(
                                                                         e
@@ -340,15 +473,17 @@ const Step5 = () => {
                                                                             [
                                                                                 {
                                                                                     attribute: `info.compulsory`,
-                                                                                    value: String(
-                                                                                        compulsory
-                                                                                    ),
+                                                                                    value: compulsory,
                                                                                 },
                                                                                 {
                                                                                     attribute: `${id}.value`,
                                                                                     value:
                                                                                         e?.value ||
                                                                                         "",
+                                                                                },
+                                                                                {
+                                                                                    attribute: `info.repeatable`,
+                                                                                    value: repeatable,
                                                                                 },
                                                                             ],
                                                                             psId
@@ -365,7 +500,7 @@ const Step5 = () => {
                                                                 onChange={(
                                                                     e: ChangeEvent<HTMLInputElement>
                                                                 ) =>
-                                                                    updateProgramStageMapping(
+                                                                    stageMappingApi.update(
                                                                         {
                                                                             attribute: `${id}.unique`,
                                                                             stage: psId,

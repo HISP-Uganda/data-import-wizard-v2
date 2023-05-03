@@ -1,18 +1,10 @@
-import React from "react";
-
-import { Text, Box } from "@chakra-ui/react";
-// import Wizard from "./Wizard";
-import OurStepper from "../OurStepper";
-// import Stepper from "./StepsExample";
+import { Stack, Text } from "@chakra-ui/react";
 
 const Aggregate = () => {
     return (
-        <>
-            <Box p={4}>
-                <Text>Aggregate</Text>
-                <OurStepper />
-            </Box>
-        </>
+        <Stack p="10px">
+            <Text>Aggregate</Text>
+        </Stack>
     );
 };
 

@@ -1,13 +1,14 @@
 export interface ISchedule {
+    id: string;
     name: string;
     type: string;
-    value: string;
     schedule: string;
     created: string;
-    next: string;
-    last: string;
+    nextRun: string;
+    lastRun: string;
     additionalDays: number;
-    url: string;
+    schedulingSeverURL: string;
     immediate: boolean;
     upstream: string;
+    mapping: string;
 }

@@ -1,4 +1,5 @@
 import {
+    Button,
     Checkbox,
     Input,
     Stack,
@@ -8,29 +9,122 @@ import {
     Th,
     Thead,
     Tr,
+    useDisclosure,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
+import { Option } from "diw-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
-import { ChangeEvent } from "react";
-import { Option } from "../../Interfaces";
-import { updateOUMapping } from "../../pages/program/Events";
+import { ChangeEvent, useEffect, useRef, useState } from "react";
 import {
-    $columns,
+    $metadata,
     $organisationUnitMapping,
-    $organisationUnits,
     $program,
     $programMapping,
+    $remoteOrganisationApi,
+    ouMappingApi,
+    programMappingApi,
+    remoteOrganisationsApi,
 } from "../../pages/program/Store";
-
+import { APICredentialsModal } from "../APICredentialsModal";
+import Progress from "../Progress";
 const Step3 = () => {
-    const programMapping = useStore($programMapping);
-    const columns = useStore($columns);
-    const organisations = useStore($organisationUnits);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const {
+        isOpen: isOpenModal,
+        onOpen: onOpenModal,
+        onClose: onCloseModal,
+    } = useDisclosure();
+    const metadata = useStore($metadata);
     const organisationUnitMapping = useStore($organisationUnitMapping);
+    const remoteOrganisationApi = useStore($remoteOrganisationApi);
+    const programMapping = useStore($programMapping);
     const program = useStore($program);
+    const [fetching, setFetching] = useState<boolean>(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        for (const {
+            value: destinationValue,
+            label,
+            code,
+        } of metadata.destinationOrgUnits) {
+            if (!organisationUnitMapping[destinationValue]) {
+                const search = metadata.sourceOrgUnits.find(
+                    ({ value, label }) => destinationValue === value
+                );
+                if (search) {
+                    ouMappingApi.update({
+                        attribute: `${destinationValue}.value`,
+                        value: search.value,
+                    });
+                }
+            }
+        }
+    }, [programMapping.orgUnitColumn]);
+
+    const onOK = async () => {
+        setFetching(() => true);
+        const { data } = await remoteOrganisationApi.get("");
+        remoteOrganisationsApi.set(data);
+        setFetching(() => false);
+        onCloseModal();
+    };
+    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const fileObj = event.target.files && event.target.files[0];
+        if (!fileObj) {
+            return;
+        }
+
+        console.log("fileObj is", fileObj);
+
+        // 👇️ reset file input
+        event.target.value = "";
+
+        // 👇️ is now empty
+        console.log(event.target.files);
+
+        // 👇️ can still access file object here
+        console.log(fileObj);
+        console.log(fileObj.name);
+    };
     return (
-        <Stack direction="row">
+        <Stack>
+            {programMapping.dataSource === "api" && (
+                <Stack direction="row" spacing="20px">
+                    <Button onClick={() => inputRef.current?.click()}>
+                        Upload Organisation Metadata List
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            programMappingApi.update({
+                                attribute: "orgUnitSource",
+                                value: "api",
+                            });
+                            onOpenModal();
+                        }}
+                    >
+                        Query Metadata from API
+                    </Button>
+                    <APICredentialsModal
+                        isOpen={isOpenModal}
+                        onClose={onCloseModal}
+                        updateMapping={programMappingApi.update}
+                        onOK={onOK}
+                        mapping={programMapping}
+                        accessor="orgUnitApiAuthentication"
+                        fetching={fetching}
+                        labelField="remoteOrgUnitLabelField"
+                        valueField="remoteOrgUnitValueField"
+                    />
+                    <input
+                        style={{ display: "none" }}
+                        ref={inputRef}
+                        type="file"
+                        onChange={handleFileChange}
+                    />
+                </Stack>
+            )}
             <Table colorScheme="facebook" size="sm">
                 <Thead>
                     <Tr>
@@ -45,28 +139,31 @@ const Step3 = () => {
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {program.organisationUnits
+                    {metadata.destinationOrgUnits
                         ?.slice(0, 10)
-                        .map(({ id, name, code }) => (
-                            <Tr key={id}>
-                                <Td w="400px">{name}</Td>
+                        .map(({ value, label }) => (
+                            <Tr key={value}>
+                                <Td w="400px">{label}</Td>
                                 <Td textAlign="center">
                                     <Checkbox
+                                        isDisabled={
+                                            programMapping.orgUnitsUploaded
+                                        }
                                         isChecked={
                                             getOr(
                                                 {
                                                     value: "",
                                                     manual: false,
                                                 },
-                                                id,
+                                                value,
                                                 organisationUnitMapping
                                             ).manual
                                         }
                                         onChange={(
                                             e: ChangeEvent<HTMLInputElement>
                                         ) =>
-                                            updateOUMapping({
-                                                attribute: `${id}.manual`,
+                                            ouMappingApi.update({
+                                                attribute: `${value}.manual`,
                                                 value: e.target.checked,
                                             })
                                         }
@@ -78,7 +175,7 @@ const Step3 = () => {
                                             value: "",
                                             manual: false,
                                         },
-                                        id,
+                                        value,
                                         organisationUnitMapping
                                     ).manual ? (
                                         <Input
@@ -88,15 +185,15 @@ const Step3 = () => {
                                                         value: "",
                                                         manual: false,
                                                     },
-                                                    id,
+                                                    value,
                                                     organisationUnitMapping
                                                 ).value
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                updateOUMapping({
-                                                    attribute: `${id}.value`,
+                                                ouMappingApi.update({
+                                                    attribute: `${value}.value`,
                                                     value: e.target.value,
                                                 })
                                             }
@@ -107,7 +204,7 @@ const Step3 = () => {
                                             false,
                                             GroupBase<Option>
                                         >
-                                            value={organisations.find(
+                                            value={metadata.sourceOrgUnits.find(
                                                 (val) =>
                                                     val.value ===
                                                     getOr(
@@ -115,15 +212,15 @@ const Step3 = () => {
                                                             value: "",
                                                             manual: false,
                                                         },
-                                                        id,
+                                                        value,
                                                         organisationUnitMapping
                                                     ).value
                                             )}
-                                            options={organisations}
+                                            options={metadata.sourceOrgUnits}
                                             isClearable
                                             onChange={(e) =>
-                                                updateOUMapping({
-                                                    attribute: `${id}.value`,
+                                                ouMappingApi.update({
+                                                    attribute: `${value}.value`,
                                                     value: e?.value || "",
                                                 })
                                             }
@@ -135,6 +232,12 @@ const Step3 = () => {
                         ))}
                 </Tbody>
             </Table>
+            <Progress
+                onClose={onClose}
+                isOpen={isOpen}
+                message="Trying to automatically map"
+                onOpen={onOpen}
+            />
         </Stack>
     );
 };

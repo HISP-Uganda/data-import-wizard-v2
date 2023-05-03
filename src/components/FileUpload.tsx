@@ -1,4 +1,4 @@
-import React, { useState, ChangeEvent } from "react";
+import { ChangeEvent } from "react";
 import { changeData } from "../pages/program/Events";
 
 export default function FileUpload() {

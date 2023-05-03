@@ -1,5 +1,4 @@
 import { domain } from "../../Domain";
-import { IMapping } from "../../Interfaces";
 import { IProgram, IProgramMapping } from "./Interfaces";
 
 export const setIProgramProperty = domain.createEvent<{

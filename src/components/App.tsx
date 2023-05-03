@@ -1,65 +1,23 @@
-import React from "react";
-import { ReactNode } from "react";
-import {
-    Box,
-    Spinner,
-    Stack,
-    HStack,
-    Flex,
-    Text,
-    Button,
-    // Link,
-    useColorModeValue,
-} from "@chakra-ui/react";
+import { Spinner, Stack } from "@chakra-ui/react";
 import {
     createHashHistory,
     Outlet,
     parseSearchWith,
     ReactLocation,
     Route,
-    Link,
     Router,
     stringifySearchWith,
-    useSearch,
 } from "@tanstack/react-location";
 
 import { LocationGenerics } from "../Interfaces";
+import { useInitials } from "../Queries";
 import { decodeFromBinary, encodeToBinary } from "../utils/utils";
 import Aggregate from "./Aggregate";
+import Home from "./Home";
+import NavBar from "./NavBar";
+import Organisation from "./Orgainsation";
 import Program from "./Program";
 import Schedule from "./Schedule";
-import Organisation from "./Orgainsation";
-import Home from "./Home";
-import { useEffect } from "react";
-import NavBar from "./NavBar";
-
-const Links = [
-    { path: "/program", name: "Tracker", icon: "" },
-    { path: "/aggregate", name: "Aggregate", icon: "" },
-    { path: "/schedule", name: "Schedule", icon: "" },
-    { path: "/organisation", name: "Organisation", icon: "" },
-];
-
-type NavLinkProps = {
-    href?: string;
-    children: ReactNode;
-    onClick?: (params: any) => any;
-};
-const NavLink = ({ href, children, onClick }: NavLinkProps) => (
-    <Button
-        px={2}
-        py={1}
-        rounded={"md"}
-        fontWeight={"small"}
-        _hover={{
-            textDecoration: "none",
-            bg: useColorModeValue("gray.200", "gray.700"),
-        }}
-        onClick={onClick}
-    >
-        {children}
-    </Button>
-);
 
 const history = createHashHistory();
 const location = new ReactLocation<LocationGenerics>({
@@ -77,7 +35,6 @@ const routes: Route<LocationGenerics>[] = [
         path: "/",
         element: <Home />,
         loader: async () => {
-            console.log("Load");
             return {};
         },
     },
@@ -119,20 +76,26 @@ const routes: Route<LocationGenerics>[] = [
     },
 ];
 const App = () => {
-    // const { isLoading, isSuccess, isError, error } = useInitials();
-    // const search = useSearch<LocationGenerics>();
-
+    const { isLoading, isSuccess, isError, error } = useInitials();
     return (
-        <>
-            <Router
-                location={location}
-                routes={routes}
-                defaultPendingElement={<Spinner />}
-            >
-                <NavBar />
-                <Outlet />
-            </Router>
-        </>
+        <Stack
+            h="calc(100vh - 48px)"
+            maxH="calc(100vh - 48px)"
+            minH="calc(100vh - 48px)"
+        >
+            {isLoading && <Spinner />}
+            {isSuccess && (
+                <Router
+                    location={location}
+                    routes={routes}
+                    defaultPendingElement={<Spinner />}
+                >
+                    <NavBar />
+                    <Outlet />
+                </Router>
+            )}
+            {isError && <pre>{JSON.stringify(error)}</pre>}
+        </Stack>
     );
 };
 

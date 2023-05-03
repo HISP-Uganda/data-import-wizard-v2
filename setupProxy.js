@@ -20,7 +20,7 @@ const options = {
     target: "http://localhost:8080",
     onProxyReq,
     onProxyRes,
-    changeOrigin: true, // needed for virtual hosted sites
+    changeOrigin: true,
     auth: undefined,
     logLevel: "debug",
 };
