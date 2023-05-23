@@ -7,6 +7,7 @@ import {
     $attributeMapping,
     $disabled,
     $label,
+    $optionMapping,
     $organisationUnitMapping,
     $programMapping,
     $programStageMapping,
@@ -35,6 +36,7 @@ const Program = () => {
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const attributeMapping = useStore($attributeMapping);
     const programStageMapping = useStore($programStageMapping);
+    const optionMapping = useStore($optionMapping);
     const label = useStore($label);
     const engine = useDataEngine();
 
@@ -46,7 +48,7 @@ const Program = () => {
         { label: "Organisation Mapping", content: <Step3 />, id: 5 },
         { label: "System Mapping", content: <OtherSystemMapping />, id: 6 },
         {
-            label: "Registration Mapping",
+            label: "Attribute Mapping",
             content: <Step4 />,
             id: 7,
         },
@@ -84,16 +86,22 @@ const Program = () => {
             resource: `dataStore/iw-stage-mapping/${programMapping.id}`,
             data: programStageMapping,
         };
+        const mutation5: any = {
+            type: "create",
+            resource: `dataStore/iw-option-mapping/${programMapping.id}`,
+            data: optionMapping,
+        };
         return await Promise.all([
             engine.mutate(mutation),
             engine.mutate(mutation2),
             engine.mutate(mutation3),
             engine.mutate(mutation4),
+            engine.mutate(mutation5),
         ]);
     };
 
     return (
-        <Stack p="10px" spacing="30px" flex={1}>
+        <Stack p="20px" spacing="30px" flex={1}>
             <Stack
                 direction="row"
                 justifyItems="space-between"
@@ -122,18 +130,34 @@ const Program = () => {
                         >
                             <Box
                                 borderRadius="50%"
-                                borderColor="blue"
-                                borderWidth="1px"
-                                bg="red.100"
+                                borderColor={
+                                    index < activeStep
+                                        ? "green"
+                                        : index === activeStep
+                                        ? "orange.600"
+                                        : "gray.400"
+                                }
+                                borderWidth="2px"
+                                bg={
+                                    index < activeStep
+                                        ? "green.500"
+                                        : index === activeStep
+                                        ? "orange.300"
+                                        : "white"
+                                }
                                 h="40px"
                                 lineHeight="40px"
                                 w="40px"
                             >
-                                <Text textAlign="center">{index + 1}</Text>
+                                <Text
+                                    textAlign="center"
+                                    color={index <= activeStep ? "white" : ""}
+                                    fontWeight="bold"
+                                >
+                                    {index + 1}
+                                </Text>
                             </Box>
-                            <Text bg={index === activeStep ? "yellow" : ""}>
-                                {step.label}
-                            </Text>
+                            <Text>{step.label}</Text>
                         </Stack>
                     ))}
             </Stack>
@@ -167,7 +191,7 @@ const Program = () => {
                         isDisabled={activeStep === 0}
                         onClick={() => stepper.previous()}
                     >
-                        Previous
+                        Previous Step
                     </Button>
 
                     {activeStep >= 2 && (

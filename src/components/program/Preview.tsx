@@ -17,7 +17,7 @@ import {
     Enrollment,
     Event,
     TrackedEntityInstance,
-} from "diw-utils";
+} from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { chunk, groupBy } from "lodash/fp";
 import { useEffect, useMemo, useState } from "react";
@@ -159,9 +159,8 @@ export default function Preview() {
     const process = async () => {
         onOpen();
         setMessage(() => "Fetching previous data");
-
         let foundInstances: Array<TrackedEntityInstance> = [];
-
+        console.log(metadata.uniqueAttributeValues);
         for (const attributeValues of chunk(
             50,
             metadata.uniqueAttributeValues
@@ -178,7 +177,6 @@ export default function Preview() {
                     );
                 }
             );
-
             params.append("fields", "*");
             params.append("program", programMapping.program || "");
             params.append("ouMode", "ALL");
@@ -236,17 +234,22 @@ export default function Preview() {
                         <Text fontSize="18px">New Entities</Text>
                         <Superscript
                             value={processed.trackedEntities?.length || 0}
+                            bg="blue.500"
                         />
                     </Tab>
                     <Tab>
                         <Text>New Enrollments</Text>
                         <Superscript
                             value={processed.enrollments?.length || 0}
+                            bg="blue.500"
                         />
                     </Tab>
                     <Tab>
                         <Text>New Events</Text>
-                        <Superscript value={processed.events?.length || 0} />
+                        <Superscript
+                            value={processed.events?.length || 0}
+                            bg="blue.500"
+                        />
                     </Tab>
                     <Tab>
                         <Text>Entity Updates</Text>

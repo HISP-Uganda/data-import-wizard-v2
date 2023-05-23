@@ -1,6 +1,6 @@
 import { Checkbox, Input, Stack, Text, Textarea } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { Option } from "diw-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
 import { $programMapping, programMappingApi } from "../../pages/program/Store";

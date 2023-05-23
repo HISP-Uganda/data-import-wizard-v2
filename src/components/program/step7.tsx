@@ -3,8 +3,9 @@ import { useDataEngine } from "@dhis2/app-runtime";
 import {
     convertToGoData,
     flattenTrackedEntityInstances,
+    GODataTokenGenerationResponse,
     TrackedEntityInstance,
-} from "diw-utils";
+} from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { useEffect, useState } from "react";
 import {
@@ -15,6 +16,7 @@ import {
     $programMapping,
     $remoteAPI,
 } from "../../pages/program/Store";
+import { postRemote } from "../../Queries";
 import { $version } from "../../Store";
 import Progress from "../Progress";
 
@@ -40,7 +42,8 @@ export default function Step7() {
                 params: {
                     pageSize,
                     page,
-                    ouMode: "ALL",
+                    ouMode: "SELECTED",
+                    ou: "a4gTh6i5VdH",
                     fields: "*",
                     program: programMapping.program,
                 },
@@ -57,19 +60,56 @@ export default function Step7() {
             if (programMapping.dataSource === "dhis2") {
             } else if (programMapping.dataSource === "godata") {
                 const trackedEntityInstances = await fetchInstances(1, 20);
-                const data = await convertToGoData(
+                const data = convertToGoData(
                     trackedEntityInstances,
                     orgUnitMapping,
                     attributeMapping,
                     goData
                 );
 
+                const {
+                    params,
+                    basicAuth,
+                    hasNextLink,
+                    headers,
+                    password,
+                    username,
+                    ...rest
+                } = programMapping.authentication || {};
                 try {
-                    const { data: res } = await remoteAPI.post(
-                        `api/outbreaks/${goData.id}/cases`,
-                        data
-                    );
-                    console.log(res);
+                    const response =
+                        await postRemote<GODataTokenGenerationResponse>(
+                            rest,
+                            "api/users/login",
+                            {
+                                email: username,
+                                password,
+                            }
+                        );
+
+                    if (response) {
+                        const token = response.id;
+                        for (const goDataCase of data) {
+                            try {
+                                const { data: res } = await postRemote<any>(
+                                    {
+                                        ...rest,
+                                    },
+                                    `api/outbreaks/${goData.id}/cases`,
+                                    goDataCase,
+                                    {
+                                        auth: {
+                                            param: "access_token",
+                                            value: token,
+                                        },
+                                    }
+                                );
+                                console.log(res);
+                            } catch (error) {
+                                console.log(error);
+                            }
+                        }
+                    }
                 } catch (error) {
                     console.log(error);
                 }
@@ -89,8 +129,13 @@ export default function Step7() {
                 });
                 setFound(() => flattenTrackedEntityInstances(data));
             }
-        } else if (programMapping.dataSource === "godata") {
+        } else if (
+            programMapping.dataSource === "godata" &&
+            !programMapping.prefetch
+        ) {
+            console.log("We seem to be in a wrong place");
         } else {
+            console.log("Are we here");
             const { enrollments, events, trackedEntities } = processed;
 
             if (trackedEntities && trackedEntities.length > 0) {

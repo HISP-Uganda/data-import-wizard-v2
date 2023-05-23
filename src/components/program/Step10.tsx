@@ -8,20 +8,21 @@ import {
     useToast,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
+import { IProgramMapping, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useEffect } from "react";
-import { Option, IProgramMapping } from "diw-utils";
 import {
-    $columns,
     $data,
     $goData,
     $metadata,
     $programMapping,
     $remoteAPI,
+    $token,
     dataApi,
     programMappingApi,
 } from "../../pages/program/Store";
+import { fetchRemote } from "../../Queries";
 import Progress from "../Progress";
 
 const CheckSelect = ({
@@ -98,15 +99,23 @@ export default function Step10() {
     const data = useStore($data);
     const remoteAPI = useStore($remoteAPI);
     const goData = useStore($goData);
+    const token = useStore($token);
 
     const fetchRemoteData = async () => {
         if (remoteAPI && !programMapping.isSource) {
             onOpen();
             try {
                 if (programMapping.dataSource === "godata" && goData.id) {
-                    const { data } = await remoteAPI.get(
+                    const data = await fetchRemote<any>(
+                        {
+                            ...programMapping.authentication,
+                            params: {
+                                auth: { param: "access_token", value: token },
+                            },
+                        },
                         `api/outbreaks/${goData.id}/cases`
                     );
+                    console.log(data);
                     dataApi.changeData(data);
                 } else {
                     const { data } = await remoteAPI.get("");

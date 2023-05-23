@@ -1,11 +1,13 @@
 import {
     Authentication,
     canQueryDHIS2,
+    CommonIdentifier,
     Enrollment,
     Event,
     findColumns,
     flattenProgram,
     generateUid,
+    GODataOption,
     IGoData,
     IProgram,
     IProgramMapping,
@@ -23,7 +25,7 @@ import {
     RealMapping,
     StageMapping,
     TrackedEntityInstance,
-} from "diw-utils";
+} from "data-import-wizard-utils";
 
 import { combine, createApi } from "effector";
 import produce from "immer";
@@ -48,9 +50,9 @@ type Processed = {
 
 const authentication: Partial<Authentication> = {
     basicAuth: true,
-    username: "skununka@gmail.com",
-    password: "nomisrmugisa",
-    url: "https://go.sk-engine.cloud/",
+    url: "http://172.16.200.107",
+    username: "ssekiwere@hispuganda.org",
+    password: "123godataAdmin",
 };
 
 const defaultMapping: Partial<IProgramMapping> = {
@@ -59,21 +61,11 @@ const defaultMapping: Partial<IProgramMapping> = {
     description: "This an example mapping",
     program: "IpHINAT79UW",
     trackedEntityType: "nEenWmSyUEp",
-    dataSource: "xlsx",
+    dataSource: "godata",
     authentication,
     // prefetch: true,
 };
 const mySchema = z.string().url();
-
-const updateMany = <T, U>(
-    state: T,
-    { attribute, update }: { attribute: keyof T; update: Partial<U> }
-) => {
-    return {
-        ...state,
-        ...{ [attribute]: { ...state[attribute], ...update } },
-    };
-};
 
 export const $attributeMapping = domain.createStore<Mapping>({});
 export const attributeMappingApi = createApi($attributeMapping, {
@@ -353,4 +345,36 @@ export const $flattenedProgramKeys = $programMapping.map((state) => {
         });
     }
     return [];
+});
+
+export const $token = domain.createStore<string>("");
+
+export const tokenApi = createApi($token, {
+    set: (_, token: string) => token,
+});
+
+export const $currentOptions = domain.createStore<CommonIdentifier[]>([]);
+export const currentOptionsApi = createApi($currentOptions, {
+    set: (_, options: CommonIdentifier[]) => options,
+});
+
+export const $optionMapping = domain.createStore<Record<string, string>>({});
+
+export const optionMappingApi = createApi($optionMapping, {
+    set: (_, value: Record<string, string>) => value,
+    add: (state, { key, value }: { key: string; value: string }) => {
+        return { ...state, [key]: value };
+    },
+});
+
+export const $goDataOptions = domain.createStore<GODataOption[]>([]);
+
+export const goDataOptionsApi = createApi($goDataOptions, {
+    set: (_, options: GODataOption[]) => options,
+});
+
+export const $currentSourceOptions = domain.createStore<Option[]>([]);
+
+export const currentSourceOptionsApi = createApi($currentSourceOptions, {
+    set: (_, options: Option[]) => options,
 });

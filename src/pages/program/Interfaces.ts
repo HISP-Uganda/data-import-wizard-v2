@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CommonIdentifier, IMapping } from "../../Interfaces";
+import { CommonIdentifier, IMapping } from "data-import-wizard-utils";
 
 export const ValueType = {
     TEXT: z.string(),

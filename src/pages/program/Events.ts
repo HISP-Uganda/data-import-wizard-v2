@@ -1,5 +1,5 @@
 import { domain } from "../../Domain";
-import { IProgram, IProgramMapping } from "./Interfaces";
+import { IProgram, IProgramMapping } from "data-import-wizard-utils";
 
 export const setIProgramProperty = domain.createEvent<{
     attribute: keyof IProgram;

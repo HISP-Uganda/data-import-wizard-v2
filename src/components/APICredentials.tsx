@@ -24,17 +24,26 @@ import {
     useToast,
 } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IGoData, IGoDataOrgUnit, IProgramMapping, Option } from "diw-utils";
+import {
+    getLowestLevelParents,
+    GODataTokenGenerationResponse,
+    IGoData,
+    IGoDataOrgUnit,
+    IProgramMapping,
+    IProgram,
+    GODataOption,
+} from "data-import-wizard-utils";
 import { Event } from "effector";
 import { useStore } from "effector-react";
 import { getOr, isEmpty } from "lodash/fp";
 import { ChangeEvent, useRef, useState } from "react";
-import { IProgram } from "../pages/program/Interfaces";
 import {
     $metadataAuthApi,
-    $remoteAPI,
+    $programMapping,
+    $token,
     dhis2ProgramApi,
     goDataApi,
+    goDataOptionsApi,
     programMappingApi,
     remoteOrganisationsApi,
 } from "../pages/program/Store";
@@ -43,21 +52,43 @@ import { generateUid } from "../utils/uid";
 import { APICredentialsModal } from "./APICredentialsModal";
 
 const RemoteOutbreaks = ({ onClose }: { onClose: () => void }) => {
-    const remoteAPI = useStore($remoteAPI);
-
+    const programMapping = useStore($programMapping);
+    const token = useStore($token);
     const { isLoading, isError, isSuccess, error, data } = useRemoteGet<
-        IGoData[]
-    >(remoteAPI, "api/outbreaks");
+        IGoData[],
+        GODataTokenGenerationResponse
+    >({
+        authentication: programMapping.authentication,
+        getToken: true,
+        tokenField: "id",
+        addTokenTo: "params",
+        tokenName: "access_token",
+        tokenGenerationURL: "api/users/login",
+        tokenGenerationPasswordField: "password",
+        tokenGenerationUsernameField: "email",
+        url: "api/outbreaks",
+    });
 
     const onRowSelect = async (outbreak: IGoData) => {
         const organisations = await fetchRemote<IGoDataOrgUnit[]>(
-            remoteAPI,
-            "api/locations",
-            undefined
+            {
+                ...programMapping.authentication,
+                params: { auth: { param: "access_token", value: token } },
+            },
+            "api/locations"
         );
+
+        const goDataOptions = await fetchRemote<GODataOption[]>(
+            {
+                ...programMapping.authentication,
+                params: { auth: { param: "access_token", value: token } },
+            },
+            "api/reference-data"
+        );
+        goDataOptionsApi.set(goDataOptions);
         goDataApi.set(outbreak);
         if (organisations) {
-            remoteOrganisationsApi.set(organisations);
+            remoteOrganisationsApi.set(getLowestLevelParents(organisations));
         }
         programMappingApi.updateMany({
             manuallyMapOrgUnitColumn: true,
@@ -102,31 +133,41 @@ const RemoteOutbreaks = ({ onClose }: { onClose: () => void }) => {
 
 const RemotePrograms = ({ onClose }: { onClose: () => void }) => {
     const queryClient = useQueryClient();
-    const remoteAPI = useStore($remoteAPI);
-    const { isLoading, isError, isSuccess, error, data } = useRemoteGet<{
-        programs: Array<Partial<IProgram>>;
-    }>(remoteAPI, "api/programs.json", {
-        "1": { value: "id,name", param: "fields" },
-        "2": { value: "false", param: "paging" },
+    const programMapping = useStore($programMapping);
+    const { isLoading, isError, isSuccess, error, data } = useRemoteGet<
+        {
+            programs: Array<Partial<IProgram>>;
+        },
+        {}
+    >({
+        authentication: {
+            ...programMapping.authentication,
+            params: {
+                "1": { value: "id,name", param: "fields" },
+                "2": { value: "false", param: "paging" },
+            },
+        },
     });
     const onRowSelect = async (program: string) => {
         const queryParams = {
             "1": {
-                value: "organisationUnits[id,code,name],programStages[id,name,code,programStageDataElements[id,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,valueType,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+                value: "organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,name,code,programStageDataElements[id,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,valueType,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
                 param: "fields",
             },
         };
-        const { keys, params } = makeQueryKeys(queryParams);
+        const { keys } = makeQueryKeys(queryParams);
         const data = await queryClient.fetchQuery<
             Partial<IProgram> | undefined,
             Error
         >({
-            queryKey: ["remote", `api/programs/${program}.json`, keys],
+            queryKey: ["remote", program, keys],
             queryFn: async () => {
                 return fetchRemote<Partial<IProgram>>(
-                    remoteAPI,
-                    `api/programs/${program}.json`,
-                    params
+                    {
+                        ...programMapping.authentication,
+                        params: queryParams,
+                    },
+                    `api/programs/${program}.json`
                 );
             },
         });
@@ -379,8 +420,8 @@ export default function APICredentials({
                 Basic Authentication
             </Checkbox>
             {getOr(false, `${accessor}.basicAuth`, mapping) && (
-                <>
-                    <Stack>
+                <Stack direction="row" spacing="20px">
+                    <Stack w="50%">
                         <Text>Username</Text>
                         <Input
                             value={getOr("", `${accessor}.username`, mapping)}
@@ -392,7 +433,7 @@ export default function APICredentials({
                             }
                         />
                     </Stack>
-                    <Stack>
+                    <Stack w="50%">
                         <Text>Password</Text>
                         <Input
                             type="password"
@@ -405,7 +446,7 @@ export default function APICredentials({
                             }
                         />
                     </Stack>
-                </>
+                </Stack>
             )}
 
             <AddableValues

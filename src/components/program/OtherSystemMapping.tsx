@@ -12,7 +12,7 @@ import {
     Tr,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { Option } from "diw-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent } from "react";

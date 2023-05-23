@@ -1,25 +1,30 @@
 import {
     Button,
     Checkbox,
+    Icon,
     Input,
     Stack,
     Table,
     Tbody,
     Td,
+    Text,
+    Tfoot,
     Th,
     Thead,
     Tr,
     useDisclosure,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { Option } from "diw-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
+import { FiCheck } from "react-icons/fi";
+
+import { usePagination } from "@ajna/pagination";
 import {
     $metadata,
     $organisationUnitMapping,
-    $program,
     $programMapping,
     $remoteOrganisationApi,
     ouMappingApi,
@@ -27,7 +32,11 @@ import {
     remoteOrganisationsApi,
 } from "../../pages/program/Store";
 import { APICredentialsModal } from "../APICredentialsModal";
+import DestinationIcon from "../DestinationIcon";
+import Paginated from "../Paginated";
 import Progress from "../Progress";
+import Search from "../Search";
+import SourceIcon from "../SourceIcon";
 const Step3 = () => {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const {
@@ -39,9 +48,36 @@ const Step3 = () => {
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const remoteOrganisationApi = useStore($remoteOrganisationApi);
     const programMapping = useStore($programMapping);
-    const program = useStore($program);
     const [fetching, setFetching] = useState<boolean>(false);
     const inputRef = useRef<HTMLInputElement>(null);
+    const [currentOrganisations, setCurrentOrganisations] = useState(
+        metadata.destinationOrgUnits
+    );
+
+    const [ouSearch, setOuSearch] = useState<string>("");
+
+    const outerLimit = 4;
+    const innerLimit = 4;
+
+    // pagination hook
+    const {
+        pages,
+        pagesCount,
+        currentPage,
+        setCurrentPage,
+        pageSize,
+        setPageSize,
+    } = usePagination({
+        total: currentOrganisations.length,
+        limits: {
+            outer: outerLimit,
+            inner: innerLimit,
+        },
+        initialState: {
+            pageSize: 10,
+            currentPage: 1,
+        },
+    });
 
     useEffect(() => {
         for (const {
@@ -88,6 +124,17 @@ const Step3 = () => {
         console.log(fileObj);
         console.log(fileObj.name);
     };
+
+    // handlers
+    const handlePageChange = (nextPage: number): void => {
+        setCurrentPage(nextPage);
+    };
+
+    const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
+        const pageSize = Number(event.target.value);
+        setPageSize(pageSize);
+    };
+
     return (
         <Stack>
             {programMapping.dataSource === "api" && (
@@ -125,25 +172,48 @@ const Step3 = () => {
                     />
                 </Stack>
             )}
-            <Table colorScheme="facebook" size="sm">
+            <Search
+                options={metadata.destinationOrgUnits}
+                action={setCurrentOrganisations}
+                searchString={ouSearch}
+                setCurrentPage={setCurrentPage}
+                setSearchString={setOuSearch}
+                mapping={organisationUnitMapping}
+                label="Show Mapped Organisations Only"
+                placeholder="Search organisation units"
+            />
+            <Table size="sm">
                 <Thead>
-                    <Tr>
-                        <Th py="20px">Destination Organization</Th>
-                        <Th w="200px" textAlign="center" py="20px">
-                            Manually Map
+                    <Tr h="30px">
+                        <Th>
+                            <Stack direction="row" alignItems="center">
+                                <DestinationIcon />
+                                <Text>Destination Organization</Text>
+                            </Stack>
                         </Th>
-                        <Th py="20px">Source Organization</Th>
-                        <Th w="100px" py="20px">
-                            Mapped?
+                        <Th w="150px" textAlign="center" minH="50px">
+                            <Text> Manually Map</Text>
+                        </Th>
+                        <Th w="45%">
+                            <Stack direction="row" alignItems="center">
+                                <SourceIcon />
+                                <Text>Source Organization</Text>
+                            </Stack>
+                        </Th>
+                        <Th w="100px" minH="50px">
+                            <Text>Mapped?</Text>
                         </Th>
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {metadata.destinationOrgUnits
-                        ?.slice(0, 10)
+                    {currentOrganisations
+                        .slice(
+                            currentPage * pageSize - pageSize,
+                            pageSize * currentPage
+                        )
                         .map(({ value, label }) => (
-                            <Tr key={value}>
-                                <Td w="400px">{label}</Td>
+                            <Tr key={value} _hover={{ bg: "green.50" }}>
+                                <Td>{label}</Td>
                                 <Td textAlign="center">
                                     <Checkbox
                                         isDisabled={
@@ -227,11 +297,36 @@ const Step3 = () => {
                                         />
                                     )}
                                 </Td>
-                                <Td></Td>
+                                <Td>
+                                    {organisationUnitMapping[value]?.value && (
+                                        <Icon
+                                            as={FiCheck}
+                                            color="green.400"
+                                            fontSize="2xl"
+                                        />
+                                    )}
+                                </Td>
                             </Tr>
                         ))}
                 </Tbody>
+                <Tfoot>
+                    <Tr>
+                        <Td colSpan={4} textAlign="right">
+                            Mapped {Object.keys(organisationUnitMapping).length}{" "}
+                            of {metadata.destinationOrgUnits.length}
+                        </Td>
+                    </Tr>
+                </Tfoot>
             </Table>
+
+            <Paginated
+                pages={pages}
+                pagesCount={pagesCount}
+                currentPage={currentPage}
+                handlePageSizeChange={handlePageSizeChange}
+                handlePageChange={handlePageChange}
+                pageSize={pageSize}
+            />
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}
