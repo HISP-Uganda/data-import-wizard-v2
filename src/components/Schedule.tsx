@@ -21,7 +21,7 @@ import { useMemo } from "react";
 import { ISchedule } from "../pages/schedules/Interfaces";
 import { useNamespace } from "../Queries";
 import TableDisplay from "./TableDisplay";
-import { Option } from "../Interfaces";
+import { Option } from "data-import-wizard-utils";
 
 const scheduleTypes: Option[] = [
     { label: "Aggregate Mapping", value: "aggregate" },

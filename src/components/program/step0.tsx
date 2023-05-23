@@ -2,9 +2,10 @@ import { Spinner, Stack, useDisclosure } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { ColumnDef } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { IProgramMapping } from "diw-utils";
+import { IProgramMapping } from "data-import-wizard-utils";
 import {
     attributeMappingApi,
+    optionMappingApi,
     ouMappingApi,
     programApi,
     programMappingApi,
@@ -31,6 +32,7 @@ const Step0 = () => {
                 "iw-ou-mapping",
                 "iw-attribute-mapping",
                 "iw-stage-mapping",
+                "iw-option-mapping",
             ],
             namespaceKey
         );
@@ -44,6 +46,7 @@ const Step0 = () => {
         attributeMappingApi.set(previousMappings["iw-attribute-mapping"] || {});
         ouMappingApi.set(previousMappings["iw-ou-mapping"] || {});
         programMappingApi.set(previousMappings["iw-program-mapping"] || {});
+        optionMappingApi.set(previousMappings["iw-option-mapping"] || {});
         onClose();
         stepper.next();
     };
@@ -68,13 +71,13 @@ const Step0 = () => {
             //     accessorKey: "firstName",
             //     cell: (info) => info.getValue(),
             // },
-            {
-                accessorFn: (row) => row.program,
-                id: "lastName",
-                cell: (info) => info.getValue(),
-                header: () => <span>Last Name</span>,
-                size: 20,
-            },
+            // {
+            //     accessorFn: (row) => row.program,
+            //     id: "lastName",
+            //     cell: (info) => info.getValue(),
+            //     header: () => <span>Last Name</span>,
+            //     size: 20,
+            // },
             // {
             //     accessorKey: "age",
             //     header: () => "Age",
@@ -94,11 +97,11 @@ const Step0 = () => {
             //     header: "Profile Progress",
             //     size: 80,
             // },
-            // {
-            //     accessorKey: "createdAt",
-            //     header: "Created At",
-            //     cell: (info) => info.getValue<Date>().toLocaleString(),
-            // },
+            {
+                accessorKey: "created",
+                header: "Created At",
+                // cell: (info) => info.getValue<Date>().toLocaleString(),
+            },
         ],
         []
     );

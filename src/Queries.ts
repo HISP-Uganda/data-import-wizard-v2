@@ -1,9 +1,15 @@
 import { useDataEngine } from "@dhis2/app-runtime";
-import { AxiosInstance } from "axios";
+import {
+    Authentication,
+    IProgram,
+    makeRemoteApi,
+    Param,
+} from "data-import-wizard-utils";
 import { fromPairs, groupBy, map, pick } from "lodash";
+import { isEmpty } from "lodash/fp";
 import { useQuery } from "react-query";
 import { closeDialog, setDataSets, setTotalDataSets } from "./Events";
-import { IProgram } from "./pages/program/Interfaces";
+import { tokenApi } from "./pages/program/Store";
 import { versionApi } from "./Store";
 import { convertDataToURL } from "./utils/utils";
 
@@ -70,7 +76,7 @@ export const loadProgram = async (engine: any, id: string) => {
         data: {
             resource: `programs/${id}.json`,
             params: {
-                fields: "trackedEntityType,organisationUnits[id,code,name],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+                fields: "trackedEntityType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
             },
         },
     };
@@ -144,20 +150,32 @@ export const usePrograms = (
         }
     );
 };
+
 export const fetchRemote = async <IData>(
-    api: AxiosInstance | undefined,
+    authentication: Partial<Authentication> | undefined,
     url: string = "",
-    params?: URLSearchParams
+    params: { [key: string]: Param } = {}
 ) => {
-    if (api && params) {
-        const { data } = await api.get<IData>(url, { params });
-        return data;
-    }
-    if (api) {
-        const { data } = await api.get<IData>(url);
-        return data;
-    }
-    return undefined;
+    const api = makeRemoteApi({
+        ...authentication,
+        params: { ...authentication?.params, ...params },
+    });
+    const { data } = await api.get<IData>(url);
+    return data;
+};
+
+export const postRemote = async <IData>(
+    authentication: Partial<Authentication> | undefined,
+    url: string = "",
+    payload: Object,
+    params: { [key: string]: Partial<Param> } = {}
+) => {
+    const api = makeRemoteApi({
+        ...authentication,
+        params: { ...(authentication?.params || {}), ...params },
+    });
+    const { data } = await api.post<IData>(url, payload);
+    return data;
 };
 
 export const makeQueryKeys = (params?: {
@@ -182,23 +200,99 @@ export const makeQueryKeys = (params?: {
     return { params: undefined, keys: "" };
 };
 
-export const useRemoteGet = <IData>(
-    api: AxiosInstance | undefined,
-    url: string = "",
-    queryParams?: {
-        [key: string]: Partial<{
-            param: string;
-            value: string;
-            forUpdates: boolean;
-        }>;
+export const useRemoteGet = <T, V>(
+    fields: Partial<{
+        authentication: Partial<Authentication> | undefined;
+        url: string;
+        getToken: boolean;
+        tokenGenerationURL: string;
+        tokenGenerationUsernameField: string;
+        tokenGenerationPasswordField: string;
+        tokenName: string;
+        tokenField: keyof V;
+        addTokenTo: "headers" | "params";
+    }> = {
+        tokenGenerationUsernameField: "username",
+        tokenGenerationPasswordField: "password",
+        getToken: false,
+        addTokenTo: "params",
+        tokenName: "access_token",
     }
 ) => {
-    const { keys, params } = makeQueryKeys(queryParams);
-    return useQuery<IData | undefined, Error>(
-        ["remote", url, keys],
+    const { keys } = makeQueryKeys(fields.authentication?.params);
+
+    return useQuery<T | undefined, Error>(
+        ["remote", fields.url, keys],
         async () => {
-            if (api && url) {
-                return await fetchRemote<IData>(api, url, params);
+            if (
+                fields.getToken &&
+                fields.tokenGenerationURL &&
+                fields.authentication?.username &&
+                fields.authentication.password &&
+                fields.tokenField &&
+                fields.tokenGenerationUsernameField &&
+                fields.tokenGenerationPasswordField
+            ) {
+                const {
+                    params,
+                    basicAuth,
+                    hasNextLink,
+                    headers,
+                    password,
+                    username,
+                    ...rest
+                } = fields.authentication;
+                const {
+                    tokenGenerationUsernameField,
+                    tokenGenerationPasswordField,
+                } = fields;
+                const data = await postRemote<V>(
+                    rest,
+                    fields.tokenGenerationURL,
+                    {
+                        [tokenGenerationUsernameField]:
+                            fields.authentication.username,
+                        [tokenGenerationPasswordField]:
+                            fields.authentication.password,
+                    }
+                );
+
+                if (data) {
+                    const token = data[fields.tokenField];
+                    tokenApi.set(token as string);
+                    let currentAuth: Partial<Authentication> = rest;
+                    if (fields.addTokenTo === "params") {
+                        currentAuth = {
+                            ...currentAuth,
+                            basicAuth: false,
+                            params: {
+                                ...params,
+                                auth: {
+                                    param: fields.tokenName,
+                                    value: token as string,
+                                },
+                            },
+                            headers,
+                        };
+                    } else {
+                        currentAuth = {
+                            ...currentAuth,
+                            basicAuth: false,
+                            headers: {
+                                ...headers,
+                                auth: {
+                                    param: fields.tokenName,
+                                    value: token as string,
+                                },
+                            },
+                            params,
+                        };
+                    }
+                    return await fetchRemote<T>(currentAuth, fields.url);
+                }
+            }
+            if (fields.authentication && fields.url) {
+                return await fetchRemote<T>(fields.authentication, fields.url);
             }
             return undefined;
         }
@@ -212,7 +306,7 @@ export const useProgram = (id: string | undefined) => {
         data: {
             resource: `programs/${id}.json`,
             params: {
-                fields: "organisationUnits[id,code,name],programStages[id,name,code,programStageDataElements[id,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,valueType,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+                fields: "organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,name,code,programStageDataElements[id,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,valueType,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
             },
         },
     };
@@ -220,6 +314,7 @@ export const useProgram = (id: string | undefined) => {
     return useQuery<Partial<IProgram>, Error>(["programs", id], async () => {
         if (id) {
             const { data }: any = await engine.query(programQuery);
+            console.log(data.organisationUnits[0]);
             return data;
         }
         return {};

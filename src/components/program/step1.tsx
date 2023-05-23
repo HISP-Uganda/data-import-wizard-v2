@@ -20,7 +20,7 @@ import {
 } from "@tanstack/react-table";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
-import { IProgram } from "diw-utils";
+import { IProgram } from "data-import-wizard-utils";
 import {
     $programMapping,
     programApi,

@@ -1,5 +1,5 @@
 import { ChangeEvent } from "react";
-import { changeData } from "../pages/program/Events";
+import { dataApi } from "../pages/program/Store";
 
 export default function FileUpload() {
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
@@ -9,7 +9,7 @@ export default function FileUpload() {
             fileReader.onload = async (e) => {
                 const result = e.target?.result;
                 if (result) {
-                    changeData(JSON.parse(String(result)));
+                    dataApi.changeData(JSON.parse(String(result)));
                 }
             };
             fileReader;
