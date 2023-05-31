@@ -4,6 +4,7 @@ import {
     convertToGoData,
     flattenTrackedEntityInstances,
     GODataTokenGenerationResponse,
+    postRemote,
     TrackedEntityInstance,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
@@ -16,7 +17,6 @@ import {
     $programMapping,
     $remoteAPI,
 } from "../../pages/program/Store";
-import { postRemote } from "../../Queries";
 import { $version } from "../../Store";
 import Progress from "../Progress";
 
@@ -135,7 +135,6 @@ export default function Step7() {
         ) {
             console.log("We seem to be in a wrong place");
         } else {
-            console.log("Are we here");
             const { enrollments, events, trackedEntities } = processed;
 
             if (trackedEntities && trackedEntities.length > 0) {

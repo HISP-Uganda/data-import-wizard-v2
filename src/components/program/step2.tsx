@@ -19,7 +19,12 @@ const importTypes: Option[] = [
 const Step2 = () => {
     const programMapping = useStore($programMapping);
     return (
-        <Stack spacing="30px">
+        <Stack
+            spacing="10px"
+            h="calc(100vh - 350px)"
+            maxH="calc(100vh - 350px)"
+            overflow="auto"
+        >
             <Stack>
                 <Text>Name</Text>
                 <Input

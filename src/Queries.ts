@@ -1,12 +1,13 @@
 import { useDataEngine } from "@dhis2/app-runtime";
 import {
     Authentication,
+    fetchRemote,
     IProgram,
     makeRemoteApi,
     Param,
+    postRemote,
 } from "data-import-wizard-utils";
 import { fromPairs, groupBy, map, pick } from "lodash";
-import { isEmpty } from "lodash/fp";
 import { useQuery } from "react-query";
 import { closeDialog, setDataSets, setTotalDataSets } from "./Events";
 import { tokenApi } from "./pages/program/Store";
@@ -149,33 +150,6 @@ export const usePrograms = (
             return { programs, total };
         }
     );
-};
-
-export const fetchRemote = async <IData>(
-    authentication: Partial<Authentication> | undefined,
-    url: string = "",
-    params: { [key: string]: Param } = {}
-) => {
-    const api = makeRemoteApi({
-        ...authentication,
-        params: { ...authentication?.params, ...params },
-    });
-    const { data } = await api.get<IData>(url);
-    return data;
-};
-
-export const postRemote = async <IData>(
-    authentication: Partial<Authentication> | undefined,
-    url: string = "",
-    payload: Object,
-    params: { [key: string]: Partial<Param> } = {}
-) => {
-    const api = makeRemoteApi({
-        ...authentication,
-        params: { ...(authentication?.params || {}), ...params },
-    });
-    const { data } = await api.post<IData>(url, payload);
-    return data;
 };
 
 export const makeQueryKeys = (params?: {

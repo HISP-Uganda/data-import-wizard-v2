@@ -12,7 +12,7 @@ import {
     stageMappingApi,
 } from "../../pages/program/Store";
 import { loadPreviousMapping, loadProgram, useNamespace } from "../../Queries";
-import { stepper } from "../../Store";
+import { actionApi, stepper } from "../../Store";
 import Progress from "../Progress";
 import TableDisplay from "../TableDisplay";
 
@@ -23,6 +23,7 @@ const Step0 = () => {
     const { isLoading, isSuccess, isError, error, data } =
         useNamespace<IProgramMapping>("iw-program-mapping");
     const loadMapping = async (namespaceKey: string) => {
+        actionApi.edit();
         setMessage(() => "Fetching saved mapping");
         onOpen();
         const previousMappings = await loadPreviousMapping(
@@ -67,39 +68,14 @@ const Step0 = () => {
                 accessorKey: "description",
                 header: "Description",
             },
-            // {
-            //     accessorKey: "firstName",
-            //     cell: (info) => info.getValue(),
-            // },
-            // {
-            //     accessorFn: (row) => row.program,
-            //     id: "lastName",
-            //     cell: (info) => info.getValue(),
-            //     header: () => <span>Last Name</span>,
-            //     size: 20,
-            // },
-            // {
-            //     accessorKey: "age",
-            //     header: () => "Age",
-            //     size: 50,
-            // },
-            // {
-            //     accessorKey: "visits",
-            //     header: () => <span>Visits</span>,
-            //     size: 50,
-            // },
-            // {
-            //     accessorKey: "status",
-            //     header: "Status",
-            // },
-            // {
-            //     accessorKey: "progress",
-            //     header: "Profile Progress",
-            //     size: 80,
-            // },
             {
                 accessorKey: "created",
                 header: "Created At",
+                // cell: (info) => info.getValue<Date>().toLocaleString(),
+            },
+            {
+                accessorKey: "lastUpdated",
+                header: "Updated At",
                 // cell: (info) => info.getValue<Date>().toLocaleString(),
             },
         ],
@@ -107,7 +83,11 @@ const Step0 = () => {
     );
     return (
         <Stack flex={1}>
-            {isLoading && <Spinner />}
+            {isLoading && (
+                <Stack h="100%" alignItems="center" justifyContent="center">
+                    <Spinner />
+                </Stack>
+            )}
             {isSuccess && (
                 <TableDisplay<IProgramMapping>
                     columns={columns}

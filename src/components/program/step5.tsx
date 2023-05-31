@@ -35,6 +35,7 @@ const Step5 = () => {
                     return (
                         psId === active && (
                             <ProgramStageMapping
+                                key={psId}
                                 psId={psId}
                                 repeatable={repeatable}
                                 programStageDataElements={

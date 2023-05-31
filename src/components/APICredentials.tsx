@@ -32,6 +32,7 @@ import {
     IProgramMapping,
     IProgram,
     GODataOption,
+    fetchRemote,
 } from "data-import-wizard-utils";
 import { Event } from "effector";
 import { useStore } from "effector-react";
@@ -47,7 +48,7 @@ import {
     programMappingApi,
     remoteOrganisationsApi,
 } from "../pages/program/Store";
-import { fetchRemote, makeQueryKeys, useRemoteGet } from "../Queries";
+import { makeQueryKeys, useRemoteGet } from "../Queries";
 import { generateUid } from "../utils/uid";
 import { APICredentialsModal } from "./APICredentialsModal";
 
@@ -98,6 +99,7 @@ const RemoteOutbreaks = ({ onClose }: { onClose: () => void }) => {
             updateEntities: true,
             incidentDateColumn: "dateOfOnset",
             enrollmentDateColumn: "dateOfOnset",
+            remoteProgram: outbreak.id,
         });
         onClose();
     };

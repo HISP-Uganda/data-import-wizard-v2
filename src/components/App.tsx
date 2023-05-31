@@ -83,7 +83,11 @@ const App = () => {
             maxH="calc(100vh - 48px)"
             minH="calc(100vh - 48px)"
         >
-            {isLoading && <Spinner />}
+            {isLoading && (
+                <Stack alignItems="center" justifyContent="center" h="100%">
+                    <Spinner />
+                </Stack>
+            )}
             {isSuccess && (
                 <Router
                     location={location}
