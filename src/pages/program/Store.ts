@@ -50,7 +50,7 @@ type Processed = {
 
 const authentication: Partial<Authentication> = {
     basicAuth: true,
-    url: "http://172.16.200.107",
+    url: "http://172.16.200.115",
     username: "ssekiwere@hispuganda.org",
     password: "123godataAdmin",
 };

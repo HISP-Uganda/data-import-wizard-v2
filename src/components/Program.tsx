@@ -1,6 +1,7 @@
 import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { Step } from "chakra-ui-steps";
+import dayjs from "dayjs";
 import { useStore } from "effector-react";
 
 import {
@@ -11,8 +12,9 @@ import {
     $organisationUnitMapping,
     $programMapping,
     $programStageMapping,
+    programMappingApi,
 } from "../pages/program/Store";
-import { $steps, stepper } from "../Store";
+import { $action, $steps, actionApi, stepper } from "../Store";
 import { OtherSystemMapping } from "./program/OtherSystemMapping";
 import Step0 from "./program/step0";
 import Step1 from "./program/step1";
@@ -38,6 +40,7 @@ const Program = () => {
     const programStageMapping = useStore($programStageMapping);
     const optionMapping = useStore($optionMapping);
     const label = useStore($label);
+    const action = useStore($action);
     const engine = useDataEngine();
 
     const steps: Step[] = [
@@ -62,42 +65,56 @@ const Program = () => {
     ];
 
     const onNextClick = () => {
+        if (activeStep === 0) {
+            programMappingApi.updateMany({
+                created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            });
+            actionApi.create();
+        }
         stepper.next();
     };
 
     const save = async () => {
+        const type = action === "creating" ? "create" : "update";
         const mutation: any = {
-            type: "create",
+            type,
             resource: `dataStore/iw-program-mapping/${programMapping.id}`,
-            data: programMapping,
+            data: {
+                ...programMapping,
+                lastUpdated: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+            },
         };
         const mutation2: any = {
-            type: "create",
+            type,
             resource: `dataStore/iw-ou-mapping/${programMapping.id}`,
             data: organisationUnitMapping,
         };
         const mutation3: any = {
-            type: "create",
+            type,
             resource: `dataStore/iw-attribute-mapping/${programMapping.id}`,
             data: attributeMapping,
         };
         const mutation4: any = {
-            type: "create",
+            type,
             resource: `dataStore/iw-stage-mapping/${programMapping.id}`,
             data: programStageMapping,
         };
         const mutation5: any = {
-            type: "create",
+            type,
             resource: `dataStore/iw-option-mapping/${programMapping.id}`,
             data: optionMapping,
         };
-        return await Promise.all([
+
+        const data = await Promise.all([
             engine.mutate(mutation),
             engine.mutate(mutation2),
             engine.mutate(mutation3),
             engine.mutate(mutation4),
             engine.mutate(mutation5),
         ]);
+
+        actionApi.edit();
+        return data;
     };
 
     return (

@@ -127,7 +127,7 @@ const Step1 = () => {
                     position="relative"
                     overflow="auto"
                     whiteSpace="nowrap"
-                    h="calc(100vh - 300px)"
+                    h="calc(100vh - 350px)"
                 >
                     {isLoading && (
                         <Stack

@@ -13,3 +13,10 @@ export const stepper = createApi($steps, {
 export const versionApi = createApi($version, {
     set: (_, value: number) => value,
 });
+
+export const $action = domain.createStore<"creating" | "editing">("creating");
+
+export const actionApi = createApi($action, {
+    edit: () => "editing",
+    create: () => "creating",
+});

@@ -8,7 +8,7 @@ import {
     useToast,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { IProgramMapping, Option } from "data-import-wizard-utils";
+import { IProgramMapping, Option, fetchRemote } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useEffect } from "react";
@@ -22,7 +22,6 @@ import {
     dataApi,
     programMappingApi,
 } from "../../pages/program/Store";
-import { fetchRemote } from "../../Queries";
 import Progress from "../Progress";
 
 const CheckSelect = ({
@@ -40,9 +39,9 @@ const CheckSelect = ({
     const isManual = !programMapping.isDHIS2 && programMapping.isSource;
 
     return (
-        <Stack spacing="10px">
+        <Stack spacing="10px" direction="row" alignItems="center">
             <Text w="200px">{label}</Text>
-            <Stack direction="row">
+            <Stack flex={1}>
                 {!isManual && (
                     <Checkbox
                         isChecked={!!programMapping[otherField]}
@@ -53,10 +52,10 @@ const CheckSelect = ({
                             })
                         }
                     >
-                        Manually Map {label}
+                        Custom {label}
                     </Checkbox>
                 )}
-                <Box flex={1}>
+                <Box>
                     {!programMapping[otherField] && !isManual ? (
                         <Select<Option, false, GroupBase<Option>>
                             options={metadata.sourceColumns}
@@ -76,7 +75,6 @@ const CheckSelect = ({
                         />
                     ) : (
                         <Input
-                            flex={1}
                             value={String(getOr("", field, programMapping))}
                             onChange={(e) =>
                                 programMappingApi.update({
@@ -143,7 +141,7 @@ export default function Step10() {
         }
     }, []);
     return (
-        <Stack spacing="20px">
+        <Stack spacing="30px">
             {!programMapping.isDHIS2 && (
                 <CheckSelect
                     otherField="manuallyMapOrgUnitColumn"

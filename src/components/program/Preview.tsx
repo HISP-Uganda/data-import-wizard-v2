@@ -1,5 +1,4 @@
 import {
-    Box,
     Stack,
     Tab,
     TabList,
@@ -13,9 +12,9 @@ import { useDataEngine } from "@dhis2/app-runtime";
 import { ColumnDef } from "@tanstack/react-table";
 import {
     convertToDHIS2,
-    processPreviousInstances,
     Enrollment,
     Event,
+    processPreviousInstances,
     TrackedEntityInstance,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
@@ -24,17 +23,17 @@ import { useEffect, useMemo, useState } from "react";
 import {
     $attributeMapping,
     $data,
+    $metadata,
     $organisationUnitMapping,
     $processed,
+    $program,
     $programMapping,
     $programStageMapping,
     $programStageUniqueElements,
+    $programTypes,
     $programUniqAttributes,
     $programUniqColumns,
     processor,
-    $metadata,
-    $program,
-    $programTypes,
 } from "../../pages/program/Store";
 import { $version } from "../../Store";
 import Progress from "../Progress";
@@ -160,13 +159,11 @@ export default function Preview() {
         onOpen();
         setMessage(() => "Fetching previous data");
         let foundInstances: Array<TrackedEntityInstance> = [];
-        console.log(metadata.uniqueAttributeValues);
         for (const attributeValues of chunk(
             50,
             metadata.uniqueAttributeValues
         )) {
             let params = new URLSearchParams();
-
             Object.entries(groupBy("attribute", attributeValues)).forEach(
                 ([attribute, values]) => {
                     params.append(
@@ -187,7 +184,6 @@ export default function Preview() {
                     resource: `trackedEntityInstances.json?${params.toString()}`,
                 },
             });
-
             foundInstances = [...foundInstances, ...trackedEntityInstances];
         }
 
@@ -208,9 +204,6 @@ export default function Preview() {
             organisationUnitMapping,
             attributeMapping,
             programStageMapping,
-            programUniqAttributes,
-            programStageUniqueElements,
-            programUniqColumns,
             version,
             program,
             elements,
