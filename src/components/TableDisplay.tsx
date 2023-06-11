@@ -128,19 +128,24 @@ export default function TableDisplay<TData>({
         return <>Loading...</>;
     }
     return (
-        <Stack flex={1}>
+        <Stack h="calc(100vh - 322px)">
             <Box
                 overflow="auto"
-                flex={1}
                 onScroll={(e) =>
                     fetchMoreOnBottomReached(e.target as HTMLDivElement)
                 }
                 ref={tableContainerRef}
+                h="calc(100vh - 372px)"
             >
                 <Table>
                     <Thead>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <Tr key={headerGroup.id}>
+                            <Tr
+                                key={headerGroup.id}
+                                top={0}
+                                position="sticky"
+                                bg="white"
+                            >
                                 {headerGroup.headers.map((header) => {
                                     return (
                                         <Th

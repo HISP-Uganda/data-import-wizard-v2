@@ -24,6 +24,7 @@ import {
     $attributeMapping,
     $data,
     $metadata,
+    $optionMapping,
     $organisationUnitMapping,
     $processed,
     $program,
@@ -151,6 +152,7 @@ export default function Preview() {
     const programUniqAttributes = useStore($programUniqAttributes);
     const programStageUniqueElements = useStore($programStageUniqueElements);
     const programUniqColumns = useStore($programUniqColumns);
+    const optionMapping = useStore($optionMapping);
     const processed = useStore($processed);
     const data = useStore($data);
     const [message, setMessage] = useState<string>("");
@@ -204,6 +206,7 @@ export default function Preview() {
             organisationUnitMapping,
             attributeMapping,
             programStageMapping,
+            optionMapping,
             version,
             program,
             elements,

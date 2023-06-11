@@ -23,6 +23,7 @@ import {
     useDisclosure,
 } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
+import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { GroupBase, Select } from "chakra-react-select";
 import { generateUid, ISchedule, Option } from "data-import-wizard-utils";
@@ -43,6 +44,7 @@ const Schedule = () => {
     const [isScheduleCustom, setIsScheduleCustom] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [action, setAction] = useState<string>("create");
+    const queryClient = useQueryClient();
     const schedulePeriods: Option[] = [
         { label: "Every5s", value: "*/5 * * * * *" },
         { label: "Minutely", value: "* * * * *" },
@@ -64,6 +66,20 @@ const Schedule = () => {
 
     const { isLoading, isSuccess, isError, error, data } =
         useNamespace<ISchedule>("iw-schedules");
+
+    const update = async (schedule: Partial<ISchedule>) => {
+        await queryClient.cancelQueries(["namespaces", "iw-schedules"]);
+        queryClient.setQueryData<ISchedule[]>(
+            ["namespaces", "iw-schedules"],
+            (old) =>
+                old?.map((s) => {
+                    if (s.id === schedule.id) {
+                        return { ...s, ...schedule };
+                    }
+                    return s;
+                })
+        );
+    };
 
     const createSchedule = () => {
         setSchedule(() => {
@@ -110,23 +126,17 @@ const Schedule = () => {
 
     const start = async (schedule: Partial<ISchedule>) => {
         if (schedule.id && schedule.schedule && schedule.schedulingSeverURL) {
-            const { data } = await axios.post(
-                `${schedule.schedulingSeverURL}/start`,
-                schedule
-            );
-
-            console.log(data);
+            await axios.post(`${schedule.schedulingSeverURL}/start`, schedule);
+            await update({ status: "running" });
         }
     };
 
     const stop = async (schedule: Partial<ISchedule>) => {
         if (schedule.id && schedule.schedule && schedule.schedulingSeverURL) {
-            const { data } = await axios.post(
-                `${schedule.schedulingSeverURL}/stop`,
-                { id: schedule.id }
-            );
-
-            console.log(data);
+            await axios.post(`${schedule.schedulingSeverURL}/stop`, {
+                id: schedule.id,
+            });
+            await update({ status: "stopped" });
         }
     };
     return (

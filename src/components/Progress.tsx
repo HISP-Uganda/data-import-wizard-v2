@@ -16,7 +16,12 @@ type ProgressProps = {
 };
 const Progress = ({ message, onClose, isOpen }: ProgressProps) => {
     return (
-        <Modal onClose={onClose} isOpen={isOpen} isCentered>
+        <Modal
+            onClose={onClose}
+            isOpen={isOpen}
+            isCentered
+            closeOnOverlayClick={false}
+        >
             <ModalOverlay />
             <ModalContent w="100%" boxShadow="none" bg="none">
                 <ModalBody m="0" p="10px">

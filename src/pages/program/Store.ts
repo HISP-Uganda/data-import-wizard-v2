@@ -59,7 +59,7 @@ const defaultMapping: Partial<IProgramMapping> = {
     id: generateUid(),
     name: "Example Mapping",
     description: "This an example mapping",
-    program: "IpHINAT79UW",
+    // program: "IpHINAT79UW",
     trackedEntityType: "nEenWmSyUEp",
     dataSource: "godata",
     authentication,
@@ -208,7 +208,24 @@ export const programMappingApi = createApi($programMapping, {
 export const $disabled = combine(
     $programMapping,
     $steps,
-    (programMapping, step) => isDisabled(programMapping, step, mySchema)
+    $programStageMapping,
+    $attributeMapping,
+    $organisationUnitMapping,
+    (
+        programMapping,
+        step,
+        programStageMapping,
+        attributeMapping,
+        organisationUnitMapping
+    ) =>
+        isDisabled(
+            programMapping,
+            programStageMapping,
+            attributeMapping,
+            organisationUnitMapping,
+            step,
+            mySchema
+        )
 );
 
 export const $columns = $data.map((state) => findColumns(state));

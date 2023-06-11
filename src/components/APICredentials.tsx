@@ -42,6 +42,7 @@ import {
     $metadataAuthApi,
     $programMapping,
     $token,
+    currentSourceOptionsApi,
     dhis2ProgramApi,
     goDataApi,
     goDataOptionsApi,
@@ -85,6 +86,11 @@ const RemoteOutbreaks = ({ onClose }: { onClose: () => void }) => {
                 params: { auth: { param: "access_token", value: token } },
             },
             "api/reference-data"
+        );
+        currentSourceOptionsApi.set(
+            goDataOptions.map(({ id }) => {
+                return { label: id, value: id };
+            })
         );
         goDataOptionsApi.set(goDataOptions);
         goDataApi.set(outbreak);
@@ -233,7 +239,10 @@ const AddableValues = ({
                 <IconButton
                     bgColor="none"
                     aria-label="add"
-                    icon={<AddIcon w={2} h={2} />}
+                    icon={<AddIcon w={3} h={3} />}
+                    size="sm"
+                    variant="ghost"
+                    _hover={{ bg: "none" }}
                     onClick={() =>
                         updateMapping({
                             attribute: `${accessor}.${attribute}.${generateUid()}`,

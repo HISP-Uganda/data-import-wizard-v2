@@ -102,7 +102,8 @@ const Step4 = () => {
 
     const openOptionSetDialog = (id: string, options?: CommonIdentifier[]) => {
         if (
-            programMapping.prefetch ||
+            (programMapping.prefetch &&
+                programMapping.dataSource !== "godata") ||
             ["xlsx", "json", "csv"].indexOf(programMapping.dataSource || "") !==
                 -1
         ) {
@@ -441,7 +442,7 @@ const Step4 = () => {
                 isOpen={isOpen}
                 onClose={onClose}
                 scrollBehavior="inside"
-                size="4xl"
+                size="6xl"
             >
                 <ModalOverlay />
                 <ModalContent>
@@ -474,7 +475,7 @@ const Step4 = () => {
                                                             getOr(
                                                                 "",
                                                                 code,
-                                                                optionMappingApi
+                                                                optionMapping
                                                             )
                                                     )}
                                                     options={
