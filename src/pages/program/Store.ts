@@ -29,6 +29,7 @@ import {
 
 import { combine, createApi } from "effector";
 import produce from "immer";
+import { Dictionary } from "lodash";
 import { isEmpty, set } from "lodash/fp";
 import { z } from "zod";
 import { domain } from "../../Domain";
@@ -50,16 +51,16 @@ type Processed = {
 
 const authentication: Partial<Authentication> = {
     basicAuth: true,
-    url: "http://172.16.200.115",
-    username: "ssekiwere@hispuganda.org",
-    password: "123godataAdmin",
+    url: "https://go.sk-engine.cloud",
+    username: "colupot@hispuganda.org",
+    password: "Tesocollege77",
 };
 
 const defaultMapping: Partial<IProgramMapping> = {
     id: generateUid(),
     name: "Example Mapping",
     description: "This an example mapping",
-    program: "IpHINAT79UW",
+    // program: "IpHINAT79UW",
     trackedEntityType: "nEenWmSyUEp",
     dataSource: "godata",
     authentication,
@@ -208,7 +209,24 @@ export const programMappingApi = createApi($programMapping, {
 export const $disabled = combine(
     $programMapping,
     $steps,
-    (programMapping, step) => isDisabled(programMapping, step, mySchema)
+    $programStageMapping,
+    $attributeMapping,
+    $organisationUnitMapping,
+    (
+        programMapping,
+        step,
+        programStageMapping,
+        attributeMapping,
+        organisationUnitMapping
+    ) =>
+        isDisabled(
+            programMapping,
+            programStageMapping,
+            attributeMapping,
+            organisationUnitMapping,
+            step,
+            mySchema
+        )
 );
 
 export const $columns = $data.map((state) => findColumns(state));
@@ -294,6 +312,11 @@ export const goDataApi = createApi($goData, {
     set: (_, data: Partial<IGoData>) => data,
 });
 
+export const $tokens = domain.createStore<Dictionary<string>>({});
+export const tokensApi = createApi($tokens, {
+    set: (_, values: Dictionary<string>) => values,
+});
+
 export const $metadata = combine(
     $programMapping,
     $program,
@@ -303,6 +326,7 @@ export const $metadata = combine(
     $attributeMapping,
     $remoteOrganisations,
     $goData,
+    $tokens,
     (
         programMapping,
         program,
@@ -311,7 +335,8 @@ export const $metadata = combine(
         programStageMapping,
         attributeMapping,
         remoteOrganisations,
-        goData
+        goData,
+        tokens
     ) =>
         makeMetadata(
             programMapping,
@@ -321,7 +346,8 @@ export const $metadata = combine(
             programStageMapping,
             attributeMapping,
             remoteOrganisations,
-            goData
+            goData,
+            tokens
         )
 );
 export const $flattenedProgram = $program.map((state) => {
@@ -348,14 +374,13 @@ export const $flattenedProgramKeys = $programMapping.map((state) => {
 });
 
 export const $token = domain.createStore<string>("");
-
 export const tokenApi = createApi($token, {
     set: (_, token: string) => token,
 });
 
-export const $currentOptions = domain.createStore<CommonIdentifier[]>([]);
+export const $currentOptions = domain.createStore<Option[]>([]);
 export const currentOptionsApi = createApi($currentOptions, {
-    set: (_, options: CommonIdentifier[]) => options,
+    set: (_, options: Option[]) => options,
 });
 
 export const $optionMapping = domain.createStore<Record<string, string>>({});

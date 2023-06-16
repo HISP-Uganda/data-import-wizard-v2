@@ -3,8 +3,6 @@ import {
     Authentication,
     fetchRemote,
     IProgram,
-    makeRemoteApi,
-    Param,
     postRemote,
 } from "data-import-wizard-utils";
 import { fromPairs, groupBy, map, pick } from "lodash";
@@ -32,6 +30,7 @@ export const useInitials = () => {
     });
 };
 export const useNamespace = <IData>(namespace: string) => {
+    console.log(namespace);
     const engine = useDataEngine();
     const namespaceQuery = {
         namespaceKeys: {
@@ -288,7 +287,6 @@ export const useProgram = (id: string | undefined) => {
     return useQuery<Partial<IProgram>, Error>(["programs", id], async () => {
         if (id) {
             const { data }: any = await engine.query(programQuery);
-            console.log(data.organisationUnits[0]);
             return data;
         }
         return {};

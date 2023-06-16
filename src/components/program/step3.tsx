@@ -51,7 +51,7 @@ const Step3 = () => {
     const [fetching, setFetching] = useState<boolean>(false);
     const inputRef = useRef<HTMLInputElement>(null);
     const [currentOrganisations, setCurrentOrganisations] = useState(
-        metadata.destinationOrgUnits
+        metadata.destinationOrgUnits || []
     );
 
     const [ouSearch, setOuSearch] = useState<string>("");
@@ -68,7 +68,7 @@ const Step3 = () => {
         pageSize,
         setPageSize,
     } = usePagination({
-        total: currentOrganisations.length,
+        total: currentOrganisations?.length || 0,
         limits: {
             outer: outerLimit,
             inner: innerLimit,
@@ -312,8 +312,9 @@ const Step3 = () => {
                 <Tfoot>
                     <Tr>
                         <Td colSpan={4} textAlign="right">
-                            Mapped {Object.keys(organisationUnitMapping).length}{" "}
-                            of {metadata.destinationOrgUnits.length}
+                            Mapped{" "}
+                            {Object.keys(organisationUnitMapping || {}).length}{" "}
+                            of {metadata.destinationOrgUnits?.length || 0}
                         </Td>
                     </Tr>
                 </Tfoot>
