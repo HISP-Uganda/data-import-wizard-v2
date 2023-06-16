@@ -42,7 +42,6 @@ const Program = () => {
     const label = useStore($label);
     const action = useStore($action);
     const engine = useDataEngine();
-
     const steps: Step[] = [
         { label: "Saved Mapping", content: <Step0 />, id: 1 },
         { label: "Select Program", content: <Step1 />, id: 2 },

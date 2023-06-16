@@ -199,6 +199,7 @@ export default function TableDisplay<TData>({
                                             ? onRowClick(row.getValue("id"))
                                             : undefined
                                     }
+                                    cursor="pointer"
                                 >
                                     {row.getVisibleCells().map((cell) => {
                                         return (

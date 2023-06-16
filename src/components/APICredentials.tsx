@@ -36,6 +36,7 @@ import {
 } from "data-import-wizard-utils";
 import { Event } from "effector";
 import { useStore } from "effector-react";
+import { fromPairs } from "lodash";
 import { getOr, isEmpty } from "lodash/fp";
 import { ChangeEvent, useRef, useState } from "react";
 import {
@@ -48,6 +49,7 @@ import {
     goDataOptionsApi,
     programMappingApi,
     remoteOrganisationsApi,
+    tokensApi,
 } from "../pages/program/Store";
 import { makeQueryKeys, useRemoteGet } from "../Queries";
 import { generateUid } from "../utils/uid";
@@ -80,19 +82,39 @@ const RemoteOutbreaks = ({ onClose }: { onClose: () => void }) => {
             "api/locations"
         );
 
-        const goDataOptions = await fetchRemote<GODataOption[]>(
+        const tokens = await fetchRemote<{
+            languageId: string;
+            lastUpdateDate: string;
+            tokens: Array<{ token: string; translation: string }>;
+        }>(
             {
                 ...programMapping.authentication,
                 params: { auth: { param: "access_token", value: token } },
             },
-            "api/reference-data"
+            "api/languages/english_us/language-tokens"
         );
-        currentSourceOptionsApi.set(
-            goDataOptions.map(({ id }) => {
-                return { label: id, value: id };
-            })
+
+        const allTokens = fromPairs(
+            tokens.tokens.map(({ token, translation }) => [token, translation])
         );
-        goDataOptionsApi.set(goDataOptions);
+        console.log(allTokens);
+
+        tokensApi.set(allTokens);
+        if (!programMapping.isSource) {
+            const goDataOptions = await fetchRemote<GODataOption[]>(
+                {
+                    ...programMapping.authentication,
+                    params: { auth: { param: "access_token", value: token } },
+                },
+                "api/reference-data"
+            );
+            currentSourceOptionsApi.set(
+                goDataOptions.map(({ id }) => {
+                    return { label: id, value: id };
+                })
+            );
+            goDataOptionsApi.set(goDataOptions);
+        }
         goDataApi.set(outbreak);
         if (organisations) {
             remoteOrganisationsApi.set(getLowestLevelParents(organisations));

@@ -24,7 +24,7 @@ import {
     useDisclosure,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { CommonIdentifier, Option } from "data-import-wizard-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { FiCheck } from "react-icons/fi";
@@ -39,12 +39,11 @@ import {
     $optionMapping,
     $programMapping,
     attributeMappingApi,
-    currentOptionsApi,
-    currentSourceOptionsApi,
     optionMappingApi,
     programMappingApi,
 } from "../../pages/program/Store";
 import DestinationIcon from "../DestinationIcon";
+import OptionSetMapping from "../OptionSetMapping";
 import Paginated from "../Paginated";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
@@ -98,27 +97,6 @@ const Step4 = () => {
                 value,
             });
         }
-    };
-
-    const openOptionSetDialog = (id: string, options?: CommonIdentifier[]) => {
-        if (
-            (programMapping.prefetch &&
-                programMapping.dataSource !== "godata") ||
-            ["xlsx", "json", "csv"].indexOf(programMapping.dataSource || "") !==
-                -1
-        ) {
-            const allOptions = data.flatMap((d) => {
-                const value: string = getOr("", id, d);
-                if (value) {
-                    const opt: Option = { value, label: value };
-                    return opt;
-                }
-                return [];
-            });
-            currentSourceOptionsApi.set(allOptions);
-        }
-        currentOptionsApi.set(options || []);
-        onOpen();
     };
 
     useEffect(() => {
@@ -352,7 +330,7 @@ const Step4 = () => {
                                                 false,
                                                 GroupBase<Option>
                                             >
-                                                value={metadata.sourceAttributes.find(
+                                                value={metadata.sourceColumns.find(
                                                     (val) =>
                                                         val.value ===
                                                         getOr(
@@ -361,9 +339,7 @@ const Step4 = () => {
                                                             attributeMapping
                                                         )
                                                 )}
-                                                options={
-                                                    metadata.sourceAttributes
-                                                }
+                                                options={metadata.sourceColumns}
                                                 isClearable
                                                 onChange={(e) =>
                                                     updateAttribute([
@@ -388,22 +364,10 @@ const Step4 = () => {
                                     </Td>
                                     <Td>
                                         {optionSetValue && (
-                                            <Button
-                                                onClick={() =>
-                                                    openOptionSetDialog(
-                                                        String(
-                                                            getOr(
-                                                                "",
-                                                                `${value}.value`,
-                                                                attributeMapping
-                                                            )
-                                                        ),
-                                                        options
-                                                    )
-                                                }
-                                            >
-                                                Map Options
-                                            </Button>
+                                            <OptionSetMapping
+                                                value={value}
+                                                options={options || []}
+                                            />
                                         )}
                                     </Td>
                                     <Td textAlign="center">
@@ -459,9 +423,9 @@ const Step4 = () => {
                                 </Tr>
                             </Thead>
                             <Tbody>
-                                {currentOptions.map(({ name, code }) => (
+                                {currentOptions.map(({ label, code }) => (
                                     <Tr key={code}>
-                                        <Td w="400px">{name}</Td>
+                                        <Td w="400px">{label}</Td>
                                         <Td textAlign="center">
                                             {currentSourceOptions.length > 0 ? (
                                                 <Select<
@@ -474,7 +438,7 @@ const Step4 = () => {
                                                             val.value ===
                                                             getOr(
                                                                 "",
-                                                                code,
+                                                                code || "",
                                                                 optionMapping
                                                             )
                                                     )}
@@ -484,7 +448,7 @@ const Step4 = () => {
                                                     isClearable
                                                     onChange={(e) =>
                                                         optionMappingApi.add({
-                                                            key: code,
+                                                            key: code || "",
                                                             value:
                                                                 e?.value || "",
                                                         })
@@ -492,12 +456,16 @@ const Step4 = () => {
                                                 />
                                             ) : (
                                                 <Input
-                                                    value={optionMapping[code]}
+                                                    value={
+                                                        optionMapping[
+                                                            code || ""
+                                                        ]
+                                                    }
                                                     onChange={(
                                                         e: ChangeEvent<HTMLInputElement>
                                                     ) =>
                                                         optionMappingApi.add({
-                                                            key: code,
+                                                            key: code || "",
                                                             value: e.target
                                                                 .value,
                                                         })
