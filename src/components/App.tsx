@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-location";
 
 import { LocationGenerics } from "../Interfaces";
+import PDF from "../pages/PDF";
 import { useInitials } from "../Queries";
 import { decodeFromBinary, encodeToBinary } from "../utils/utils";
 import Aggregate from "./Aggregate";
@@ -71,6 +72,15 @@ const routes: Route<LocationGenerics>[] = [
             {
                 path: "/",
                 element: <Schedule />,
+            },
+        ],
+    },
+    {
+        path: "/docs",
+        children: [
+            {
+                path: "/",
+                element: <PDF />,
             },
         ],
     },

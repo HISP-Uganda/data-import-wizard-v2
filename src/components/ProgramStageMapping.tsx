@@ -140,7 +140,7 @@ export default function ProgramStageMapping({
     };
 
     return (
-        <Stack key={psId} spacing="30px">
+        <Stack key={psId} spacing="20px">
             <Stack spacing={[1, 5]} direction={["column", "row"]}>
                 <Checkbox
                     colorScheme="green"
@@ -295,15 +295,15 @@ export default function ProgramStageMapping({
                     </Stack>
                 </Stack>
 
-                {programMapping.isDHIS2 && (
+                {programMapping.dataSource === "dhis2" && (
                     <Stack spacing="20px" flex={1}>
                         <Text>Specific Stage</Text>
                         <Box w="100%">
                             <Select<Option, false, GroupBase<Option>>
-                                value={metadata.stages.find(
+                                value={metadata.destinationStages.find(
                                     (val) => val.value === stage
                                 )}
-                                options={metadata.stages}
+                                options={metadata.destinationStages}
                                 isClearable
                                 onChange={(e) => {
                                     stageMappingApi.update({
@@ -346,30 +346,24 @@ export default function ProgramStageMapping({
             <Table size="sm">
                 <Thead>
                     <Tr>
-                        <Th py="20px">
+                        <Th>
                             <Stack direction="row" alignItems="center">
                                 <DestinationIcon />
                                 <Text> Destination Data Element</Text>
                             </Stack>
                         </Th>
-                        <Th textAlign="center" py="20px">
-                            Compulsory
-                        </Th>
-                        <Th textAlign="center" py="20px">
-                            Manually Map
-                        </Th>
-                        <Th py="20px">
+                        <Th textAlign="center">Compulsory</Th>
+                        <Th textAlign="center">Custom</Th>
+                        <Th>
                             <Stack direction="row" alignItems="center">
                                 <SourceIcon />
                                 <Text> Source Data Element</Text>
                             </Stack>
                         </Th>
-                        <Th w="150px" textAlign="center" py="20px">
+                        <Th w="150px" textAlign="center">
                             Is Unique
                         </Th>
-                        <Th w="100px" py="20px">
-                            Mapped?
-                        </Th>
+                        <Th w="75px">Mapped?</Th>
                     </Tr>
                 </Thead>
                 <Tbody>
@@ -524,8 +518,13 @@ export default function ProgramStageMapping({
                 <Tfoot>
                     <Tr>
                         <Td colSpan={6} textAlign="right">
-                            Mapped {Object.keys(rest).length} of{" "}
-                            {metadata.destinationAttributes.length}
+                            Mapped{" "}
+                            {
+                                Object.values(rest).filter(
+                                    ({ value }) => !!value
+                                ).length
+                            }{" "}
+                            of {currentElements.length}
                         </Td>
                     </Tr>
                 </Tfoot>

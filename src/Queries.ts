@@ -30,7 +30,6 @@ export const useInitials = () => {
     });
 };
 export const useNamespace = <IData>(namespace: string) => {
-    console.log(namespace);
     const engine = useDataEngine();
     const namespaceQuery = {
         namespaceKeys: {

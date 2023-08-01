@@ -11,7 +11,7 @@ export const available: any = {
             p="0"
             m="0"
         >
-            <Image src="/excel.svg" alt="xlsx" />
+            <Image src="./excel.svg" alt="xlsx" />
         </Stack>
     ),
     dhis2: (
@@ -22,7 +22,7 @@ export const available: any = {
             p="0"
             m="0"
         >
-            <Image src="/dhis2.svg" alt="dhis2" />
+            <Image src="./dhis2.svg" alt="dhis2" />
         </Stack>
     ),
     api: (
@@ -33,7 +33,7 @@ export const available: any = {
             p="0"
             m="0"
         >
-            <Image src="/api.svg" alt="api" />
+            <Image src="./api.svg" alt="api" />
         </Stack>
     ),
     csv: (
@@ -44,7 +44,7 @@ export const available: any = {
             p="0"
             m="0"
         >
-            <Image src="/csv.svg" alt="csv" />
+            <Image src="./csv.svg" alt="csv" />
         </Stack>
     ),
     json: (
@@ -55,7 +55,7 @@ export const available: any = {
             p="0"
             m="0"
         >
-            <Image src="/json.svg" alt="json" />
+            <Image src="./json.svg" alt="json" />
         </Stack>
     ),
     godata: (
@@ -66,7 +66,7 @@ export const available: any = {
             p="0"
             m="0"
         >
-            <Image src="/godata.svg" alt="godata" />
+            <Image src="./godata.svg" alt="godata" />
         </Stack>
     ),
 };

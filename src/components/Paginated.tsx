@@ -40,12 +40,12 @@ export default function Paginated({
                     w="full"
                 >
                     <PaginationPrevious
-                        _hover={{
-                            bg: "yellow.400",
-                        }}
-                        bg="yellow.300"
+                    // _hover={{
+                    //     bg: "yellow.400",
+                    // }}
+                    // bg="yellow.300"
                     >
-                        <Text>Previous</Text>
+                        <Text>Previous Page</Text>
                     </PaginationPrevious>
                     <PaginationPageGroup
                         isInline
@@ -53,7 +53,7 @@ export default function Paginated({
                         separator={
                             <PaginationSeparator
                                 isDisabled
-                                bg="blue.300"
+                                bg="blue.600"
                                 fontSize="sm"
                                 w={7}
                                 jumpSize={11}
@@ -63,28 +63,29 @@ export default function Paginated({
                         {pages.map((page: number) => (
                             <PaginationPage
                                 w={10}
-                                bg="red.300"
                                 key={`pagination_page_${page}`}
                                 page={page}
                                 fontSize="sm"
                                 _hover={{
-                                    bg: "green.300",
+                                    bg: "blue.50",
+                                    color: "gray.600",
                                 }}
                                 _current={{
-                                    bg: "green.300",
+                                    bg: "blue.400",
                                     fontSize: "sm",
+                                    color: "white",
                                     w: 10,
                                 }}
                             />
                         ))}
                     </PaginationPageGroup>
                     <PaginationNext
-                        _hover={{
-                            bg: "yellow.400",
-                        }}
-                        bg="yellow.300"
+                    // _hover={{
+                    //     bg: "yellow.400",
+                    // }}
+                    // bg="yellow.300"
                     >
-                        <Text>Next</Text>
+                        <Text>Next Page</Text>
                     </PaginationNext>
                 </PaginationContainer>
             </Pagination>

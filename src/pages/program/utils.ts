@@ -117,7 +117,6 @@ const processEvents = (
             if (repeatable) {
                 return allValues.flatMap(([key, currentRow]) => {
                     const prev = stagePreviousEvents[key];
-                    console.log(prev);
                     return currentRow.flatMap((row) => {
                         const eventDate: string = format(
                             "yyyy-MM-dd",
@@ -340,8 +339,6 @@ export const processData = async (
                 );
                 const { ["lZGmxYbs97q"]: removed, ...rest } =
                     currentAttributeValues;
-                console.log(rest, attributesSchema, currentAttributeValues);
-                console.log(attributesSchema.parse(currentAttributeValues));
 
                 if (previousAttributes.length > 0 && updateEntities) {
                     if (
