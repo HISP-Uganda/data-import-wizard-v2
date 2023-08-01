@@ -5,6 +5,7 @@ import {
     Button,
     Flex,
     HStack,
+    Tooltip,
     useColorModeValue,
     useDisclosure,
 } from "@chakra-ui/react";
@@ -26,11 +27,23 @@ const NavBar = () => {
                         <Button
                             fontWeight={"small"}
                             onClick={() => {
-                                navigate({ to: "/program", search });
+                                navigate({ to: "", search });
                             }}
                         >
-                            Tracker
+                            Overview
                         </Button>
+                        <Tooltip label={"Import data into a tracker or event program"}>
+                            <Button
+                                fontWeight={"small"}
+                                onClick={() => {
+                                    navigate({ to: "/program", search });
+                                }}
+                            >
+                                Program
+                            </Button>
+                        </Tooltip>
+
+                        <Tooltip label={"Import aggregate data"}>
                         <Button
                             fontWeight={"small"}
                             onClick={() => {
@@ -39,6 +52,8 @@ const NavBar = () => {
                         >
                             Aggregate
                         </Button>
+                        </Tooltip>
+                        <Tooltip label={"Schedule data import based on saved mapping"}>
                         <Button
                             fontWeight={"small"}
                             onClick={() => {
@@ -47,6 +62,9 @@ const NavBar = () => {
                         >
                             Schedule
                         </Button>
+                        </Tooltip>
+
+                        <Tooltip label={"Map and import organisation units"}>
                         <Button
                             fontWeight={"small"}
                             onClick={() => {
@@ -55,6 +73,19 @@ const NavBar = () => {
                         >
                             Organisation
                         </Button>
+                        </Tooltip>
+
+                        <Tooltip label={"Browse documentation"}>
+                        <Button
+                            fontWeight={"small"}
+                            onClick={() => {
+                                navigate({ to: "/docs", search });
+                            }}
+                        >
+                            Documentation
+                        </Button>
+                        </Tooltip>
+
                     </HStack>
                 </HStack>
             </Flex>
