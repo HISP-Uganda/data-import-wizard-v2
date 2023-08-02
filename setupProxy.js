@@ -17,7 +17,7 @@ const onProxyRes = (proxyRes) => {
 };
 // proxy middleware options
 const options = {
-    target: "https://ugandaeidsr.org/",
+    target: "https://ugandaeidsr.org",
     onProxyReq,
     onProxyRes,
     changeOrigin: true,

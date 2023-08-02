@@ -1,7 +1,6 @@
 import {
     Authentication,
     canQueryDHIS2,
-    CommonIdentifier,
     Enrollment,
     Event,
     findColumns,
@@ -52,8 +51,25 @@ type Processed = {
 const authentication: Partial<Authentication> = {
     basicAuth: true,
     url: "https://go.sk-engine.cloud",
+    // url: "https://apitest.cphluganda.org/case_details",
     username: "colupot@hispuganda.org",
     password: "Tesocollege77",
+    // username: "",
+    // password: "",
+    // params: {
+    //     token: {
+    //         param: "token",
+    //         value: "PMAK-5ed7e01fdfcba0004d318db7-1e8d8c59a69c393b173c31d47dd1014267",
+    //     },
+    //     start: {
+    //         param: "start",
+    //         value: "2020-07-31",
+    //     },
+    //     end: {
+    //         param: "end",
+    //         value: "2020-07-31",
+    //     },
+    // },
 };
 
 const defaultMapping: Partial<IProgramMapping> = {
@@ -63,8 +79,9 @@ const defaultMapping: Partial<IProgramMapping> = {
     // program: "IpHINAT79UW",
     trackedEntityType: "nEenWmSyUEp",
     dataSource: "godata",
+    isSource: true,
     authentication,
-    // prefetch: true,
+    prefetch: true,
 };
 const mySchema = z.string().url();
 
@@ -139,7 +156,7 @@ export const ouMappingApi = createApi($organisationUnitMapping, {
 export const $data = domain.createStore<any[]>([]);
 
 export const dataApi = createApi($data, {
-    changeData: (_, data) => data,
+    changeData: (_, data: any[]) => data,
 });
 
 export const $programMapping =
@@ -153,81 +170,7 @@ export const programMappingApi = createApi($programMapping, {
     updateMany: (state, update: Partial<IProgramMapping>) => {
         return { ...state, ...update };
     },
-    addMetadata: (state) => {
-        if (
-            state.metadataOptions?.metadata &&
-            state.metadataOptions?.labelField
-        ) {
-            return {
-                ...state,
-                metadataOptions: {
-                    ...state.metadataOptions,
-                    metadata: [
-                        ...state.metadataOptions.metadata,
-                        {
-                            [state.metadataOptions.idField]: generateUid(),
-                            [state.metadataOptions.labelField]: "",
-                            [state.metadataOptions.requiredField]: false,
-                        },
-                    ],
-                },
-            };
-        }
-    },
-    updateMetadata: (
-        state,
-        { value, id, attribute }: { value: any; id: string; attribute: string }
-    ) => {
-        if (
-            state.metadataOptions?.metadata &&
-            state.metadataOptions?.labelField
-        ) {
-            return {
-                ...state,
-                metadataOptions: {
-                    ...state.metadataOptions,
-                    metadata: state.metadataOptions.metadata.map(
-                        (data: any) => {
-                            if (
-                                data[state.metadataOptions?.idField || ""] ===
-                                id
-                            ) {
-                                return {
-                                    ...data,
-                                    [attribute]: value,
-                                };
-                            }
-                            return data;
-                        }
-                    ),
-                },
-            };
-        }
-    },
 });
-
-export const $disabled = combine(
-    $programMapping,
-    $steps,
-    $programStageMapping,
-    $attributeMapping,
-    $organisationUnitMapping,
-    (
-        programMapping,
-        step,
-        programStageMapping,
-        attributeMapping,
-        organisationUnitMapping
-    ) =>
-        isDisabled(
-            programMapping,
-            programStageMapping,
-            attributeMapping,
-            organisationUnitMapping,
-            step,
-            mySchema
-        )
-);
 
 export const $columns = $data.map((state) => findColumns(state));
 
@@ -257,8 +200,26 @@ export const processor = createApi($processed, {
         produce(state, (draft) => {
             draft.events = events;
         }),
+
+    addInstanceUpdated: (
+        state,
+        trackedEntities: Array<Partial<TrackedEntityInstance>>
+    ) =>
+        produce(state, (draft) => {
+            draft.trackedEntityUpdates = trackedEntities;
+        }),
+    addEventUpdates: (state, events: Array<Partial<Event>>) =>
+        produce(state, (draft) => {
+            draft.eventsUpdates = events;
+        }),
     reset: () => {
-        return { trackedEntityInstances: [], enrollments: [], events: [] };
+        return {
+            trackedEntityInstances: [],
+            enrollments: [],
+            events: [],
+            eventsUpdates: [],
+            trackedEntityUpdates: [],
+        };
     },
 });
 
@@ -338,16 +299,40 @@ export const $metadata = combine(
         goData,
         tokens
     ) =>
-        makeMetadata(
-            programMapping,
-            program,
+        makeMetadata(program, programMapping, {
             data,
             dhis2Program,
             programStageMapping,
             attributeMapping,
             remoteOrganisations,
             goData,
-            tokens
+            tokens,
+        })
+);
+
+export const $disabled = combine(
+    $programMapping,
+    $steps,
+    $programStageMapping,
+    $attributeMapping,
+    $organisationUnitMapping,
+    $metadata,
+    (
+        programMapping,
+        step,
+        programStageMapping,
+        attributeMapping,
+        organisationUnitMapping,
+        metadata
+    ) =>
+        isDisabled(
+            programMapping,
+            programStageMapping,
+            attributeMapping,
+            organisationUnitMapping,
+            step,
+            mySchema,
+            metadata.destinationColumns
         )
 );
 export const $flattenedProgram = $program.map((state) => {
@@ -402,4 +387,10 @@ export const $currentSourceOptions = domain.createStore<Option[]>([]);
 
 export const currentSourceOptionsApi = createApi($currentSourceOptions, {
     set: (_, options: Option[]) => options,
+});
+
+export const $otherProcessed = domain.createStore<any[]>([]);
+
+export const otherProcessedApi = createApi($otherProcessed, {
+    set: (_, data: any[]) => data,
 });

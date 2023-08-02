@@ -180,6 +180,7 @@ const Step4 = () => {
                     </Box>
                 </Stack>
             </Stack>
+
             <Search
                 options={metadata.destinationAttributes}
                 mapping={attributeMapping}
@@ -206,7 +207,10 @@ const Step4 = () => {
                             Unique
                         </Th>
                         <Th textAlign="center" py="20px" w="150px">
-                            Manually Map
+                            Custom
+                        </Th>
+                        <Th py="10px" w="50px" textAlign="center">
+                            Specify
                         </Th>
                         <Th py="20px">
                             <Stack direction="row" alignItems="center">
@@ -214,7 +218,7 @@ const Step4 = () => {
                                 <Text>Source Attribute</Text>
                             </Stack>
                         </Th>
-                        <Th w="200px">Options Mapping</Th>
+                        <Th w="200px">Options</Th>
                         <Th w="75px" py="20px">
                             Mapped?
                         </Th>
@@ -234,7 +238,7 @@ const Step4 = () => {
                                 optionSetValue,
                                 code,
                                 mandatory,
-                                options,
+                                availableOptions,
                             }) => (
                                 <Tr
                                     key={value}
@@ -247,7 +251,7 @@ const Step4 = () => {
                                             isChecked={
                                                 !!getOr(
                                                     false,
-                                                    `${value}.compulsory`,
+                                                    `${value}.mandatory`,
                                                     attributeMapping
                                                 )
                                             }
@@ -256,7 +260,7 @@ const Step4 = () => {
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 attributeMappingApi.update({
-                                                    attribute: `${value}.compulsory`,
+                                                    attribute: `${value}.mandatory`,
                                                     value: e.target.checked,
                                                 })
                                             }
@@ -301,10 +305,34 @@ const Step4 = () => {
                                             }
                                         />
                                     </Td>
+                                    <Td textAlign="center">
+                                        <Checkbox
+                                            isChecked={
+                                                !!getOr(
+                                                    false,
+                                                    `${value}.specific`,
+                                                    attributeMapping
+                                                )
+                                            }
+                                            onChange={(
+                                                e: ChangeEvent<HTMLInputElement>
+                                            ) =>
+                                                attributeMappingApi.update({
+                                                    attribute: `${value}.specific`,
+                                                    value: e.target.checked,
+                                                })
+                                            }
+                                        />
+                                    </Td>
                                     <Td>
                                         {!!getOr(
                                             false,
                                             `${value}.manual`,
+                                            attributeMapping
+                                        ) ||
+                                        !!getOr(
+                                            false,
+                                            `${value}.specific`,
                                             attributeMapping
                                         ) ? (
                                             <Input
@@ -366,7 +394,9 @@ const Step4 = () => {
                                         {optionSetValue && (
                                             <OptionSetMapping
                                                 value={value}
-                                                options={options || []}
+                                                destinationOptions={
+                                                    availableOptions || []
+                                                }
                                             />
                                         )}
                                     </Td>
@@ -386,14 +416,18 @@ const Step4 = () => {
 
                 <Tfoot>
                     <Tr>
-                        <Td colSpan={7} textAlign="right">
-                            Mapped {Object.keys(attributeMapping).length} of{" "}
-                            {metadata.destinationAttributes.length}
+                        <Td colSpan={8} textAlign="right">
+                            Mapped{" "}
+                            {
+                                Object.values(attributeMapping).filter(
+                                    ({ value }) => !!value
+                                ).length
+                            }{" "}
+                            of {metadata.destinationAttributes.length}
                         </Td>
                     </Tr>
                 </Tfoot>
             </Table>
-
             <Paginated
                 pages={pages}
                 pagesCount={pagesCount}

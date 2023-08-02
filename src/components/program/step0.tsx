@@ -14,6 +14,7 @@ import {
     Thead,
     Tr,
     useDisclosure,
+    useToast,
 } from "@chakra-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -35,6 +36,7 @@ import { actionApi, stepper } from "../../Store";
 import Progress from "../Progress";
 
 const Step0 = () => {
+    const toast = useToast();
     const engine = useDataEngine();
     const queryClient = useQueryClient();
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -62,6 +64,8 @@ const Step0 = () => {
             currentPage: 1,
         },
     });
+
+    const run = (id: string) => {};
     const loadMapping = async (namespaceKey: string) => {
         actionApi.edit();
         setMessage(() => "Fetching saved mapping");
@@ -151,6 +155,13 @@ const Step0 = () => {
                 return data?.filter(({ id: programId }) => id !== programId);
             }
         );
+        toast({
+            title: "Mapping deleted.",
+            description: "Mapping has been deleted",
+            status: "success",
+            duration: 9000,
+            isClosable: true,
+        });
     };
     return (
         <Stack flex={1}>
@@ -160,7 +171,7 @@ const Step0 = () => {
                 </Stack>
             )}
             {isSuccess && (
-                <Table>
+                <Table size="sm">
                     <Thead>
                         <Tr>
                             <Th w="100px">ID</Th>
@@ -198,14 +209,19 @@ const Step0 = () => {
                                                     icon={
                                                         <BiDotsVerticalRounded
                                                             style={{
-                                                                width: "24px",
-                                                                height: "24px",
+                                                                width: "20px",
+                                                                height: "20px",
                                                             }}
                                                         />
                                                     }
                                                     bg="none"
                                                 />
                                                 <MenuList>
+                                                    <MenuItem
+                                                        onClick={() => run(id)}
+                                                    >
+                                                        Run
+                                                    </MenuItem>
                                                     <MenuItem
                                                         onClick={() =>
                                                             loadMapping(id)
@@ -232,7 +248,6 @@ const Step0 = () => {
                     </Tbody>
                 </Table>
             )}
-
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}

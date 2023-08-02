@@ -115,6 +115,7 @@ const Step1 = () => {
     const { isLoading, isError, isSuccess, error, data } = usePrograms(1, 100);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const engine = useDataEngine();
+    const programMapping = useStore($programMapping);
     const columns = useMemo<ColumnDef<Partial<IProgram>>[]>(
         () => [
             {
@@ -138,10 +139,10 @@ const Step1 = () => {
     const onProgramSelect = async (id: string) => {
         onOpen();
         const data = await loadProgram(engine, id);
-        programMappingApi.update({ attribute: "program", value: id });
-        programMappingApi.update({
-            attribute: "trackedEntityType",
-            value: getOr("", "trackedEntityType.id", data),
+        programMappingApi.updateMany({
+            trackedEntityType: getOr("", "trackedEntityType.id", data),
+            program: id,
+            programType: getOr("", "programType", data),
         });
         programApi.set(data);
         onClose();
@@ -174,6 +175,7 @@ const Step1 = () => {
                             columns={columns}
                             onRowClick={onProgramSelect}
                             queryKey={["step2"]}
+                            selected={programMapping.program}
                         />
                     )}
                     {isError && JSON.stringify(error)}

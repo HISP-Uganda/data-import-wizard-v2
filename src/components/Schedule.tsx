@@ -22,7 +22,7 @@ import {
     Tr,
     useDisclosure,
 } from "@chakra-ui/react";
-import { useDataEngine } from "@dhis2/app-runtime";
+import { useDataEngine, useConfig } from "@dhis2/app-runtime";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { GroupBase, Select } from "chakra-react-select";
@@ -39,28 +39,31 @@ const scheduleTypes: Option[] = [
 
 const Schedule = () => {
     const engine = useDataEngine();
+    const { baseUrl } = useConfig();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [additionalDays, setAdditionalDays] = useState<string>("0");
     const [isScheduleCustom, setIsScheduleCustom] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [action, setAction] = useState<string>("create");
     const queryClient = useQueryClient();
-    const schedulePeriods: Option[] = [
-        { label: "Every5s", value: "*/5 * * * * *" },
-        { label: "Minutely", value: "* * * * *" },
-        { label: "Every5m", value: "*/5 * * * *" },
-        { label: "Hourly", value: "0 * * * *" },
-        { label: "Daily", value: "0 0 * * *" },
-        { label: "Weekly", value: `0 0 * * ${additionalDays}` },
-        { label: "Monthly", value: `0 0 ${additionalDays} * *` },
-        { label: "BiMonthly", value: `0 0 ${additionalDays} */2 *` },
-        { label: "Quarterly", value: `0 0 ${additionalDays} */3 *` },
-        { label: "SixMonthly", value: `0 0 ${additionalDays} */6 *` },
-        { label: "Yearly", value: `0 0 ${additionalDays} 1 *` },
-        { label: "FinancialJuly", value: `0 0 ${additionalDays} 7 *` },
-        { label: "FinancialApril", value: `0 0 ${additionalDays} 4 *` },
-        { label: "FinancialOct", value: `0 0 ${additionalDays} 10 *` },
-    ];
+    const schedulePeriods = (): Option[] => {
+        return [
+            { label: "Every5s", value: "*/5 * * * * *" },
+            { label: "Minutely", value: "* * * * *" },
+            { label: "Every5m", value: "*/5 * * * *" },
+            { label: "Hourly", value: "0 * * * *" },
+            { label: "Daily", value: "0 0 * * *" },
+            { label: "Weekly", value: `0 0 * * ${additionalDays}` },
+            { label: "Monthly", value: `0 0 ${additionalDays} * *` },
+            { label: "BiMonthly", value: `0 0 ${additionalDays} */2 *` },
+            { label: "Quarterly", value: `0 0 ${additionalDays} */3 *` },
+            { label: "SixMonthly", value: `0 0 ${additionalDays} */6 *` },
+            { label: "Yearly", value: `0 0 ${additionalDays} 1 *` },
+            { label: "FinancialJuly", value: `0 0 ${additionalDays} 7 *` },
+            { label: "FinancialApril", value: `0 0 ${additionalDays} 4 *` },
+            { label: "FinancialOct", value: `0 0 ${additionalDays} 10 *` },
+        ];
+    };
 
     const [schedule, setSchedule] = useState<Partial<ISchedule>>({});
 
@@ -86,12 +89,13 @@ const Schedule = () => {
             return {
                 id: generateUid(),
                 createdAt: dayjs().format("YYYY-MM-DDTHH:mm:ss"),
-                type: "program",
+                type: "tracker",
                 schedule: "0 0 * * *",
                 name: "",
                 description: "",
                 schedulingSeverURL: "",
                 status: "created",
+                url: `${baseUrl}/api`,
             };
         });
         onOpen();
@@ -376,9 +380,9 @@ const Schedule = () => {
                                                     false,
                                                     GroupBase<Option>
                                                 >
-                                                    options={schedulePeriods}
+                                                    options={schedulePeriods()}
                                                     isClearable
-                                                    value={schedulePeriods.find(
+                                                    value={schedulePeriods().find(
                                                         (schedulePeriod) =>
                                                             schedulePeriod.value ===
                                                             schedule.schedule

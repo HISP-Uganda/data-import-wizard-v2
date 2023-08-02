@@ -7,7 +7,7 @@ export const $version = domain.createStore<number>(0);
 export const stepper = createApi($steps, {
     next: (state) => state + 1,
     previous: (state) => state - 1,
-    goTo: (state, step: number) => state + step,
+    goTo: (_, step: number) => step,
     reset: () => 0,
 });
 export const versionApi = createApi($version, {

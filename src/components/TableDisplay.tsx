@@ -31,6 +31,7 @@ type TableProps<TData> = {
     queryKey: any[];
     onRowClick?: (id: string) => void;
     onCellClick?: (id: string) => void;
+    selected?: string;
 };
 
 export default function TableDisplay<TData>({
@@ -39,6 +40,7 @@ export default function TableDisplay<TData>({
     onRowClick,
     onCellClick,
     queryKey,
+    selected,
 }: TableProps<TData>) {
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -200,6 +202,11 @@ export default function TableDisplay<TData>({
                                             : undefined
                                     }
                                     cursor="pointer"
+                                    bg={
+                                        row.getValue("id") === selected
+                                            ? "gray.100"
+                                            : ""
+                                    }
                                 >
                                     {row.getVisibleCells().map((cell) => {
                                         return (
