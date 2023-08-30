@@ -36,6 +36,7 @@ import {
     $currentSourceOptions,
     $data,
     $metadata,
+    $names,
     $optionMapping,
     $programMapping,
     attributeMappingApi,
@@ -56,7 +57,7 @@ const Step4 = () => {
     const currentOptions = useStore($currentOptions);
     const optionMapping = useStore($optionMapping);
     const currentSourceOptions = useStore($currentSourceOptions);
-    const data = useStore($data);
+    const { source, destination } = useStore($names);
 
     const [currentAttributes, setCurrentAttributes] = useState(
         metadata.destinationAttributes
@@ -83,7 +84,7 @@ const Step4 = () => {
             inner: innerLimit,
         },
         initialState: {
-            pageSize: 10,
+            pageSize: 7,
             currentPage: 1,
         },
     });
@@ -94,6 +95,7 @@ const Step4 = () => {
         for (const { attribute, value } of attributes) {
             attributeMappingApi.update({
                 attribute,
+                key: "value",
                 value,
             });
         }
@@ -109,7 +111,8 @@ const Step4 = () => {
                 );
                 if (search) {
                     attributeMappingApi.update({
-                        attribute: `${destinationValue}.value`,
+                        attribute: `${destinationValue}`,
+                        key: "value",
                         value: search.value,
                     });
                 }
@@ -124,6 +127,40 @@ const Step4 = () => {
     const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
         const pageSize = Number(event.target.value);
         setPageSize(pageSize);
+    };
+
+    const setCustom = (attribute: string, manual: boolean) => {
+        const isSpecific = attributeMapping[attribute]?.specific;
+        attributeMappingApi.update({
+            attribute,
+            key: "manual",
+            value: manual,
+        });
+
+        if (isSpecific) {
+            attributeMappingApi.update({
+                attribute,
+                key: "specific",
+                value: !isSpecific,
+            });
+        }
+    };
+
+    const setSpecific = (attribute: string, specific: boolean) => {
+        attributeMappingApi.update({
+            attribute,
+            key: "specific",
+            value: specific,
+        });
+        const isManual = attributeMapping[attribute]?.manual;
+
+        if (isManual) {
+            attributeMappingApi.update({
+                attribute,
+                key: "manual",
+                value: !isManual,
+            });
+        }
     };
 
     return (
@@ -194,32 +231,56 @@ const Step4 = () => {
             <Table size="sm">
                 <Thead>
                     <Tr>
-                        <Th py="20px">
+                        <Th py="20px" textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <DestinationIcon />
                                 <Text> Destination Attribute</Text>
+                                <Text>{destination}</Text>
                             </Stack>
                         </Th>
-                        <Th textAlign="center" py="20px" w="100px">
+                        <Th
+                            textAlign="center"
+                            py="20px"
+                            w="100px"
+                            textTransform="none"
+                        >
                             Mandatory
                         </Th>
-                        <Th textAlign="center" py="20px" w="100px">
+                        <Th
+                            textAlign="center"
+                            py="20px"
+                            w="100px"
+                            textTransform="none"
+                        >
                             Unique
                         </Th>
-                        <Th textAlign="center" py="20px" w="150px">
+                        <Th
+                            textAlign="center"
+                            py="20px"
+                            w="150px"
+                            textTransform="none"
+                        >
                             Custom
                         </Th>
-                        <Th py="10px" w="50px" textAlign="center">
+                        <Th
+                            py="10px"
+                            w="50px"
+                            textAlign="center"
+                            textTransform="none"
+                        >
                             Specify
                         </Th>
-                        <Th py="20px">
+                        <Th py="20px" textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <SourceIcon />
                                 <Text>Source Attribute</Text>
+                                <Text>{source}</Text>
                             </Stack>
                         </Th>
-                        <Th w="200px">Options</Th>
-                        <Th w="75px" py="20px">
+                        <Th w="200px" textTransform="none">
+                            Options
+                        </Th>
+                        <Th w="75px" py="20px" textTransform="none">
                             Mapped?
                         </Th>
                     </Tr>
@@ -239,6 +300,7 @@ const Step4 = () => {
                                 code,
                                 mandatory,
                                 availableOptions,
+                                valueType,
                             }) => (
                                 <Tr
                                     key={value}
@@ -249,18 +311,16 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                !!getOr(
-                                                    false,
-                                                    `${value}.mandatory`,
-                                                    attributeMapping
-                                                )
+                                                attributeMapping[value]
+                                                    ?.mandatory
                                             }
                                             isReadOnly={mandatory}
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 attributeMappingApi.update({
-                                                    attribute: `${value}.mandatory`,
+                                                    attribute: value,
+                                                    key: "mandatory",
                                                     value: e.target.checked,
                                                 })
                                             }
@@ -269,18 +329,15 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                !!getOr(
-                                                    unique,
-                                                    `${value}.unique`,
-                                                    attributeMapping
-                                                )
+                                                attributeMapping[value]?.unique
                                             }
                                             isReadOnly={unique}
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) => {
                                                 attributeMappingApi.update({
-                                                    attribute: `${value}.unique`,
+                                                    attribute: value,
+                                                    key: "unique",
                                                     value: e.target.checked,
                                                 });
                                             }}
@@ -289,65 +346,48 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                !!getOr(
-                                                    false,
-                                                    `${value}.manual`,
-                                                    attributeMapping
-                                                )
+                                                attributeMapping[value]?.manual
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                attributeMappingApi.update({
-                                                    attribute: `${value}.manual`,
-                                                    value: e.target.checked,
-                                                })
+                                                setCustom(
+                                                    value,
+                                                    e.target.checked
+                                                )
                                             }
                                         />
                                     </Td>
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                !!getOr(
-                                                    false,
-                                                    `${value}.specific`,
-                                                    attributeMapping
-                                                )
+                                                attributeMapping[value]
+                                                    ?.specific
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
-                                                attributeMappingApi.update({
-                                                    attribute: `${value}.specific`,
-                                                    value: e.target.checked,
-                                                })
+                                                setSpecific(
+                                                    value,
+                                                    e.target.checked
+                                                )
                                             }
                                         />
                                     </Td>
                                     <Td>
-                                        {!!getOr(
-                                            false,
-                                            `${value}.manual`,
-                                            attributeMapping
-                                        ) ||
-                                        !!getOr(
-                                            false,
-                                            `${value}.specific`,
-                                            attributeMapping
-                                        ) ? (
+                                        {attributeMapping[value]?.manual ||
+                                        attributeMapping[value]?.specific ? (
                                             <Input
-                                                value={String(
-                                                    getOr(
-                                                        "",
-                                                        `${value}.value`,
-                                                        attributeMapping
-                                                    )
-                                                )}
+                                                value={
+                                                    attributeMapping[value]
+                                                        ?.value
+                                                }
                                                 onChange={(
                                                     e: ChangeEvent<HTMLInputElement>
                                                 ) =>
                                                     attributeMappingApi.update({
-                                                        attribute: `${value}.value`,
+                                                        attribute: `${value}`,
+                                                        key: "value",
                                                         value: e.target.value,
                                                     })
                                                 }
@@ -358,34 +398,40 @@ const Step4 = () => {
                                                 false,
                                                 GroupBase<Option>
                                             >
-                                                value={metadata.sourceColumns.find(
+                                                value={metadata.sourceColumns?.find(
                                                     (val) =>
                                                         val.value ===
-                                                        getOr(
-                                                            "",
-                                                            `${value}.value`,
-                                                            attributeMapping
-                                                        )
+                                                        attributeMapping[value]
+                                                            ?.value
                                                 )}
-                                                options={metadata.sourceColumns}
+                                                options={metadata.sourceColumns?.map(
+                                                    ({ value, label }) => ({
+                                                        label,
+                                                        value,
+                                                    })
+                                                )}
                                                 isClearable
                                                 onChange={(e) =>
-                                                    updateAttribute([
-                                                        {
-                                                            attribute: `${value}.value`,
-                                                            value:
-                                                                e?.value || "",
-                                                        },
-                                                        {
-                                                            attribute: `${value}.unique`,
-                                                            value:
-                                                                !!getOr(
-                                                                    false,
-                                                                    `${value}.unique`,
-                                                                    attributeMapping
-                                                                ) || unique,
-                                                        },
-                                                    ])
+                                                    attributeMappingApi.updateMany(
+                                                        attributeMappingApi.updateMany(
+                                                            {
+                                                                attribute:
+                                                                    value,
+                                                                update: {
+                                                                    value:
+                                                                        e?.value ||
+                                                                        "",
+                                                                    unique:
+                                                                        attributeMapping[
+                                                                            value
+                                                                        ]
+                                                                            ?.unique ||
+                                                                        unique,
+                                                                    valueType,
+                                                                },
+                                                            }
+                                                        )
+                                                    )
                                                 }
                                             />
                                         )}

@@ -20,7 +20,6 @@ import { $processed } from "../pages/program/Store";
 import TableDisplay from "./TableDisplay";
 export default function DHIS2Preview() {
     const processed = useStore($processed);
-
     const instanceColumns = useMemo<
         ColumnDef<Partial<TrackedEntityInstance>>[]
     >(
@@ -144,6 +143,7 @@ export default function DHIS2Preview() {
                             "instances",
                             processed.trackedEntities?.length || 0,
                         ]}
+                        idField="trackedEntityInstance"
                     />
                 </TabPanel>
                 <TabPanel>
@@ -154,6 +154,7 @@ export default function DHIS2Preview() {
                             "enrollments",
                             processed.enrollments?.length || 0,
                         ]}
+                        idField="enrollment"
                     />
                 </TabPanel>
                 <TabPanel>
@@ -161,8 +162,8 @@ export default function DHIS2Preview() {
                         columns={eventColumns}
                         generatedData={processed.events || []}
                         queryKey={["events", processed.events?.length || 0]}
+                        idField="event"
                     />
-                    <pre>{JSON.stringify(processed.events, null, 2)}</pre>
                 </TabPanel>
                 <TabPanel>
                     <TableDisplay<Partial<TrackedEntityInstance>>
@@ -172,6 +173,7 @@ export default function DHIS2Preview() {
                             "instances-updates",
                             processed.trackedEntityUpdates?.length || 0,
                         ]}
+                        idField="trackedEntityInstance"
                     />
                 </TabPanel>
                 <TabPanel>
@@ -182,6 +184,7 @@ export default function DHIS2Preview() {
                             "events-updates",
                             processed.eventsUpdates?.length || 0,
                         ]}
+                        idField="event"
                     />
                 </TabPanel>
                 <TabPanel>6</TabPanel>

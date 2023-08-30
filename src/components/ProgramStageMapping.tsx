@@ -25,6 +25,7 @@ import { ChangeEvent, useState } from "react";
 import { FiCheck } from "react-icons/fi";
 import {
     $metadata,
+    $names,
     $programMapping,
     $programStageMapping,
     stageMappingApi,
@@ -48,12 +49,14 @@ export default function ProgramStageMapping({
     const programMapping = useStore($programMapping);
     const programStageMapping = useStore($programStageMapping);
     const metadata = useStore($metadata);
+    const { source, destination } = useStore($names);
     const updateStage = (
         attributes: { attribute: string; value: any }[],
         stage: string
     ) => {
         for (const { attribute, value } of attributes) {
             stageMappingApi.update({
+                key: "" as any,
                 attribute,
                 stage,
                 value,
@@ -148,7 +151,8 @@ export default function ProgramStageMapping({
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         stageMappingApi.update({
                             stage: psId,
-                            attribute: `info.createEvents`,
+                            attribute: "info",
+                            key: "createEvents",
                             value: e.target.checked,
                         })
                     }
@@ -162,7 +166,8 @@ export default function ProgramStageMapping({
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         stageMappingApi.update({
                             stage: psId,
-                            attribute: `info.updateEvents`,
+                            attribute: "info",
+                            key: "updateEvents",
                             value: e.target.checked,
                         })
                     }
@@ -176,7 +181,8 @@ export default function ProgramStageMapping({
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         stageMappingApi.update({
                             stage: psId,
-                            attribute: `info.eventDateIsUnique`,
+                            attribute: "info",
+                            key: "eventDateIsUnique",
                             value: e.target.checked,
                         })
                     }
@@ -197,8 +203,9 @@ export default function ProgramStageMapping({
                             isChecked={isChecked}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 stageMappingApi.update({
-                                    attribute: `info.manual`,
+                                    attribute: "info",
                                     stage: psId,
+                                    key: "manual",
                                     value: e.target.checked,
                                 })
                             }
@@ -214,7 +221,8 @@ export default function ProgramStageMapping({
                                     ) =>
                                         stageMappingApi.update({
                                             stage: psId,
-                                            attribute: `info.eventDateColumn`,
+                                            attribute: "info",
+                                            key: "eventDateColumn",
                                             value: e.target.value,
                                         })
                                     }
@@ -230,8 +238,9 @@ export default function ProgramStageMapping({
                                     onChange={(e) =>
                                         stageMappingApi.update({
                                             stage: psId,
-                                            attribute: `info.eventDateColumn`,
-                                            value: e?.value || "",
+                                            attribute: "info",
+                                            key: "eventDateColumn",
+                                            value: e?.value,
                                         })
                                     }
                                 />
@@ -252,8 +261,9 @@ export default function ProgramStageMapping({
                             isChecked={eventIdColumnIsManual}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 stageMappingApi.update({
-                                    attribute: `info.eventIdColumnIsManual`,
+                                    attribute: "info",
                                     stage: psId,
+                                    key: "eventIdColumnIsManual",
                                     value: e.target.checked,
                                 })
                             }
@@ -269,7 +279,8 @@ export default function ProgramStageMapping({
                                     ) =>
                                         stageMappingApi.update({
                                             stage: psId,
-                                            attribute: `info.eventIdColumn`,
+                                            attribute: "info",
+                                            key: "eventIdColumn",
                                             value: e.target.value,
                                         })
                                     }
@@ -285,7 +296,8 @@ export default function ProgramStageMapping({
                                     onChange={(e) =>
                                         stageMappingApi.update({
                                             stage: psId,
-                                            attribute: `info.eventIdColumn`,
+                                            attribute: "info",
+                                            key: "eventIdColumn",
                                             value: e?.value || "",
                                         })
                                     }
@@ -308,7 +320,8 @@ export default function ProgramStageMapping({
                                 onChange={(e) => {
                                     stageMappingApi.update({
                                         stage: psId,
-                                        attribute: `info.stage`,
+                                        attribute: "info",
+                                        key: "stage",
                                         value: e?.value || "",
                                     });
                                 }}
@@ -346,24 +359,32 @@ export default function ProgramStageMapping({
             <Table size="sm">
                 <Thead>
                     <Tr>
-                        <Th>
+                        <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <DestinationIcon />
                                 <Text> Destination Data Element</Text>
+                                <Text>{destination}</Text>
                             </Stack>
                         </Th>
-                        <Th textAlign="center">Compulsory</Th>
-                        <Th textAlign="center">Custom</Th>
-                        <Th>
+                        <Th textAlign="center" textTransform="none">
+                            Compulsory
+                        </Th>
+                        <Th textAlign="center" textTransform="none">
+                            Custom
+                        </Th>
+                        <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <SourceIcon />
                                 <Text> Source Data Element</Text>
+                                <Text>{source}</Text>
                             </Stack>
                         </Th>
-                        <Th w="150px" textAlign="center">
+                        <Th w="150px" textAlign="center" textTransform="none">
                             Is Unique
                         </Th>
-                        <Th w="75px">Mapped?</Th>
+                        <Th w="75px" textTransform="none">
+                            Mapped?
+                        </Th>
                     </Tr>
                 </Thead>
                 <Tbody>
@@ -404,7 +425,8 @@ export default function ProgramStageMapping({
                                                     e: ChangeEvent<HTMLInputElement>
                                                 ) =>
                                                     stageMappingApi.update({
-                                                        attribute: `${id}.manual`,
+                                                        attribute: id,
+                                                        key: "manual",
                                                         stage: psId,
                                                         value: e.target.checked,
                                                     })
@@ -493,7 +515,8 @@ export default function ProgramStageMapping({
                                                     e: ChangeEvent<HTMLInputElement>
                                                 ) =>
                                                     stageMappingApi.update({
-                                                        attribute: `${id}.unique`,
+                                                        attribute: id,
+                                                        key: "unique",
                                                         stage: psId,
                                                         value: e.target.checked,
                                                     })

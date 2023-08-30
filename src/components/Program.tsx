@@ -48,8 +48,8 @@ const Program = () => {
     const engine = useDataEngine();
     const steps: Step[] = [
         { label: "Saved Mappings", content: <Step0 />, id: 1 },
-        { label: "Select Program", content: <Step1 />, id: 2 },
-        { label: "Integration Type", content: <Step2 />, id: 3 },
+        { label: "Integration Type", content: <Step2 />, id: 2 },
+        { label: "Select Program", content: <Step1 />, id: 3 },
         { label: "Mapping Options", content: <Step10 />, id: 4 },
         { label: "Select Outbreak", content: <RemoteOutbreaks />, id: 5 },
         { label: "Select Program2", content: <RemotePrograms />, id: 6 },
@@ -83,12 +83,19 @@ const Program = () => {
                     return [1, 2, 3, 7, 9, 11].indexOf(id) !== -1;
                 }
                 if (programMapping.dataSource === "godata") {
-                    if (programMapping.prefetch) {
+                    if (programMapping.isSource) {
                         return (
                             [1, 2, 3, 5, 7, 8, 11, 12, 13].indexOf(id) !== -1
                         );
+                    } else {
+                        if (programMapping.prefetch) {
+                            return (
+                                [1, 2, 3, 5, 7, 8, 11, 12, 13].indexOf(id) !==
+                                -1
+                            );
+                        }
+                        return [1, 2, 3, 5, 7, 8, 13].indexOf(id) !== -1;
                     }
-                    return [1, 2, 3, 5, 7, 8, 13].indexOf(id) !== -1;
                 }
                 if (programMapping.prefetch) {
                     return [1, 2, 3, 9, 10, 11].indexOf(id) !== -1;
@@ -100,8 +107,9 @@ const Program = () => {
                 return [5, 8, 11].indexOf(id) === -1;
             }
             if (programMapping.dataSource === "godata") {
-                return [6, 8, 11].indexOf(id) === -1;
+                return [4, 6, 8, 11].indexOf(id) === -1;
             }
+            return [1, 2, 3, 4, 7, 9, 10, 12, 13].indexOf(id) !== -1;
         });
     };
 
@@ -112,7 +120,11 @@ const Program = () => {
             });
             actionApi.create();
         }
-        stepper.next();
+        if (activeStep === activeSteps().length - 1) {
+            stepper.reset();
+        } else {
+            stepper.next();
+        }
     };
 
     const save = async () => {
