@@ -24,6 +24,7 @@ import { FiCheck } from "react-icons/fi";
 import { usePagination } from "@ajna/pagination";
 import {
     $metadata,
+    $names,
     $organisationUnitMapping,
     $programMapping,
     $remoteOrganisationApi,
@@ -45,6 +46,7 @@ const Step3 = () => {
         onClose: onCloseModal,
     } = useDisclosure();
     const metadata = useStore($metadata);
+    const { source, destination } = useStore($names);
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const remoteOrganisationApi = useStore($remoteOrganisationApi);
     const programMapping = useStore($programMapping);
@@ -91,7 +93,8 @@ const Step3 = () => {
                 );
                 if (search) {
                     ouMappingApi.update({
-                        attribute: `${destinationValue}.value`,
+                        attribute: `${destinationValue}`,
+                        key: "value",
                         value: search.value,
                     });
                 }
@@ -185,22 +188,29 @@ const Step3 = () => {
             <Table size="sm">
                 <Thead>
                     <Tr h="30px">
-                        <Th>
+                        <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <DestinationIcon />
                                 <Text>Destination Organization</Text>
+                                <Text>{destination}</Text>
                             </Stack>
                         </Th>
-                        <Th w="150px" textAlign="center" minH="50px">
+                        <Th
+                            w="150px"
+                            textAlign="center"
+                            minH="50px"
+                            textTransform="none"
+                        >
                             <Text> Manually Map</Text>
                         </Th>
-                        <Th w="45%">
+                        <Th w="45%" textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <SourceIcon />
                                 <Text>Source Organization</Text>
+                                <Text>{source}</Text>
                             </Stack>
                         </Th>
-                        <Th w="100px" minH="50px">
+                        <Th w="100px" minH="50px" textTransform="none">
                             <Text>Mapped?</Text>
                         </Th>
                     </Tr>
@@ -233,7 +243,8 @@ const Step3 = () => {
                                             e: ChangeEvent<HTMLInputElement>
                                         ) =>
                                             ouMappingApi.update({
-                                                attribute: `${value}.manual`,
+                                                attribute: `${value}`,
+                                                key: "manual",
                                                 value: e.target.checked,
                                             })
                                         }
@@ -263,7 +274,8 @@ const Step3 = () => {
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 ouMappingApi.update({
-                                                    attribute: `${value}.value`,
+                                                    attribute: `${value}`,
+                                                    key: "value",
                                                     value: e.target.value,
                                                 })
                                             }
@@ -290,8 +302,9 @@ const Step3 = () => {
                                             isClearable
                                             onChange={(e) =>
                                                 ouMappingApi.update({
-                                                    attribute: `${value}.value`,
-                                                    value: e?.value || "",
+                                                    attribute: `${value}`,
+                                                    key: "value",
+                                                    value: e?.value,
                                                 })
                                             }
                                         />

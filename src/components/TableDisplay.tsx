@@ -19,6 +19,7 @@ import {
     SortingState,
     useReactTable,
 } from "@tanstack/react-table";
+import { isArray, isObject } from "lodash";
 import React from "react";
 import { useVirtual } from "react-virtual";
 import { fetchData, Response } from "./makeData";
@@ -32,6 +33,7 @@ type TableProps<TData> = {
     onRowClick?: (id: string) => void;
     onCellClick?: (id: string) => void;
     selected?: string;
+    idField?: string;
 };
 
 export default function TableDisplay<TData>({
@@ -41,6 +43,7 @@ export default function TableDisplay<TData>({
     onCellClick,
     queryKey,
     selected,
+    idField = "id",
 }: TableProps<TData>) {
     const tableContainerRef = React.useRef<HTMLDivElement>(null);
     const [sorting, setSorting] = React.useState<SortingState>([]);
@@ -66,21 +69,17 @@ export default function TableDisplay<TData>({
         }
     );
 
-    //we must flatten the array of arrays from the useInfiniteQuery hook
     const flatData = React.useMemo(
         () => data?.pages?.flatMap((page) => page.data) ?? [],
         [data]
     );
     const totalDBRowCount = data?.pages?.[0]?.meta?.totalRowCount ?? 0;
     const totalFetched = flatData.length;
-
-    //called on scroll and possibly on mount to fetch more data as the user scrolls and reaches bottom of table
     const fetchMoreOnBottomReached = React.useCallback(
         (containerRefElement?: HTMLDivElement | null) => {
             if (containerRefElement) {
                 const { scrollHeight, scrollTop, clientHeight } =
                     containerRefElement;
-                //once the user has scrolled within 300px of the bottom of the table, fetch more data if there is any
                 if (
                     scrollHeight - scrollTop - clientHeight < 300 &&
                     !isFetching &&
@@ -93,7 +92,6 @@ export default function TableDisplay<TData>({
         [fetchNextPage, isFetching, totalFetched, totalDBRowCount]
     );
 
-    //a check on mount and after a fetch to see if the table is already scrolled to the bottom and immediately needs to fetch more data
     React.useEffect(() => {
         fetchMoreOnBottomReached(tableContainerRef.current);
     }, [fetchMoreOnBottomReached]);
@@ -112,7 +110,6 @@ export default function TableDisplay<TData>({
 
     const { rows } = table.getRowModel();
 
-    //Virtualizing is optional, but might be necessary if we are going to potentially have hundreds or thousands of rows
     const rowVirtualizer = useVirtual({
         parentRef: tableContainerRef,
         size: rows.length,
@@ -130,14 +127,14 @@ export default function TableDisplay<TData>({
         return <>Loading...</>;
     }
     return (
-        <Stack h="calc(100vh - 322px)">
+        <Stack h="calc(100vh - 420px)">
             <Box
                 overflow="auto"
                 onScroll={(e) =>
                     fetchMoreOnBottomReached(e.target as HTMLDivElement)
                 }
                 ref={tableContainerRef}
-                h="calc(100vh - 372px)"
+                h="calc(100vh - 420px)"
             >
                 <Table>
                     <Thead>
@@ -154,6 +151,8 @@ export default function TableDisplay<TData>({
                                             key={header.id}
                                             colSpan={header.colSpan}
                                             style={{ width: header.getSize() }}
+                                            textTransform="none"
+                                            fontSize="14px"
                                         >
                                             {header.isPlaceholder ? null : (
                                                 <div
@@ -195,20 +194,35 @@ export default function TableDisplay<TData>({
                             const row = rows[virtualRow.index] as Row<TData>;
                             return (
                                 <Tr
-                                    key={row.id}
+                                    key={row.getValue(String(idField))}
                                     onClick={() =>
                                         onRowClick
-                                            ? onRowClick(row.getValue("id"))
+                                            ? onRowClick(
+                                                  row.getValue(String(idField))
+                                              )
                                             : undefined
                                     }
                                     cursor="pointer"
                                     bg={
-                                        row.getValue("id") === selected
+                                        row.getValue(String(idField)) ===
+                                        selected
                                             ? "gray.100"
                                             : ""
                                     }
                                 >
                                     {row.getVisibleCells().map((cell) => {
+                                        let value: any = cell
+                                            .getContext()
+                                            .getValue();
+                                        if (isArray(value) || isObject(value)) {
+                                            return (
+                                                <Td>
+                                                    <pre>
+                                                        {JSON.stringify(value)}
+                                                    </pre>
+                                                </Td>
+                                            );
+                                        }
                                         return (
                                             <Td
                                                 key={cell.id}

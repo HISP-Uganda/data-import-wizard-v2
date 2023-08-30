@@ -75,7 +75,7 @@ export const loadProgram = async (engine: any, id: string) => {
         data: {
             resource: `programs/${id}.json`,
             params: {
-                fields: "trackedEntityType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+                fields: "id,name,trackedEntityType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
             },
         },
     };
@@ -145,7 +145,16 @@ export const usePrograms = (
                     programs,
                 },
             }: any = await engine.query(programsQuery);
-            return { programs, total };
+            return {
+                programs: programs.map((p: Partial<IProgram>) => ({
+                    ...p,
+                    programType:
+                        p.programType === "WITH_REGISTRATION"
+                            ? "Tracker"
+                            : "Event",
+                })),
+                total,
+            };
         }
     );
 };

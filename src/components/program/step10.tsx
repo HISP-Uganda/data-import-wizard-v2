@@ -8,7 +8,12 @@ import {
     useToast,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { IProgramMapping, Option, fetchRemote } from "data-import-wizard-utils";
+import {
+    IProgramMapping,
+    Option,
+    fetchRemote,
+    pullRemoteData,
+} from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { fromPairs, isArray, isString } from "lodash";
 import { getOr } from "lodash/fp";
@@ -110,40 +115,14 @@ export default function Step10() {
         if (remoteAPI && !programMapping.isSource) {
             onOpen();
             try {
-                if (programMapping.dataSource === "godata" && goData.id) {
-                    const data = await fetchRemote<any[]>(
-                        {
-                            ...programMapping.authentication,
-                            params: {
-                                auth: { param: "access_token", value: token },
-                            },
-                        },
-                        `api/outbreaks/${goData.id}/cases`
-                    );
-                    const finalData = data.map((d) => {
-                        const processed = Object.entries(d).map(
-                            ([key, value]) => {
-                                if (isArray(value)) {
-                                    return [
-                                        key,
-                                        value.map((v) => tokens[v] || v),
-                                    ];
-                                }
-
-                                if (isString(value)) {
-                                    return [key, tokens[value] || value];
-                                }
-                                return [key, value];
-                            }
-                        );
-                        return fromPairs(processed);
-                    });
-
-                    dataApi.changeData(finalData);
-                } else {
-                    const { data } = await remoteAPI.get("");
-                    dataApi.changeData(data);
-                }
+                const data = await pullRemoteData(
+                    programMapping,
+                    goData,
+                    tokens,
+                    token,
+                    remoteAPI
+                );
+                dataApi.changeData(data);
             } catch (error: any) {
                 toast({
                     title: "Fetch Failed",

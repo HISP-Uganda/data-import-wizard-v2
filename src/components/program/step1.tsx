@@ -1,27 +1,10 @@
-import {
-    Box,
-    Spinner,
-    Stack,
-    Table,
-    Tbody,
-    Td,
-    Text,
-    Th,
-    Thead,
-    Tr,
-    useDisclosure,
-} from "@chakra-ui/react";
+import { Box, Spinner, Stack, useDisclosure } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
-import {
-    ColumnDef,
-    createColumnHelper,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
-} from "@tanstack/react-table";
+import { ColumnDef } from "@tanstack/react-table";
+import { IProgram } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
-import { IProgram, IProgramMapping } from "data-import-wizard-utils";
+import { useMemo } from "react";
 import {
     $programMapping,
     programApi,
@@ -30,87 +13,8 @@ import {
 import { loadProgram, usePrograms } from "../../Queries";
 import { stepper } from "../../Store";
 import Progress from "../Progress";
-import { useMemo } from "react";
 import TableDisplay from "../TableDisplay";
 
-// function TableDisplay({ data }: { data: Partial<IProgram>[] }) {
-//     const { isOpen, onOpen, onClose } = useDisclosure();
-//     const programMapping = useStore($programMapping);
-//     const engine = useDataEngine();
-//     const columnHelper = createColumnHelper<Partial<IProgram>>();
-
-//     const columns = [
-//         columnHelper.accessor("id", {
-//             id: "id",
-//             cell: (info) => <Text>{info.getValue()}</Text>,
-//         }),
-//         columnHelper.accessor("name", {
-//             id: "name",
-//             cell: (info) => <Text>{info.getValue()}</Text>,
-//         }),
-//         columnHelper.accessor("programType", {
-//             id: "programType",
-//             cell: (info) => <Text>{info.getValue()}</Text>,
-//         }),
-//     ];
-//     const table = useReactTable({
-//         data,
-//         columns,
-//         getCoreRowModel: getCoreRowModel(),
-//     });
-
-//     return (
-//         <Stack>
-//             <Table>
-//                 <Thead>
-//                     {table.getHeaderGroups().map((headerGroup) => (
-//                         <Tr key={headerGroup.id}>
-//                             {headerGroup.headers.map((header) => (
-//                                 <Th key={header.id}>
-//                                     {header.isPlaceholder
-//                                         ? null
-//                                         : flexRender(
-//                                               header.column.columnDef.header,
-//                                               header.getContext()
-//                                           )}
-//                                 </Th>
-//                             ))}
-//                         </Tr>
-//                     ))}
-//                 </Thead>
-//                 <Tbody>
-//                     {table.getRowModel().rows.map((row) => (
-//                         <Tr
-//                             key={row.id}
-//                             cursor="pointer"
-//                             onClick={() => onProgramSelect(row.getValue("id"))}
-//                             bg={
-//                                 row.getValue("id") === programMapping.program
-//                                     ? "yellow"
-//                                     : ""
-//                             }
-//                         >
-//                             {row.getVisibleCells().map((cell) => (
-//                                 <Td key={cell.id}>
-//                                     {flexRender(
-//                                         cell.column.columnDef.cell,
-//                                         cell.getContext()
-//                                     )}
-//                                 </Td>
-//                             ))}
-//                         </Tr>
-//                     ))}
-//                 </Tbody>
-//             </Table>
-//             <Progress
-//                 onClose={onClose}
-//                 isOpen={isOpen}
-//                 message="Loading Selected Program"
-//                 onOpen={onOpen}
-//             />
-//         </Stack>
-//     );
-// }
 const Step1 = () => {
     const { isLoading, isError, isSuccess, error, data } = usePrograms(1, 100);
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -138,11 +42,15 @@ const Step1 = () => {
 
     const onProgramSelect = async (id: string) => {
         onOpen();
-        const data = await loadProgram(engine, id);
+        let data = await loadProgram(engine, id);
+        const other = programMapping.isSource
+            ? { source: data.name }
+            : { destination: data.name };
         programMappingApi.updateMany({
             trackedEntityType: getOr("", "trackedEntityType.id", data),
             program: id,
             programType: getOr("", "programType", data),
+            ...other,
         });
         programApi.set(data);
         onClose();

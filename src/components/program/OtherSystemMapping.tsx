@@ -1,10 +1,16 @@
 import { usePagination } from "@ajna/pagination";
 import {
+    Box,
     Checkbox,
     Icon,
     Input,
     Stack,
+    Tab,
     Table,
+    TabList,
+    TabPanel,
+    TabPanels,
+    Tabs,
     Tbody,
     Td,
     Text,
@@ -12,34 +18,31 @@ import {
     Th,
     Thead,
     Tr,
-    Tabs,
-    TabList,
-    TabPanels,
-    Tab,
-    TabPanel,
-    Box,
+    useDisclosure,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
 import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { getOr } from "lodash/fp";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useEffect } from "react";
 import { FiCheck } from "react-icons/fi";
 import {
     $attributeMapping,
     $metadata,
-    attributeMappingApi,
+    $names,
     $programMapping,
+    attributeMappingApi,
     programMappingApi,
 } from "../../pages/program/Store";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
 import Paginated from "../Paginated";
+import Progress from "../Progress";
 import SourceIcon from "../SourceIcon";
 
 const Display = ({ data }: { data: Option[] }) => {
     const metadata = useStore($metadata);
     const attributeMapping = useStore($attributeMapping);
+    const { source, destination } = useStore($names);
 
     const outerLimit = 4;
     const innerLimit = 4;
@@ -57,7 +60,7 @@ const Display = ({ data }: { data: Option[] }) => {
             inner: innerLimit,
         },
         initialState: {
-            pageSize: 5,
+            pageSize: 7,
             currentPage: 1,
         },
     });
@@ -73,13 +76,15 @@ const Display = ({ data }: { data: Option[] }) => {
     const setCustom = (attribute: string, manual: boolean) => {
         const isSpecific = attributeMapping[attribute]?.specific;
         attributeMappingApi.update({
-            attribute: `${attribute}.manual`,
+            attribute,
+            key: "manual",
             value: manual,
         });
 
         if (isSpecific) {
             attributeMappingApi.update({
-                attribute: `${attribute}.specific`,
+                attribute,
+                key: "specific",
                 value: !isSpecific,
             });
         }
@@ -87,14 +92,16 @@ const Display = ({ data }: { data: Option[] }) => {
 
     const setSpecific = (attribute: string, specific: boolean) => {
         attributeMappingApi.update({
-            attribute: `${attribute}.specific`,
+            attribute,
+            key: "specific",
             value: specific,
         });
         const isManual = attributeMapping[attribute]?.manual;
 
         if (isManual) {
             attributeMappingApi.update({
-                attribute: `${attribute}.manual`,
+                attribute,
+                key: "manual",
                 value: !isManual,
             });
         }
@@ -104,34 +111,56 @@ const Display = ({ data }: { data: Option[] }) => {
             <Table colorScheme="facebook" size="sm">
                 <Thead>
                     <Tr>
-                        <Th py="10px" w="35%">
+                        <Th py="10px" w="35%" textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <DestinationIcon />
                                 <Text> Destination</Text>
+                                <Text>{destination}</Text>
                             </Stack>
                         </Th>
-                        <Th py="10px" w="100px" textAlign="center">
+                        <Th
+                            py="10px"
+                            w="100px"
+                            textAlign="center"
+                            textTransform="none"
+                        >
                             Mandatory
                         </Th>
-                        <Th py="10px" w="100px" textAlign="center">
+                        <Th
+                            py="10px"
+                            w="100px"
+                            textAlign="center"
+                            textTransform="none"
+                        >
                             Unique
                         </Th>
-                        <Th py="10px" w="100px" textAlign="center">
+                        <Th
+                            py="10px"
+                            w="100px"
+                            textAlign="center"
+                            textTransform="none"
+                        >
                             Custom
                         </Th>
-                        <Th py="10px" w="50px" textAlign="center">
+                        <Th
+                            py="10px"
+                            w="50px"
+                            textAlign="center"
+                            textTransform="none"
+                        >
                             Specify
                         </Th>
-                        <Th py="10px" w="35%">
+                        <Th py="10px" w="35%" textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <SourceIcon />
                                 <Text>Source</Text>
+                                <Text>{source}</Text>
                             </Stack>
                         </Th>
-                        <Th py="10px" w="70px">
+                        <Th py="10px" w="70px" textTransform="none">
                             Option
                         </Th>
-                        <Th py="10px" w="100px">
+                        <Th py="10px" w="100px" textTransform="none">
                             Mapped?
                         </Th>
                     </Tr>
@@ -150,6 +179,7 @@ const Display = ({ data }: { data: Option[] }) => {
                                 mandatory,
                                 availableOptions,
                                 optionSetValue,
+                                valueType,
                             }) => (
                                 <Tr key={value} _hover={{ bg: "gray.50" }}>
                                     <Td>{label}</Td>
@@ -164,7 +194,8 @@ const Display = ({ data }: { data: Option[] }) => {
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 attributeMappingApi.update({
-                                                    attribute: `${value}.mandatory`,
+                                                    attribute: value,
+                                                    key: "mandatory",
                                                     value: e.target.checked,
                                                 })
                                             }
@@ -180,7 +211,8 @@ const Display = ({ data }: { data: Option[] }) => {
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) => {
                                                 attributeMappingApi.update({
-                                                    attribute: `${value}.unique`,
+                                                    attribute: value,
+                                                    key: "unique",
                                                     value: e.target.checked,
                                                 });
                                             }}
@@ -189,11 +221,7 @@ const Display = ({ data }: { data: Option[] }) => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                !!getOr(
-                                                    false,
-                                                    `${value}.manual`,
-                                                    attributeMapping
-                                                )
+                                                attributeMapping[value]?.manual
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
@@ -208,11 +236,8 @@ const Display = ({ data }: { data: Option[] }) => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                !!getOr(
-                                                    false,
-                                                    `${value}.specific`,
-                                                    attributeMapping
-                                                )
+                                                attributeMapping[value]
+                                                    ?.specific
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
@@ -225,29 +250,19 @@ const Display = ({ data }: { data: Option[] }) => {
                                         />
                                     </Td>
                                     <Td>
-                                        {!!getOr(
-                                            false,
-                                            `${value}.manual`,
-                                            attributeMapping
-                                        ) ||
-                                        !!getOr(
-                                            false,
-                                            `${value}.specific`,
-                                            attributeMapping
-                                        ) ? (
+                                        {attributeMapping[value]?.manual ||
+                                        attributeMapping[value]?.specific ? (
                                             <Input
-                                                value={String(
-                                                    getOr(
-                                                        "",
-                                                        `${value}.value`,
-                                                        attributeMapping
-                                                    )
-                                                )}
+                                                value={
+                                                    attributeMapping[value]
+                                                        ?.value
+                                                }
                                                 onChange={(
                                                     e: ChangeEvent<HTMLInputElement>
                                                 ) =>
                                                     attributeMappingApi.update({
-                                                        attribute: `${value}.value`,
+                                                        attribute: `${value}`,
+                                                        key: "value",
                                                         value: e.target.value,
                                                     })
                                                 }
@@ -261,11 +276,8 @@ const Display = ({ data }: { data: Option[] }) => {
                                                 value={metadata.sourceColumns?.find(
                                                     (val) =>
                                                         val.value ===
-                                                        getOr(
-                                                            "",
-                                                            `${value}.value`,
-                                                            attributeMapping
-                                                        )
+                                                        attributeMapping[value]
+                                                            ?.value
                                                 )}
                                                 options={metadata.sourceColumns?.map(
                                                     ({ value, label }) => ({
@@ -285,12 +297,12 @@ const Display = ({ data }: { data: Option[] }) => {
                                                                         e?.value ||
                                                                         "",
                                                                     unique:
-                                                                        !!getOr(
-                                                                            false,
-                                                                            `${value}.unique`,
-                                                                            attributeMapping
-                                                                        ) ||
+                                                                        attributeMapping[
+                                                                            value
+                                                                        ]
+                                                                            ?.unique ||
                                                                         unique,
+                                                                    valueType,
                                                                 },
                                                             }
                                                         )
@@ -359,7 +371,8 @@ const Display = ({ data }: { data: Option[] }) => {
 };
 
 export function OtherSystemMapping() {
-    const attributeMapping = useStore($attributeMapping);
+    const { isOpen, onOpen, onClose } = useDisclosure();
+
     const metadata = useStore($metadata);
     const programMapping = useStore($programMapping);
     const entityOptions: Option[] = [
@@ -375,18 +388,24 @@ export function OtherSystemMapping() {
         ) {
             programMappingApi.update({
                 attribute: "responseKey",
-                value: "CONTACT",
+                value: "CASE",
             });
         }
     }, []);
 
     useEffect(() => {
-        metadata.destinationColumns?.forEach(({ value, mandatory, unique }) => {
+        onOpen();
+        for (const {
+            value,
+            mandatory,
+            unique,
+        } of metadata.destinationColumns) {
             attributeMappingApi.updateMany({
                 attribute: value,
                 update: { mandatory, unique: unique || false },
             });
-        });
+        }
+        onClose();
         return () => {};
     }, [programMapping.responseKey]);
 
@@ -453,5 +472,15 @@ export function OtherSystemMapping() {
         );
     }
 
-    return <Display data={metadata.destinationColumns} />;
+    return (
+        <Stack>
+            <Display data={metadata.destinationColumns} />
+            <Progress
+                onClose={onClose}
+                isOpen={isOpen}
+                message="Creating initial mapping and trying to map automatically"
+                onOpen={onOpen}
+            />
+        </Stack>
+    );
 }

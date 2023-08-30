@@ -32,7 +32,8 @@ export default function DHIS2Options() {
                         })}
                         onChange={(e) =>
                             programMappingApi.update({
-                                attribute: "dhis2Options.programStage",
+                                attribute: "dhis2Options",
+                                key: "programStage",
                                 value: e.map((ee) => ee.value),
                             })
                         }

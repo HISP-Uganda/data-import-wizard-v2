@@ -1,3 +1,4 @@
+import { Stack, Text } from "@chakra-ui/react";
 import { ChangeEvent } from "react";
 import { dataApi } from "../pages/program/Store";
 
@@ -17,13 +18,13 @@ export default function FileUpload() {
         }
     };
     return (
-        <div>
+        <Stack>
             <input
                 type="file"
                 id="input"
                 multiple
                 onChange={handleFileChange}
             />
-        </div>
+        </Stack>
     );
 }

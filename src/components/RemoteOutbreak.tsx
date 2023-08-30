@@ -1,35 +1,33 @@
 import {
-    Stack,
     Spinner,
+    Stack,
     Table,
-    Thead,
-    Tr,
-    Th,
     Tbody,
     Td,
-    Text,
+    Th,
+    Thead,
+    Tr,
     useDisclosure,
 } from "@chakra-ui/react";
 import {
-    IGoData,
-    GODataTokenGenerationResponse,
     fetchRemote,
-    IGoDataOrgUnit,
-    GODataOption,
     getLowestLevelParents,
+    GODataOption,
+    GODataTokenGenerationResponse,
+    IGoData,
+    IGoDataOrgUnit,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { fromPairs, isEmpty } from "lodash";
-import { useState } from "react";
 import {
     $programMapping,
     $token,
-    tokensApi,
     currentSourceOptionsApi,
-    goDataOptionsApi,
     goDataApi,
-    remoteOrganisationsApi,
+    goDataOptionsApi,
     programMappingApi,
+    remoteOrganisationsApi,
+    tokensApi,
 } from "../pages/program/Store";
 import { useRemoteGet } from "../Queries";
 import { stepper } from "../Store";
@@ -56,6 +54,9 @@ export default function RemoteOutbreaks() {
     });
 
     const onRowSelect = async (outbreak: IGoData) => {
+        const other = programMapping.isSource
+            ? { destination: outbreak.name }
+            : { source: outbreak.name };
         onOpen();
         if (!programMapping.isSource) {
             programMappingApi.updateMany({
@@ -71,6 +72,7 @@ export default function RemoteOutbreaks() {
         } else {
             programMappingApi.updateMany({
                 remoteProgram: outbreak.id,
+                ...other,
             });
         }
         const organisations = await fetchRemote<IGoDataOrgUnit[]>(
@@ -117,13 +119,21 @@ export default function RemoteOutbreaks() {
         if (organisations) {
             remoteOrganisationsApi.set(getLowestLevelParents(organisations));
         }
-
         onClose();
         stepper.next();
     };
     return (
-        <Stack>
-            {isLoading && <Spinner />}
+        <Stack w="100%" h="100%">
+            {isLoading && (
+                <Stack
+                    w="100%"
+                    h="100%"
+                    alignItems="center"
+                    justifyContent="center"
+                >
+                    <Spinner />
+                </Stack>
+            )}
             {isSuccess && !isEmpty(data) && (
                 <Table colorScheme="facebook">
                     <Thead>

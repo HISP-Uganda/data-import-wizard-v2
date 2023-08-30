@@ -15,6 +15,7 @@ import {
     makeMetadata,
     makeRemoteApi,
     makeValidation,
+    mandatoryAttributes,
     Mapping,
     Option,
     programStageUniqColumns,
@@ -24,6 +25,8 @@ import {
     RealMapping,
     StageMapping,
     TrackedEntityInstance,
+    Update,
+    updateObject,
 } from "data-import-wizard-utils";
 
 import { combine, createApi } from "effector";
@@ -34,10 +37,6 @@ import { z } from "zod";
 import { domain } from "../../Domain";
 import { $steps } from "../../Store";
 
-type Update = {
-    attribute: string;
-    value: any;
-};
 type StageUpdate = Update & { stage: string };
 
 type Processed = {
@@ -46,6 +45,11 @@ type Processed = {
     events: Array<Partial<Event>>;
     trackedEntityUpdates: Array<Partial<TrackedEntityInstance>>;
     eventsUpdates: Array<Partial<Event>>;
+};
+
+type OtherProcessed = {
+    newInserts: Array<any>;
+    updates: Array<any>;
 };
 
 const authentication: Partial<Authentication> = {
@@ -76,10 +80,8 @@ const defaultMapping: Partial<IProgramMapping> = {
     id: generateUid(),
     name: "Example Mapping",
     description: "This an example mapping",
-    // program: "IpHINAT79UW",
-    trackedEntityType: "nEenWmSyUEp",
     dataSource: "godata",
-    isSource: true,
+    isSource: false,
     authentication,
     prefetch: true,
 };
@@ -87,8 +89,8 @@ const mySchema = z.string().url();
 
 export const $attributeMapping = domain.createStore<Mapping>({});
 export const attributeMappingApi = createApi($attributeMapping, {
-    update: (state, { attribute, value }: Update) => {
-        return set(attribute, value, state);
+    update: (state, payload: Update) => {
+        return updateObject(state, payload);
     },
     set: (_, value: Mapping) => value,
     updateMany: (
@@ -107,8 +109,8 @@ export const attributeMappingApi = createApi($attributeMapping, {
 
 export const $remoteMapping = domain.createStore<Mapping>({});
 export const remoteMappingApi = createApi($remoteMapping, {
-    update: (state, { attribute, value }: Update) => {
-        return set(attribute, value, state);
+    update: (state, payload: Update) => {
+        return updateObject(state, payload);
     },
     updateMany: (
         state,
@@ -131,8 +133,8 @@ export const remoteOrganisationsApi = createApi($remoteOrganisations, {
 export const $programStageMapping = domain.createStore<StageMapping>({});
 
 export const stageMappingApi = createApi($programStageMapping, {
-    update: (state, { attribute, value, stage }: StageUpdate) => {
-        return set(`${stage}.${attribute}`, value, state);
+    update: (state, { attribute, value, stage, key }: StageUpdate) => {
+        return set(`${stage}.${attribute}.${key}`, value, state);
     },
     set: (_, value: StageMapping) => value,
     updateMany: (
@@ -145,8 +147,8 @@ export const stageMappingApi = createApi($programStageMapping, {
 export const $organisationUnitMapping = domain.createStore<Mapping>({});
 
 export const ouMappingApi = createApi($organisationUnitMapping, {
-    update: (state, { attribute, value }: Update) => {
-        return set(attribute, value, state);
+    update: (state, payload: Update) => {
+        return updateObject(state, payload);
     },
     set: (_, value: Mapping) => value,
     updateMany: (state, update: Mapping) => {
@@ -163,9 +165,16 @@ export const $programMapping =
     domain.createStore<Partial<IProgramMapping>>(defaultMapping);
 
 export const programMappingApi = createApi($programMapping, {
-    set: (_, mapping: IProgramMapping) => mapping,
-    update: (state, { attribute, value }: Update) => {
-        return set(attribute, value, state);
+    set: (_, mapping: Partial<IProgramMapping>) => mapping,
+    update: (
+        state,
+        {
+            attribute,
+            value,
+            key,
+        }: { attribute: keyof IProgramMapping; value: any; key?: string }
+    ) => {
+        return set(key ? `${attribute}.${key}` : attribute, value, state);
     },
     updateMany: (state, update: Partial<IProgramMapping>) => {
         return { ...state, ...update };
@@ -183,6 +192,7 @@ export const programApi = createApi($program, {
 });
 
 export const $processed = domain.createStore<Partial<Processed>>({});
+export const $otherProcessed = domain.createStore<Partial<OtherProcessed>>({});
 
 export const processor = createApi($processed, {
     addInstances: (
@@ -223,6 +233,11 @@ export const processor = createApi($processed, {
     },
 });
 
+export const otherProcessedApi = createApi($otherProcessed, {
+    addNewInserts: (state, newInserts: any[]) => ({ ...state, newInserts }),
+    addUpdates: (state, updates: any[]) => ({ ...state, updates }),
+});
+
 export const $programStageUniqueElements = $programStageMapping.map(
     (programStageMapping) => programStageUniqElements(programStageMapping)
 );
@@ -233,6 +248,10 @@ export const $programStageUniqueColumns = $programStageMapping.map(
 
 export const $programUniqAttributes = $attributeMapping.map(
     (attributeMapping) => programUniqAttributes(attributeMapping)
+);
+
+export const $mandatoryAttribute = $attributeMapping.map((attributeMapping) =>
+    mandatoryAttributes(attributeMapping)
 );
 
 export const $programUniqColumns = $attributeMapping.map((attributeMapping) =>
@@ -389,8 +408,51 @@ export const currentSourceOptionsApi = createApi($currentSourceOptions, {
     set: (_, options: Option[]) => options,
 });
 
-export const $otherProcessed = domain.createStore<any[]>([]);
+export const $errors = domain.createStore<any[]>([]);
+export const $conflicts = domain.createStore<any[]>([]);
 
-export const otherProcessedApi = createApi($otherProcessed, {
+export const errorsApi = createApi($errors, {
     set: (_, data: any[]) => data,
 });
+export const conflictsApi = createApi($conflicts, {
+    set: (_, data: any[]) => data,
+});
+
+export const $names = combine(
+    $programMapping,
+    $program,
+    $goData,
+    $dhis2Program,
+    (programMapping, program, goData, destinationProgram) => {
+        if (
+            programMapping.isSource &&
+            programMapping.dataSource &&
+            ["godata", "dhis2", ""].indexOf(programMapping.dataSource) !== -1
+        ) {
+            return {
+                source: `(${program.name})`,
+                destination: `(${goData.name || destinationProgram.name})`,
+            };
+        } else if (
+            programMapping.dataSource &&
+            ["godata", "dhis2", ""].indexOf(programMapping.dataSource) !== -1
+        ) {
+            return {
+                destination: `(${program.name})`,
+                source: `(${goData.name || destinationProgram.name})`,
+            };
+        }
+
+        if (programMapping.isSource) {
+            return {
+                source: `(${program.name})`,
+                destination: "",
+            };
+        }
+
+        return {
+            destination: `(${program.name})`,
+            source: "",
+        };
+    }
+);
