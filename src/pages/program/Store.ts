@@ -31,7 +31,7 @@ import {
 
 import { combine, createApi } from "effector";
 import produce from "immer";
-import { Dictionary } from "lodash";
+import { Dictionary, drop } from "lodash";
 import { isEmpty, set } from "lodash/fp";
 import { z } from "zod";
 import { domain } from "../../Domain";
@@ -198,30 +198,59 @@ export const processor = createApi($processed, {
     addInstances: (
         state,
         trackedEntities: Array<Partial<TrackedEntityInstance>>
-    ) =>
-        produce(state, (draft) => {
-            draft.trackedEntities = trackedEntities;
-        }),
-    addEnrollments: (state, enrollments: Array<Partial<Enrollment>>) =>
-        produce(state, (draft) => {
-            draft.enrollments = enrollments;
-        }),
-    addEvents: (state, events: Array<Partial<Event>>) =>
-        produce(state, (draft) => {
-            draft.events = events;
-        }),
+    ) => {
+        if (state.trackedEntities) {
+            return {
+                ...state,
+                trackedEntities: [...state.trackedEntities, ...trackedEntities],
+            };
+        }
+        return { ...state, trackedEntities };
+    },
+
+    addEnrollments: (state, enrollments: Array<Partial<Enrollment>>) => {
+        if (state.enrollments) {
+            return {
+                ...state,
+                enrollments: [...state.enrollments, ...enrollments],
+            };
+        }
+        return { ...state, enrollments };
+    },
+    addEvents: (state, events: Array<Partial<Event>>) => {
+        if (state.events) {
+            return {
+                ...state,
+                events: [...state.events, ...events],
+            };
+        }
+        return { ...state, events };
+    },
 
     addInstanceUpdated: (
         state,
-        trackedEntities: Array<Partial<TrackedEntityInstance>>
-    ) =>
-        produce(state, (draft) => {
-            draft.trackedEntityUpdates = trackedEntities;
-        }),
-    addEventUpdates: (state, events: Array<Partial<Event>>) =>
-        produce(state, (draft) => {
-            draft.eventsUpdates = events;
-        }),
+        trackedEntityUpdates: Array<Partial<TrackedEntityInstance>>
+    ) => {
+        if (state.trackedEntityUpdates) {
+            return {
+                ...state,
+                trackedEntityUpdates: [
+                    ...state.trackedEntityUpdates,
+                    ...trackedEntityUpdates,
+                ],
+            };
+        }
+        return { ...state, trackedEntityUpdates };
+    },
+    addEventUpdates: (state, eventsUpdates: Array<Partial<Event>>) => {
+        if (state.eventsUpdates) {
+            return {
+                ...state,
+                eventUpdates: [...state.eventsUpdates, ...eventsUpdates],
+            };
+        }
+        return { ...state, eventsUpdates };
+    },
     reset: () => {
         return {
             trackedEntityInstances: [],

@@ -7,6 +7,7 @@ import {
     fetchEvents,
     fetchRemote,
     fetchTrackedEntityInstances,
+    findUniqAttributes,
     flattenTrackedEntityInstances,
     getLowestLevelParents,
     GODataTokenGenerationResponse,
@@ -74,7 +75,6 @@ export default function Preview() {
             } = {
                 trackedEntityInstances: [],
             };
-            console.log(programMapping.dhis2Options);
             if (
                 programMapping.dhis2Options?.programStage &&
                 programMapping.dhis2Options.programStage.length > 0
@@ -94,8 +94,6 @@ export default function Preview() {
                     [],
                     false
                 );
-
-                console.log(instances);
             }
 
             const flattened = flattenTrackedEntityInstances(instances);
@@ -191,20 +189,12 @@ export default function Preview() {
                         `api/outbreaks/${goData.id}/cases`
                     );
 
-                    const metadata = makeMetadata(program, programMapping, {
-                        data: goDataData,
-                        programStageMapping,
-                        attributeMapping,
-                        remoteOrganisations,
-                        goData,
-                        tokens,
-                    });
                     for (const current of chunk(goDataData, 25)) {
                         await fetchTrackedEntityInstances(
                             { engine },
                             programMapping,
                             {},
-                            metadata.uniqueAttributeValues,
+                            findUniqAttributes(current, attributeMapping),
                             true,
                             async (trackedEntityInstances) => {
                                 const previous = processPreviousInstances(
@@ -213,6 +203,7 @@ export default function Preview() {
                                     programStageUniqueElements,
                                     programMapping.program || ""
                                 );
+                                console.log(previous);
                                 const {
                                     enrollments,
                                     events,
@@ -232,7 +223,6 @@ export default function Preview() {
                                     elements,
                                     attributes
                                 );
-                                console.log(processedInstances);
                                 processor.addInstances(processedInstances);
                                 processor.addEnrollments(enrollments);
                                 processor.addEvents(events);
