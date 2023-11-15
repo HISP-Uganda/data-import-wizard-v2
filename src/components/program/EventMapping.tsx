@@ -1,16 +1,21 @@
 import { Button, Flex, Stack } from "@chakra-ui/react";
 import { useStore } from "effector-react";
 import { useState } from "react";
-import { $program } from "../../pages/program/Store";
+import { $program } from "../../pages/program";
 import ProgramStageMapping from "../ProgramStageMapping";
 
-const Step5 = () => {
+export default function EventMapping() {
     const program = useStore($program);
     const [active, setActive] = useState<string>(
         program.programStages?.[0].id || ""
     );
     return (
-        <Stack spacing="30px">
+        <Stack
+            spacing="30px"
+            h="calc(100vh - 350px)"
+            maxH="calc(100vh - 350px)"
+            overflow="auto"
+        >
             <Flex
                 gap="5px"
                 flexWrap="wrap"
@@ -48,6 +53,4 @@ const Step5 = () => {
             )}
         </Stack>
     );
-};
-
-export default Step5;
+}

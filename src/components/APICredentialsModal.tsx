@@ -11,6 +11,7 @@ import {
     Stack,
     Text,
 } from "@chakra-ui/react";
+import { IMapping } from "data-import-wizard-utils";
 import { Event } from "effector";
 import { getOr } from "lodash/fp";
 import { ChangeEvent } from "react";
@@ -22,7 +23,7 @@ type Props = {
     updateMapping: Event<any>;
     onOK: () => void;
     mapping: any;
-    accessor: string;
+    accessor: keyof IMapping;
     fetching: boolean;
     labelField?: string;
     valueField?: string;

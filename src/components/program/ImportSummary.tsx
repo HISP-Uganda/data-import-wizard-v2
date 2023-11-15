@@ -19,17 +19,14 @@ import {
     convertToGoData,
     Event,
     fetchEvents,
-    fetchRemote,
+    fetchGoDataData,
     fetchTrackedEntityInstances,
     flattenTrackedEntityInstances,
-    GODataTokenGenerationResponse,
-    IGoDataData,
+    groupGoData4Insert,
     postRemote,
-    putRemote,
     TrackedEntityInstance,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { response } from "express";
 import { chunk, groupBy, isArray } from "lodash";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -38,17 +35,19 @@ import {
     $optionMapping,
     $organisationUnitMapping,
     $otherProcessed,
+    $prevGoData,
     $processed,
+    $processedGoDataData,
     $programMapping,
     $remoteAPI,
     $tokens,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import { $version } from "../../Store";
 import Progress from "../Progress";
 import Superscript from "../Superscript";
 import TableDisplay from "../TableDisplay";
 
-export default function Step7() {
+export default function ImportSummary() {
     const toast = useToast();
     const engine = useDataEngine();
     const version = useStore($version);
@@ -58,6 +57,8 @@ export default function Step7() {
     const optionMapping = useStore($optionMapping);
     const tokens = useStore($tokens);
     const otherProcessed = useStore($otherProcessed);
+    const processedGoDataData = useStore($processedGoDataData);
+    const prevGoData = useStore($prevGoData);
     const goData = useStore($goData);
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const processed = useStore($processed);
@@ -158,111 +159,11 @@ export default function Step7() {
         return () => {};
     }, [JSON.stringify(updates)]);
 
-    const insertIntoGoData = async (data: any[] | undefined) => {
-        if (data) {
-            const {
-                params,
-                basicAuth,
-                hasNextLink,
-                headers,
-                password,
-                username,
-                ...rest
-            } = programMapping.authentication || {};
-            try {
-                setMessage(() => "Getting auth token");
-                const response =
-                    await postRemote<GODataTokenGenerationResponse>(
-                        rest,
-                        "api/users/login",
-                        {
-                            email: username,
-                            password,
-                        }
-                    );
-                if (response) {
-                    const token = response.id;
-                    for (const { id, ...goDataCase } of data) {
-                        try {
-                            if (id) {
-                                const response = await putRemote<any>(
-                                    {
-                                        ...rest,
-                                    },
-                                    `api/outbreaks/${goData.id}/cases/${id}`,
-                                    goDataCase,
-                                    {
-                                        auth: {
-                                            param: "access_token",
-                                            value: token,
-                                        },
-                                    }
-                                );
-                                setUpdates((prev) => [...prev, response]);
-                            } else {
-                                const response = await postRemote<any>(
-                                    {
-                                        ...rest,
-                                    },
-                                    `api/outbreaks/${goData.id}/cases`,
-                                    goDataCase,
-                                    {
-                                        auth: {
-                                            param: "access_token",
-                                            value: token,
-                                        },
-                                    }
-                                );
-                                setInserted((prev) => [...prev, response]);
-                            }
-                        } catch (error: any) {
-                            const keys = Object.keys(error);
-                            if (keys.indexOf("response") !== -1) {
-                                const { error: e } = error.response.data;
-                                setErrored((prev) => [
-                                    ...prev,
-                                    { ...goDataCase, ...e },
-                                ]);
-                                toast({
-                                    title: "Post/Put Failed",
-                                    description: e?.message,
-                                    status: "error",
-                                    duration: 9000,
-                                    isClosable: true,
-                                });
-                            } else {
-                                setErrored((prev) => [
-                                    ...prev,
-                                    { ...goDataCase, message: error?.message },
-                                ]);
-                                toast({
-                                    title: "Post/Put Failed",
-                                    description: error?.message,
-                                    status: "error",
-                                    duration: 9000,
-                                    isClosable: true,
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch (error: any) {
-                toast({
-                    title: "Fetch Failed",
-                    description: error?.message,
-                    status: "error",
-                    duration: 9000,
-                    isClosable: true,
-                });
-            }
-        }
-    };
-
     const fetchAndInsert = async () => {
         onOpen();
         if (programMapping.isSource) {
-            if (programMapping.dataSource === "dhis2") {
-            } else if (programMapping.dataSource === "godata") {
+            if (programMapping.dataSource === "dhis2-program") {
+            } else if (programMapping.dataSource === "go-data") {
                 const {
                     params,
                     basicAuth,
@@ -273,36 +174,27 @@ export default function Step7() {
                     ...rest
                 } = programMapping.authentication || {};
 
-                const response =
-                    await postRemote<GODataTokenGenerationResponse>(
-                        rest,
-                        "api/users/login",
-                        {
-                            email: username,
-                            password,
-                        }
-                    );
-                const prev = await fetchRemote<Array<Partial<IGoDataData>>>(
-                    rest,
-                    `api/outbreaks/${goData.id}/cases`,
-                    {
-                        auth: {
-                            param: "access_token",
-                            value: response.id,
-                            forUpdates: false,
-                        },
-                    }
-                );
                 if (programMapping.prefetch) {
-                    const { newInserts, updates } = otherProcessed;
-                    if (newInserts && updates) {
-                        await insertIntoGoData([...newInserts, ...updates]);
-                    } else if (newInserts) {
-                        await insertIntoGoData(newInserts);
-                    } else if (updates) {
-                        await insertIntoGoData(updates);
+                    const { conflicts, errors, processed } =
+                        processedGoDataData;
+                    if (processed) {
+                        const { updates, inserts } = processed;
+                        await groupGoData4Insert(
+                            goData,
+                            inserts,
+                            updates,
+                            prevGoData,
+                            programMapping.authentication || {},
+                            setMessage,
+                            setInserted,
+                            setUpdates
+                        );
                     }
                 } else {
+                    const { metadata, prev } = await fetchGoDataData(
+                        goData,
+                        programMapping.authentication || {}
+                    );
                     await fetchTrackedEntityInstances(
                         { engine },
                         programMapping,
@@ -314,7 +206,7 @@ export default function Step7() {
                                 () =>
                                     `Working on page ${page} for tracked entities`
                             );
-                            const { inserts, updates, errors, conflicts } =
+                            const { processed, errors, conflicts } =
                                 convertToGoData(
                                     flattenTrackedEntityInstances({
                                         trackedEntityInstances,
@@ -324,11 +216,19 @@ export default function Step7() {
                                     goData,
                                     optionMapping,
                                     tokens,
-                                    prev
+                                    metadata
                                 );
-                            setErrored((prev) => [...prev, errors]);
-                            setConflicted((prev) => [...prev, conflicts]);
-                            await insertIntoGoData([...inserts, ...updates]);
+                            const { inserts, updates } = processed;
+                            await groupGoData4Insert(
+                                goData,
+                                inserts,
+                                updates,
+                                prev,
+                                programMapping.authentication || {},
+                                setMessage,
+                                setInserted,
+                                setUpdates
+                            );
                         }
                     );
                 }
@@ -344,12 +244,12 @@ export default function Step7() {
                         );
                     }
                 } else {
-                    if (programMapping.dhis2Options?.programStage) {
+                    if (programMapping.program?.dhis2Options?.programStage) {
                         const data = await fetchEvents(
                             { engine },
-                            programMapping.dhis2Options.programStage,
+                            programMapping.program?.dhis2Options.programStage,
                             50,
-                            programMapping.program || ""
+                            programMapping.program?.program || ""
                         );
                         const actual = await convertFromDHIS2(
                             data as any,
@@ -424,13 +324,13 @@ export default function Step7() {
                     }
                 }
             }
-        } else if (programMapping.dataSource === "dhis2") {
+        } else if (programMapping.dataSource === "dhis2-program") {
             if (remoteAPI) {
                 const { data } = await remoteAPI.get<{
                     trackedEntityInstances: Array<TrackedEntityInstance>;
                 }>("api/trackedEntityInstances.json", {
                     params: {
-                        program: programMapping.remoteProgram,
+                        program: programMapping.program?.remoteProgram,
                         fields: "*",
                         ouMode: "ALL",
                         pageSize: 1,
@@ -440,7 +340,7 @@ export default function Step7() {
                 setFound(() => flattenTrackedEntityInstances(data));
             }
         } else if (
-            programMapping.dataSource === "godata" &&
+            programMapping.dataSource === "go-data" &&
             !programMapping.prefetch
         ) {
             console.log("We seem to be in a wrong place");
@@ -1003,7 +903,7 @@ export default function Step7() {
         <Stack spacing="20px">
             {!programMapping.isSource && createDHIS2Response()}
             {programMapping.isSource &&
-                programMapping.dataSource === "godata" &&
+                programMapping.dataSource === "go-data" &&
                 createGoDataResponse()}
             <Progress
                 onClose={onClose}

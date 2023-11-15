@@ -1,5 +1,5 @@
 import { useStore } from "effector-react";
-import { $programMapping } from "../../pages/program/Store";
+import { $programMapping } from "../../pages/program";
 import DHIS2Options from "./DHIS2Options";
 import Preview from "./Preview";
 

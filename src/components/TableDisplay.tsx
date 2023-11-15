@@ -105,7 +105,7 @@ export default function TableDisplay<TData>({
         onSortingChange: setSorting,
         getCoreRowModel: getCoreRowModel(),
         getSortedRowModel: getSortedRowModel(),
-        debugTable: true,
+        // debugTable: false,
     });
 
     const { rows } = table.getRowModel();
@@ -113,7 +113,7 @@ export default function TableDisplay<TData>({
     const rowVirtualizer = useVirtual({
         parentRef: tableContainerRef,
         size: rows.length,
-        overscan: 10,
+        overscan: 5,
     });
     const { virtualItems: virtualRows, totalSize } = rowVirtualizer;
     const paddingTop =

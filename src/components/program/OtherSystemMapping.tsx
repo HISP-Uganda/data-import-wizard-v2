@@ -32,7 +32,7 @@ import {
     $programMapping,
     attributeMappingApi,
     programMappingApi,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
 import Paginated from "../Paginated";
@@ -186,7 +186,7 @@ const Display = ({ data }: { data: Option[] }) => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]
+                                                attributeMapping[value ?? ""]
                                                     ?.mandatory
                                             }
                                             isReadOnly={mandatory}
@@ -194,7 +194,7 @@ const Display = ({ data }: { data: Option[] }) => {
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 attributeMappingApi.update({
-                                                    attribute: value,
+                                                    attribute: value ?? "",
                                                     key: "mandatory",
                                                     value: e.target.checked,
                                                 })
@@ -204,14 +204,15 @@ const Display = ({ data }: { data: Option[] }) => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]?.unique
+                                                attributeMapping[value ?? ""]
+                                                    ?.unique
                                             }
                                             isReadOnly={unique}
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) => {
                                                 attributeMappingApi.update({
-                                                    attribute: value,
+                                                    attribute: value ?? "",
                                                     key: "unique",
                                                     value: e.target.checked,
                                                 });
@@ -221,13 +222,14 @@ const Display = ({ data }: { data: Option[] }) => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]?.manual
+                                                attributeMapping[value ?? ""]
+                                                    ?.manual
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 setCustom(
-                                                    value,
+                                                    value ?? "",
                                                     e.target.checked
                                                 )
                                             }
@@ -236,26 +238,29 @@ const Display = ({ data }: { data: Option[] }) => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]
+                                                attributeMapping[value ?? ""]
                                                     ?.specific
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 setSpecific(
-                                                    value,
+                                                    value ?? "",
                                                     e.target.checked
                                                 )
                                             }
                                         />
                                     </Td>
                                     <Td>
-                                        {attributeMapping[value]?.manual ||
-                                        attributeMapping[value]?.specific ? (
+                                        {attributeMapping[value ?? ""]
+                                            ?.manual ||
+                                        attributeMapping[value ?? ""]
+                                            ?.specific ? (
                                             <Input
                                                 value={
-                                                    attributeMapping[value]
-                                                        ?.value
+                                                    attributeMapping[
+                                                        value ?? ""
+                                                    ]?.value
                                                 }
                                                 onChange={(
                                                     e: ChangeEvent<HTMLInputElement>
@@ -273,32 +278,39 @@ const Display = ({ data }: { data: Option[] }) => {
                                                 false,
                                                 GroupBase<Option>
                                             >
-                                                value={metadata.sourceColumns?.find(
-                                                    (val) =>
-                                                        val.value ===
-                                                        attributeMapping[value]
-                                                            ?.value
+                                                value={metadata.sourceColumns.find(
+                                                    (val) => {
+                                                        if (value) {
+                                                            return (
+                                                                attributeMapping[
+                                                                    value
+                                                                ] !==
+                                                                    undefined &&
+                                                                attributeMapping[
+                                                                    value
+                                                                ].value ===
+                                                                    val.value
+                                                            );
+                                                        }
+                                                        return false;
+                                                    }
                                                 )}
-                                                options={metadata.sourceColumns?.map(
-                                                    ({ value, label }) => ({
-                                                        label,
-                                                        value,
-                                                    })
-                                                )}
+                                                options={metadata.sourceColumns}
                                                 isClearable
                                                 onChange={(e) =>
                                                     attributeMappingApi.updateMany(
                                                         attributeMappingApi.updateMany(
                                                             {
                                                                 attribute:
-                                                                    value,
+                                                                    value ?? "",
                                                                 update: {
                                                                     value:
                                                                         e?.value ||
                                                                         "",
                                                                     unique:
                                                                         attributeMapping[
-                                                                            value
+                                                                            value ??
+                                                                                ""
                                                                         ]
                                                                             ?.unique ||
                                                                         unique,
@@ -308,6 +320,20 @@ const Display = ({ data }: { data: Option[] }) => {
                                                         )
                                                     )
                                                 }
+                                                formatGroupLabel={(group) => (
+                                                    <Text
+                                                        color="red.500"
+                                                        ml="-10px"
+                                                        fontSize="20px"
+                                                    >
+                                                        {group.label}
+                                                    </Text>
+                                                )}
+                                                formatOptionLabel={(option) => (
+                                                    <Text cursor="pointer">
+                                                        {option.label}
+                                                    </Text>
+                                                )}
                                             />
                                         )}
                                     </Td>
@@ -317,12 +343,13 @@ const Display = ({ data }: { data: Option[] }) => {
                                                 destinationOptions={
                                                     availableOptions || []
                                                 }
-                                                value={value}
+                                                value={value ?? ""}
                                             />
                                         )}
                                     </Td>
                                     <Td>
-                                        {attributeMapping[value]?.value && (
+                                        {attributeMapping[value ?? ""]
+                                            ?.value && (
                                             <Icon
                                                 as={FiCheck}
                                                 color="green.400"
@@ -383,11 +410,12 @@ export function OtherSystemMapping() {
 
     useEffect(() => {
         if (
-            programMapping.dataSource === "godata" &&
-            !programMapping.responseKey
+            programMapping.dataSource === "go-data" &&
+            !programMapping.program?.responseKey
         ) {
             programMappingApi.update({
-                attribute: "responseKey",
+                attribute: "program",
+                key: "responseKey",
                 value: "CASE",
             });
         }
@@ -400,16 +428,16 @@ export function OtherSystemMapping() {
             mandatory,
             unique,
         } of metadata.destinationColumns) {
-            attributeMappingApi.updateMany({
-                attribute: value,
-                update: { mandatory, unique: unique || false },
-            });
+            // attributeMappingApi.updateMany({
+            //     attribute: value,
+            //     update: { mandatory, unique: unique || false },
+            // });
         }
         onClose();
         return () => {};
-    }, [programMapping.responseKey]);
+    }, [programMapping.program?.responseKey]);
 
-    if (programMapping.dataSource === "godata") {
+    if (programMapping.dataSource === "go-data") {
         return (
             <Stack>
                 <Stack direction="row" alignItems="center">
@@ -418,14 +446,16 @@ export function OtherSystemMapping() {
                         <Select<Option, false, GroupBase<Option>>
                             value={entityOptions.find(
                                 (val) =>
-                                    val.value === programMapping.responseKey
+                                    val.value ===
+                                    programMapping.program?.responseKey
                             )}
                             options={entityOptions}
                             isClearable
                             placeholder="Select"
                             onChange={(e) =>
                                 programMappingApi.update({
-                                    attribute: "responseKey",
+                                    attribute: "program",
+                                    key: "responseKey",
                                     value: e?.value,
                                 })
                             }
@@ -433,7 +463,7 @@ export function OtherSystemMapping() {
                     </Box>
                 </Stack>
 
-                {programMapping.responseKey === "EVENT" ? (
+                {programMapping.program?.responseKey === "EVENT" ? (
                     <Display data={metadata.events} />
                 ) : (
                     <Tabs>
@@ -441,9 +471,8 @@ export function OtherSystemMapping() {
                             <Tab>Personal</Tab>
                             <Tab>Epidemiology</Tab>
                             <Tab>Questionnaire</Tab>
-                            {programMapping.responseKey === "CONTACT" && (
-                                <Tab>Relationship</Tab>
-                            )}
+                            {programMapping.program?.responseKey ===
+                                "CONTACT" && <Tab>Relationship</Tab>}
                             <Tab>Lab</Tab>
                         </TabList>
 
@@ -457,13 +486,14 @@ export function OtherSystemMapping() {
                             <TabPanel>
                                 <Display data={metadata.questionnaire} />
                             </TabPanel>
-                            {programMapping.responseKey === "CONTACT" && (
+                            {programMapping.program?.responseKey ===
+                                "CONTACT" && (
                                 <TabPanel>
-                                    <Text>Relationships</Text>
+                                    <Display data={metadata.relationship} />
                                 </TabPanel>
                             )}
                             <TabPanel>
-                                <Text>Lab</Text>
+                                <Display data={metadata.lab} />
                             </TabPanel>
                         </TabPanels>
                     </Tabs>

@@ -9,13 +9,14 @@ import {
     $programMapping,
     programApi,
     programMappingApi,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import { loadProgram, usePrograms } from "../../Queries";
 import { stepper } from "../../Store";
+import Loader from "../Loader";
 import Progress from "../Progress";
 import TableDisplay from "../TableDisplay";
 
-const Step1 = () => {
+const ProgramSelect = () => {
     const { isLoading, isError, isSuccess, error, data } = usePrograms(1, 100);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const engine = useDataEngine();
@@ -42,15 +43,24 @@ const Step1 = () => {
 
     const onProgramSelect = async (id: string) => {
         onOpen();
-        let data = await loadProgram(engine, id);
+        let data = await loadProgram<IProgram>({
+            engine,
+            id,
+            fields: "id,name,trackedEntityType,programType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code,optionSetValue,optionSet[id,name,options[id,name,code]]]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+            resource: "programs",
+        });
         const other = programMapping.isSource
             ? { source: data.name }
             : { destination: data.name };
-        programMappingApi.updateMany({
-            trackedEntityType: getOr("", "trackedEntityType.id", data),
-            program: id,
-            programType: getOr("", "programType", data),
-            ...other,
+        programMappingApi.update({
+            attribute: "program",
+            value: {
+                ...programMapping.program,
+                trackedEntityType: getOr("", "trackedEntityType.id", data),
+                program: id,
+                programType: getOr("", "programType", data),
+                ...other,
+            },
         });
         programApi.set(data);
         onClose();
@@ -60,30 +70,20 @@ const Step1 = () => {
         <Stack>
             <Box m="auto" w="100%">
                 <Box
-                    position="relative"
                     overflow="auto"
                     whiteSpace="nowrap"
                     h="calc(100vh - 350px)"
                 >
                     {isLoading && (
-                        <Stack
-                            h="100%"
-                            alignItems="center"
-                            justifyContent="center"
-                            justifyItems="center"
-                            alignContent="center"
-                        >
-                            <Spinner />
-                        </Stack>
+                        <Loader message="Loading DHIS2 programs..." />
                     )}
-                    {isLoading && <Spinner />}
                     {isSuccess && (
                         <TableDisplay<Partial<IProgram>>
                             generatedData={data.programs}
                             columns={columns}
                             onRowClick={onProgramSelect}
                             queryKey={["step2"]}
-                            selected={programMapping.program}
+                            selected={programMapping.program?.program}
                         />
                     )}
                     {isError && JSON.stringify(error)}
@@ -100,4 +100,4 @@ const Step1 = () => {
     );
 };
 
-export default Step1;
+export default ProgramSelect;

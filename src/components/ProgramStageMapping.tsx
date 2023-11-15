@@ -29,8 +29,9 @@ import {
     $programMapping,
     $programStageMapping,
     stageMappingApi,
-} from "../pages/program/Store";
+} from "../pages/program";
 import DestinationIcon from "./DestinationIcon";
+import OptionSetMapping from "./OptionSetMapping";
 import Paginated from "./Paginated";
 import SourceIcon from "./SourceIcon";
 
@@ -142,20 +143,55 @@ export default function ProgramStageMapping({
         setPageSize(pageSize);
     };
 
+    const updateStageAttributes = () => {
+        for (const element of programStageDataElements) {
+            if (rest[element.dataElement.id] === undefined) {
+                const search = metadata.sourceColumns.find(
+                    ({ value }) => value === element.dataElement.name
+                );
+                if (search) {
+                    stageMappingApi.update({
+                        stage: psId,
+                        attribute: element.dataElement.id,
+                        key: "value",
+                        value: search.value,
+                    });
+                }
+            }
+        }
+    };
+
+    const onCreateEvents = (e: ChangeEvent<HTMLInputElement>) => {
+        stageMappingApi.update({
+            stage: psId,
+            attribute: "info",
+            key: "createEvents",
+            value: e.target.checked,
+        });
+        if (e.target.checked) {
+            updateStageAttributes();
+        }
+    };
+
+    const onUpdateEvents = (e: ChangeEvent<HTMLInputElement>) => {
+        stageMappingApi.update({
+            stage: psId,
+            attribute: "info",
+            key: "updateEvents",
+            value: e.target.checked,
+        });
+        if (e.target.checked) {
+            updateStageAttributes();
+        }
+    };
+
     return (
         <Stack key={psId} spacing="20px">
             <Stack spacing={[1, 5]} direction={["column", "row"]}>
                 <Checkbox
                     colorScheme="green"
                     isChecked={createEvents}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        stageMappingApi.update({
-                            stage: psId,
-                            attribute: "info",
-                            key: "createEvents",
-                            value: e.target.checked,
-                        })
-                    }
+                    onChange={onCreateEvents}
                 >
                     Create Events
                 </Checkbox>
@@ -163,14 +199,7 @@ export default function ProgramStageMapping({
                 <Checkbox
                     colorScheme="green"
                     isChecked={updateEvents}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        stageMappingApi.update({
-                            stage: psId,
-                            attribute: "info",
-                            key: "updateEvents",
-                            value: e.target.checked,
-                        })
-                    }
+                    onChange={onUpdateEvents}
                 >
                     Update Events
                 </Checkbox>
@@ -307,7 +336,7 @@ export default function ProgramStageMapping({
                     </Stack>
                 </Stack>
 
-                {programMapping.dataSource === "dhis2" && (
+                {programMapping.dataSource === "dhis2-program" && (
                     <Stack spacing="20px" flex={1}>
                         <Text>Specific Stage</Text>
                         <Box w="100%">
@@ -382,6 +411,9 @@ export default function ProgramStageMapping({
                         <Th w="150px" textAlign="center" textTransform="none">
                             Is Unique
                         </Th>
+                        <Th w="100px" textTransform="none">
+                            Options
+                        </Th>
                         <Th w="75px" textTransform="none">
                             Mapped?
                         </Th>
@@ -395,7 +427,12 @@ export default function ProgramStageMapping({
                         )
                         .map(
                             ({
-                                dataElement: { id, name },
+                                dataElement: {
+                                    id,
+                                    name,
+                                    optionSetValue,
+                                    optionSet,
+                                },
                                 compulsory,
                                 allowFutureDate,
                             }) => {
@@ -522,6 +559,19 @@ export default function ProgramStageMapping({
                                                     })
                                                 }
                                             />
+                                        </Td>
+                                        <Td>
+                                            {optionSetValue && (
+                                                <OptionSetMapping
+                                                    value={value}
+                                                    destinationOptions={optionSet.options.map(
+                                                        ({ code, name }) => ({
+                                                            label: name,
+                                                            value: code,
+                                                        })
+                                                    )}
+                                                />
+                                            )}
                                         </Td>
                                         <Td>
                                             {rest[id]?.value && (

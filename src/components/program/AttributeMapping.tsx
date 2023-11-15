@@ -42,14 +42,14 @@ import {
     attributeMappingApi,
     optionMappingApi,
     programMappingApi,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
 import Paginated from "../Paginated";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
 
-const Step4 = () => {
+export default function AttributeMapping() {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const attributeMapping = useStore($attributeMapping);
     const programMapping = useStore($programMapping);
@@ -89,31 +89,25 @@ const Step4 = () => {
         },
     });
 
-    const updateAttribute = (
-        attributes: { attribute: string; value: any }[]
-    ) => {
-        for (const { attribute, value } of attributes) {
-            attributeMappingApi.update({
-                attribute,
-                key: "value",
-                value,
-            });
-        }
-    };
-
     useEffect(() => {
         for (const {
             value: destinationValue,
+            unique,
+            label,
+            mandatory,
         } of metadata.destinationAttributes) {
-            if (!attributeMapping[destinationValue]) {
+            if (attributeMapping[destinationValue ?? ""] === undefined) {
                 const search = metadata.sourceAttributes.find(
-                    ({ value }) => value === destinationValue
+                    ({ value }) => value === label
                 );
                 if (search) {
-                    attributeMappingApi.update({
+                    attributeMappingApi.updateMany({
                         attribute: `${destinationValue}`,
-                        key: "value",
-                        value: search.value,
+                        update: {
+                            value: search.value,
+                            unique,
+                            mandatory,
+                        },
                     });
                 }
             }
@@ -164,17 +158,23 @@ const Step4 = () => {
     };
 
     return (
-        <Stack>
+        <Stack
+            h="calc(100vh - 350px)"
+            maxH="calc(100vh - 350px)"
+            overflow="auto"
+        >
             <Stack spacing="20px" direction="row" alignItems="center">
                 <Text>Tracked Entity Column</Text>
                 <Stack spacing="0">
                     <Checkbox
                         isChecked={
-                            programMapping.trackedEntityInstanceColumnIsManual
+                            programMapping.program
+                                ?.trackedEntityInstanceColumnIsManual
                         }
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
                             programMappingApi.update({
-                                attribute: `trackedEntityInstanceColumnIsManual`,
+                                attribute: "program",
+                                key: "trackedEntityInstanceColumnIsManual",
                                 value: e.target.checked,
                             })
                         }
@@ -182,15 +182,17 @@ const Step4 = () => {
                         Custom Tracked Entity Column
                     </Checkbox>
                     <Box w="500px">
-                        {programMapping.trackedEntityInstanceColumnIsManual ? (
+                        {programMapping.program
+                            ?.trackedEntityInstanceColumnIsManual ? (
                             <Input
                                 value={
-                                    programMapping.trackedEntityInstanceColumn
+                                    programMapping.program
+                                        ?.trackedEntityInstanceColumn
                                 }
                                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                     programMappingApi.update({
-                                        attribute:
-                                            "trackedEntityInstanceColumn",
+                                        attribute: "program",
+                                        key: "trackedEntityInstanceColumn",
                                         value: e.target.value,
                                     })
                                 }
@@ -200,15 +202,16 @@ const Step4 = () => {
                                 value={metadata.sourceColumns.find(
                                     (val) =>
                                         val.value ===
-                                        programMapping.trackedEntityInstanceColumn
+                                        programMapping.program
+                                            ?.trackedEntityInstanceColumn
                                 )}
                                 options={metadata.sourceColumns}
                                 isClearable
                                 placeholder="Select tracked entity column"
                                 onChange={(e) =>
                                     programMappingApi.update({
-                                        attribute:
-                                            "trackedEntityInstanceColumn",
+                                        attribute: "program",
+                                        key: "trackedEntityInstanceColumn",
                                         value: e?.value || "",
                                     })
                                 }
@@ -311,7 +314,7 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]
+                                                attributeMapping[value ?? ""]
                                                     ?.mandatory
                                             }
                                             isReadOnly={mandatory}
@@ -319,7 +322,7 @@ const Step4 = () => {
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 attributeMappingApi.update({
-                                                    attribute: value,
+                                                    attribute: value ?? "",
                                                     key: "mandatory",
                                                     value: e.target.checked,
                                                 })
@@ -329,14 +332,15 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]?.unique
+                                                attributeMapping[value ?? ""]
+                                                    ?.unique
                                             }
                                             isReadOnly={unique}
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) => {
                                                 attributeMappingApi.update({
-                                                    attribute: value,
+                                                    attribute: value ?? "",
                                                     key: "unique",
                                                     value: e.target.checked,
                                                 });
@@ -346,13 +350,14 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]?.manual
+                                                attributeMapping[value ?? ""]
+                                                    ?.manual
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 setCustom(
-                                                    value,
+                                                    value ?? "",
                                                     e.target.checked
                                                 )
                                             }
@@ -361,26 +366,29 @@ const Step4 = () => {
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
-                                                attributeMapping[value]
+                                                attributeMapping[value ?? ""]
                                                     ?.specific
                                             }
                                             onChange={(
                                                 e: ChangeEvent<HTMLInputElement>
                                             ) =>
                                                 setSpecific(
-                                                    value,
+                                                    value ?? "",
                                                     e.target.checked
                                                 )
                                             }
                                         />
                                     </Td>
                                     <Td>
-                                        {attributeMapping[value]?.manual ||
-                                        attributeMapping[value]?.specific ? (
+                                        {attributeMapping[value ?? ""]
+                                            ?.manual ||
+                                        attributeMapping[value ?? ""]
+                                            ?.specific ? (
                                             <Input
                                                 value={
-                                                    attributeMapping[value]
-                                                        ?.value
+                                                    attributeMapping[
+                                                        value ?? ""
+                                                    ]?.value
                                                 }
                                                 onChange={(
                                                     e: ChangeEvent<HTMLInputElement>
@@ -401,29 +409,26 @@ const Step4 = () => {
                                                 value={metadata.sourceColumns?.find(
                                                     (val) =>
                                                         val.value ===
-                                                        attributeMapping[value]
-                                                            ?.value
+                                                        attributeMapping[
+                                                            value ?? ""
+                                                        ]?.value
                                                 )}
-                                                options={metadata.sourceColumns?.map(
-                                                    ({ value, label }) => ({
-                                                        label,
-                                                        value,
-                                                    })
-                                                )}
+                                                options={metadata.sourceColumns}
                                                 isClearable
                                                 onChange={(e) =>
                                                     attributeMappingApi.updateMany(
                                                         attributeMappingApi.updateMany(
                                                             {
                                                                 attribute:
-                                                                    value,
+                                                                    value ?? "",
                                                                 update: {
                                                                     value:
                                                                         e?.value ||
                                                                         "",
                                                                     unique:
                                                                         attributeMapping[
-                                                                            value
+                                                                            value ??
+                                                                                ""
                                                                         ]
                                                                             ?.unique ||
                                                                         unique,
@@ -439,7 +444,7 @@ const Step4 = () => {
                                     <Td>
                                         {optionSetValue && (
                                             <OptionSetMapping
-                                                value={value}
+                                                value={value ?? ""}
                                                 destinationOptions={
                                                     availableOptions || []
                                                 }
@@ -447,7 +452,8 @@ const Step4 = () => {
                                         )}
                                     </Td>
                                     <Td textAlign="center">
-                                        {attributeMapping[value]?.value && (
+                                        {attributeMapping[value ?? ""]
+                                            ?.value && (
                                             <Icon
                                                 as={FiCheck}
                                                 color="green.400"
@@ -567,6 +573,4 @@ const Step4 = () => {
             </Modal>
         </Stack>
     );
-};
-
-export default Step4;
+}

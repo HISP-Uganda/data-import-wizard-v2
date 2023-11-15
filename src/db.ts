@@ -1,5 +1,5 @@
+import { IProgram } from "data-import-wizard-utils";
 import Dexie, { Table } from "dexie";
-import { IProgram } from "./pages/program/Interfaces";
 
 export class DIWDexie extends Dexie {
     program!: Table<Partial<IProgram>>;

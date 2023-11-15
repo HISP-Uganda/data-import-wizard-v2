@@ -1,16 +1,82 @@
 import { useDataEngine } from "@dhis2/app-runtime";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import axios, { AxiosRequestConfig } from "axios";
 import {
     Authentication,
     fetchRemote,
     IProgram,
     postRemote,
 } from "data-import-wizard-utils";
-import { fromPairs, groupBy, map, pick } from "lodash";
+import { fromPairs, groupBy, isEmpty, map, pick } from "lodash";
+import { getOr } from "lodash/fp";
 import { useQuery } from "react-query";
 import { closeDialog, setDataSets, setTotalDataSets } from "./Events";
-import { tokenApi } from "./pages/program/Store";
+import { tokenApi } from "./pages/program";
 import { versionApi } from "./Store";
 import { convertDataToURL } from "./utils/utils";
+
+export const useDHIS2Metadata = <TData>(
+    resource: string,
+    page: number,
+    pageSize: number,
+    fields: string,
+    searchQuery = ""
+) => {
+    const engine = useDataEngine();
+
+    let params: { [key: string]: any } = {
+        page,
+        pageSize,
+        fields,
+        order: "name:ASC",
+    };
+    let parameters: Array<{ [key: string]: any }> = [params];
+
+    if (searchQuery !== "") {
+        parameters = [
+            ...parameters,
+            {
+                param: "filter",
+                value: `name:ilike:${searchQuery}`,
+            },
+            {
+                param: "filter",
+                value: `code:like:${searchQuery}`,
+            },
+            {
+                param: "filter",
+                value: `id:like:${searchQuery}`,
+            },
+            {
+                param: "rootJunction",
+                value: "OR",
+            },
+        ];
+    }
+
+    const stringParams = convertDataToURL(parameters);
+    const metadataQuery = {
+        data: {
+            resource: `${resource}.json?${stringParams}`,
+            params,
+        },
+    };
+    return useQuery<{ data: Array<Partial<TData>>; total: number }, Error>(
+        ["programs", page, pageSize, searchQuery],
+        async () => {
+            const {
+                data: {
+                    pager: { total },
+                    [resource]: actual,
+                },
+            }: any = await engine.query(metadataQuery);
+            return {
+                data: actual,
+                total,
+            };
+        }
+    );
+};
 
 export const useInitials = () => {
     const engine = useDataEngine();
@@ -70,19 +136,29 @@ export const loadPreviousMapping = async (
     return await engine.query(fromPairs(query));
 };
 
-export const loadProgram = async (engine: any, id: string) => {
+export const loadProgram = async <T>({
+    resource,
+    engine,
+    id,
+    fields,
+}: {
+    engine: any;
+    resource: string;
+    id: string;
+    fields: string;
+}) => {
     const query = {
         data: {
-            resource: `programs/${id}.json`,
+            resource: `${resource}/${id}.json`,
             params: {
-                fields: "id,name,trackedEntityType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+                fields,
             },
         },
     };
 
     const { data }: any = await engine.query(query);
 
-    return data as Partial<IProgram>;
+    return data as Partial<T>;
 };
 
 export const useNamespaceKey = <IData>(namespace: string, key: string) => {
@@ -96,6 +172,191 @@ export const useNamespaceKey = <IData>(namespace: string, key: string) => {
         const { storedValue } = await engine.query(namespaceQuery);
         return storedValue as IData;
     });
+};
+
+export const getDHIS2SingleResource = async <T>({
+    isCurrentDHIS2,
+    params,
+    resource,
+    engine,
+    auth,
+}: Partial<{
+    params: { [key: string]: string };
+    resource: string;
+    isCurrentDHIS2?: boolean;
+    resourceKey: string;
+    auth?: Partial<Authentication>;
+    engine: any;
+}>) => {
+    if (isCurrentDHIS2 && resource) {
+        const { data }: any = await engine.query({
+            data: {
+                resource,
+                params,
+            },
+        });
+
+        const { pager } = data;
+        let total = params?.pageSize || 10;
+
+        if (pager && pager.total) {
+            total = pager.total;
+        }
+
+        return data as Partial<T>;
+    }
+
+    if (auth) {
+        let config: AxiosRequestConfig = {
+            baseURL: auth.url,
+        };
+        if (auth.username && auth.password) {
+            config = {
+                ...config,
+                auth: {
+                    username: auth.username,
+                    password: auth.password,
+                },
+            };
+        }
+        const api = axios.create(config);
+
+        if (resource) {
+            const { data } = await api.get<Partial<T>>(resource, {
+                params,
+            });
+            return data;
+        }
+    }
+    return {} as Partial<T>;
+};
+
+export const getDHIS2Resource = async <T>({
+    isCurrentDHIS2,
+    params,
+    resource,
+    resourceKey,
+    engine,
+    auth,
+}: Partial<{
+    params: { [key: string]: string };
+    resource: string;
+    isCurrentDHIS2?: boolean;
+    resourceKey: string;
+    auth?: Partial<Authentication>;
+    engine: any;
+    callback: () => void;
+}>) => {
+    if (isCurrentDHIS2 && resource && resourceKey) {
+        const { data }: any = await engine.query({
+            data: {
+                resource,
+                params,
+            },
+        });
+
+        const { pager } = data;
+        let total = params?.pageSize || 10;
+
+        if (pager && pager.total) {
+            total = pager.total;
+        }
+
+        return getOr<T[]>([], resourceKey, data);
+    }
+    if (isCurrentDHIS2 && resource) {
+        const { data }: any = await engine.query({
+            data: {
+                resource,
+                params,
+            },
+        });
+        return data as Array<T>;
+    }
+    if (auth) {
+        let config: AxiosRequestConfig<T> = {
+            baseURL: auth.url,
+        };
+        if (auth.username && auth.password) {
+            config = {
+                ...config,
+                auth: {
+                    username: auth.username,
+                    password: auth.password,
+                },
+            };
+        }
+        const api = axios.create(config);
+
+        if (resource && resourceKey) {
+            const { data } = await api.get<{ [key: string]: T[] }>(resource, {
+                params,
+            });
+            return data[resourceKey];
+        }
+        if (resource) {
+            const { data } = await api.get<T[]>(resource, {
+                params,
+            });
+            return data;
+        }
+    }
+    return [];
+};
+
+export const useDHIS2Resources = <T>({
+    page,
+    pageSize,
+    resource,
+    q,
+    isCurrentDHIS2,
+    resourceKey,
+    derive = true,
+    auth,
+}: {
+    page: number;
+    pageSize: number;
+    resource: string;
+    q: string;
+    isCurrentDHIS2?: boolean | undefined;
+    derive?: boolean;
+    resourceKey?: string;
+    auth?: Partial<Authentication> | undefined;
+}) => {
+    const engine = useDataEngine();
+    let rKey = resourceKey;
+    if (!rKey && derive) {
+        rKey = resource.split(".")[0];
+    }
+    let params: { [key: string]: any } = {
+        page,
+        pageSize,
+        fields: "id,name",
+        order: "name:ASC",
+    };
+
+    if (q) {
+        params = {
+            ...params,
+            filter: `identifiable:token:${q}`,
+        };
+    }
+
+    return useQuery<T[], Error>(
+        [resource, page, pageSize, q, isCurrentDHIS2],
+        async () => {
+            const data = await getDHIS2Resource<T>({
+                isCurrentDHIS2,
+                resource,
+                params,
+                engine,
+                resourceKey: rKey,
+                auth,
+            });
+
+            return data;
+        }
+    );
 };
 
 export const usePrograms = (
@@ -121,6 +382,10 @@ export const usePrograms = (
             {
                 param: "filter",
                 value: `code:like:${searchQuery}`,
+            },
+            {
+                param: "filter",
+                value: `id:like:${searchQuery}`,
             },
             {
                 param: "rootJunction",
@@ -436,3 +701,142 @@ export const useDataSets = (
 export const useDataElements = () => {};
 
 export const useUserGroups = () => {};
+
+export const getDHIS2Resource2 = async <T>({
+    params,
+    resource,
+    engine,
+    resourceKey,
+    auth,
+    isCurrentDHIS2,
+}: Partial<{
+    params: { [key: string]: string };
+    resource: string;
+    engine: any;
+    isCurrentDHIS2?: boolean;
+    resourceKey: string;
+    auth?: Partial<Authentication>;
+}>) => {
+    if (isCurrentDHIS2 && resource) {
+        let query: any = {
+            data: {
+                resource,
+            },
+        };
+        if (!isEmpty(params)) {
+            query = {
+                data: { resource, params },
+            };
+        }
+        const { data }: any = await engine.query(query);
+        return {
+            pager: getOr<{
+                total: number;
+                page: number;
+                pageSize: number;
+                pageCount: number;
+            }>(
+                { total: 0, page: 1, pageSize: 50, pageCount: 1 },
+                "pager",
+                data
+            ),
+            data: getOr<T[]>([], resourceKey || resource.split(".")[0], data),
+        };
+    }
+    if (auth && resource) {
+        let config: AxiosRequestConfig = {
+            baseURL: auth.url,
+        };
+        if (auth.username && auth.password) {
+            config = {
+                ...config,
+                auth: {
+                    username: auth.username,
+                    password: auth.password,
+                },
+            };
+        }
+        const api = axios.create(config);
+        const { data } = await api.get(resource, {
+            params,
+        });
+        return {
+            pager: getOr<{
+                total: number;
+                page: number;
+                pageSize: number;
+                pageCount: number;
+            }>(
+                { total: 0, page: 1, pageSize: 50, pageCount: 1 },
+                "pager",
+                data
+            ),
+            data: getOr<T[]>([], resourceKey || resource.split(".")[0], data),
+        };
+    }
+    return {
+        data: [],
+        pager: { total: 0, page: 1, pageSize: 50, pageCount: 1 },
+    };
+};
+
+export const useInfiniteDHIS2Query = <T>({
+    search,
+    resource,
+    isCurrentDHIS2,
+    auth,
+    resourceKey,
+}: {
+    search: string;
+    resource: string;
+    isCurrentDHIS2?: boolean | undefined;
+    resourceKey?: string;
+    auth?: Partial<Authentication> | undefined;
+}) => {
+    const engine = useDataEngine();
+    return useInfiniteQuery<
+        {
+            pager: {
+                total: number;
+                page: number;
+                pageSize: number;
+                pageCount: number;
+            };
+            data: Array<T>;
+        },
+        Error
+    >(
+        [resource, search],
+        async ({ pageParam = 1 }) => {
+            let params: { [key: string]: any } = {
+                fields: "id,name",
+                page: pageParam,
+                paging: true,
+                totalPages: true,
+            };
+            if (search) {
+                params = { ...params, filter: `identifiable:token:${search}` };
+            }
+
+            const data = await getDHIS2Resource2<T>({
+                resource,
+                params,
+                engine,
+                isCurrentDHIS2,
+                auth,
+                resourceKey,
+            });
+            return data;
+        },
+        {
+            getPreviousPageParam: (firstPage) =>
+                firstPage.pager.page ?? undefined,
+            getNextPageParam: (lastPage) => {
+                if (lastPage.pager.page < lastPage.pager.pageCount) {
+                    return lastPage.pager.page + 1;
+                }
+                return undefined;
+            },
+        }
+    );
+};

@@ -1,5 +1,5 @@
 import { Spinner } from "@chakra-ui/react";
-import { IProgramMapping } from "data-import-wizard-utils";
+import { IMapping, IProgramMapping } from "data-import-wizard-utils";
 import React from "react";
 import { useNamespace } from "../Queries";
 import DropDown from "./DropDown";
@@ -7,11 +7,11 @@ export default function ProgramMappingSelect({
     onChange,
     value,
 }: {
-    onChange: (mapping: IProgramMapping | null) => void;
+    onChange: (mapping: IMapping | null) => void;
     value: string | undefined;
 }) {
     const { isLoading, isSuccess, error, data } =
-        useNamespace<IProgramMapping>("iw-program-mapping");
+        useNamespace<IMapping>("iw-mapping");
 
     if (isLoading) {
         return <Spinner />;
@@ -19,7 +19,7 @@ export default function ProgramMappingSelect({
 
     if (isSuccess && data) {
         return (
-            <DropDown<IProgramMapping>
+            <DropDown<IMapping>
                 list={data}
                 labelKey="name"
                 valueKey="id"

@@ -1,9 +1,22 @@
-import { Box, Image, Stack } from "@chakra-ui/react";
+import { Image, Stack } from "@chakra-ui/react";
 import { useStore } from "effector-react";
+import React from "react";
 import { $programMapping } from "../pages/program/Store";
 
-export const available: any = {
-    xlsx: (
+export const available: {
+    "xlsx-line-list": React.ReactElement;
+    "xlsx-tabular-data": React.ReactElement;
+    "xlsx-form": React.ReactElement;
+    "dhis2-program": React.ReactElement;
+    "dhis2-indicators": React.ReactElement;
+    "dhis2-program-indicators": React.ReactElement;
+    "dhis2-data-set": React.ReactElement;
+    api: React.ReactElement;
+    json: React.ReactElement;
+    "csv-line-list": React.ReactElement;
+    "go-data": React.ReactElement;
+} = {
+    "xlsx-line-list": (
         <Stack
             boxSize="25px"
             alignItems="center"
@@ -14,7 +27,62 @@ export const available: any = {
             <Image src="./excel.svg" alt="xlsx" />
         </Stack>
     ),
-    dhis2: (
+    "xlsx-tabular-data": (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./excel.svg" alt="xlsx" />
+        </Stack>
+    ),
+    "xlsx-form": (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./excel.svg" alt="xlsx" />
+        </Stack>
+    ),
+    "dhis2-program": (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./dhis2.svg" alt="dhis2" />
+        </Stack>
+    ),
+    "dhis2-indicators": (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./dhis2.svg" alt="dhis2" />
+        </Stack>
+    ),
+    "dhis2-program-indicators": (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./dhis2.svg" alt="dhis2" />
+        </Stack>
+    ),
+    "dhis2-data-set": (
         <Stack
             boxSize="25px"
             alignItems="center"
@@ -36,7 +104,7 @@ export const available: any = {
             <Image src="./api.svg" alt="api" />
         </Stack>
     ),
-    csv: (
+    "csv-line-list": (
         <Stack
             boxSize="25px"
             alignItems="center"
@@ -58,7 +126,7 @@ export const available: any = {
             <Image src="./json.svg" alt="json" />
         </Stack>
     ),
-    godata: (
+    "go-data": (
         <Stack
             boxSize="25px"
             alignItems="center"
@@ -74,9 +142,9 @@ export const available: any = {
 export default function DestinationIcon() {
     const programMapping = useStore($programMapping);
 
-    if (programMapping.isSource) {
-        return available[programMapping.dataSource || ""];
+    if (programMapping.isSource && programMapping.dataSource) {
+        return available[programMapping.dataSource];
     }
 
-    return available.dhis2;
+    return available["dhis2-program"];
 }

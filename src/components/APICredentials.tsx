@@ -4,14 +4,7 @@ import {
     Checkbox,
     IconButton,
     Input,
-    Modal,
-    ModalBody,
-    ModalCloseButton,
-    ModalContent,
-    ModalHeader,
-    ModalOverlay,
     Spacer,
-    Spinner,
     Stack,
     Table,
     Tbody,
@@ -22,42 +15,24 @@ import {
     Tr,
     useDisclosure,
     useToast,
+    Tabs,
+    TabList,
+    TabPanels,
+    Tab,
+    TabPanel,
+    Tfoot,
 } from "@chakra-ui/react";
-import { useQueryClient } from "@tanstack/react-query";
-import {
-    fetchRemote,
-    getLowestLevelParents,
-    GODataOption,
-    GODataTokenGenerationResponse,
-    IGoData,
-    IGoDataOrgUnit,
-    IProgram,
-    IProgramMapping,
-    Option,
-} from "data-import-wizard-utils";
+import { IMapping, IProgramMapping, Option } from "data-import-wizard-utils";
 import { Event } from "effector";
 import { useStore } from "effector-react";
-import { fromPairs, isArray } from "lodash";
-import { getOr, isEmpty } from "lodash/fp";
+import { isArray } from "lodash";
+import { getOr } from "lodash/fp";
 import { ChangeEvent, useRef, useState } from "react";
-import {
-    $metadataAuthApi,
-    $programMapping,
-    $token,
-    currentSourceOptionsApi,
-    dhis2ProgramApi,
-    goDataApi,
-    goDataOptionsApi,
-    programMappingApi,
-    remoteOrganisationsApi,
-    tokensApi,
-} from "../pages/program/Store";
-import { makeQueryKeys, useRemoteGet } from "../Queries";
+import { $metadataAuthApi, programMappingApi } from "../pages/program";
 import { generateUid } from "../utils/uid";
 import { APICredentialsModal } from "./APICredentialsModal";
-import MetadataOptions from "./MetadataOptions";
 
-const AddableValues = ({
+const AddableValues = <U extends IMapping>({
     label,
     attribute,
     updateMapping,
@@ -66,129 +41,139 @@ const AddableValues = ({
 }: {
     label: string;
     attribute: "headers" | "params";
-    updateMapping: Event<any>;
-    mapping: any;
-    accessor: string;
+    updateMapping: Event<{
+        attribute: keyof U;
+        value: any;
+        key?: string;
+    }>;
+    mapping: Partial<U>;
+    accessor: keyof U;
 }) => {
     return (
-        <Stack>
-            <Stack direction="row" alignItems="center">
-                <Text>{label}</Text>
-                <Spacer />
-                <IconButton
-                    bgColor="none"
-                    aria-label="add"
-                    icon={<AddIcon w={3} h={3} />}
-                    size="sm"
-                    variant="ghost"
-                    _hover={{ bg: "none" }}
-                    onClick={() =>
-                        updateMapping({
-                            attribute: `${accessor}.${attribute}.${generateUid()}`,
-                            value: {
-                                param: "",
-                                value: "",
-                                forUpdates: false,
-                            },
-                        })
-                    }
-                />
-            </Stack>
-
-            <Table size="sm">
-                <Thead>
-                    <Tr>
-                        <Th w="35%">Param</Th>
-                        <Th w="35%">Value</Th>
-                        <Th w="20%" textAlign="center">
-                            Update Param?
-                        </Th>
-                        <Th w="10%"></Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {Object.entries<
-                        Partial<{
-                            param: string;
-                            value: string;
-                            forUpdates: boolean;
-                        }>
-                    >(getOr({}, `${accessor}.${attribute}`, mapping)).map(
-                        ([parameter, { param, value, forUpdates }]) => (
-                            <Tr key={parameter}>
-                                <Td>
-                                    <Input
-                                        value={param}
-                                        onChange={(
-                                            e: ChangeEvent<HTMLInputElement>
-                                        ) =>
-                                            updateMapping({
-                                                attribute: `${accessor}.${attribute}.${parameter}.param`,
-                                                value: e.target.value,
-                                            })
-                                        }
-                                    />
-                                </Td>
-                                <Td>
-                                    <Input
-                                        value={value}
-                                        onChange={(
-                                            e: ChangeEvent<HTMLInputElement>
-                                        ) =>
-                                            updateMapping({
-                                                attribute: `${accessor}.${attribute}.${parameter}.value`,
-                                                value: e.target.value,
-                                            })
-                                        }
-                                    />
-                                </Td>
-                                <Td textAlign="center">
-                                    <Checkbox isChecked={forUpdates} />
-                                </Td>
-                                <Td textAlign="right">
-                                    <IconButton
-                                        aria-label="delete"
-                                        bgColor="none"
-                                        icon={<DeleteIcon w={3} h={3} />}
-                                        onClick={() => {
-                                            const {
-                                                [parameter]: toRemove,
-                                                ...rest
-                                            } = getOr(
-                                                {},
-                                                `${accessor}.${attribute}`,
-                                                mapping
-                                            );
-                                            updateMapping({
-                                                attribute: `${accessor}.${attribute}`,
-                                                value: rest,
-                                            });
-                                        }}
-                                    />
-                                </Td>
-                            </Tr>
-                        )
-                    )}
-                </Tbody>
-            </Table>
-        </Stack>
+        <Table size="sm">
+            <Thead>
+                <Tr>
+                    <Th w="35%">Param</Th>
+                    <Th w="35%">Value</Th>
+                    <Th w="20%" textAlign="center">
+                        Update Param?
+                    </Th>
+                    <Th w="10%"></Th>
+                </Tr>
+            </Thead>
+            <Tbody>
+                {Object.entries<
+                    Partial<{
+                        param: string;
+                        value: string;
+                        forUpdates: boolean;
+                    }>
+                >(getOr({}, `${String(accessor)}.${attribute}`, mapping)).map(
+                    ([parameter, { param, value, forUpdates }]) => (
+                        <Tr key={parameter}>
+                            <Td>
+                                <Input
+                                    value={param}
+                                    onChange={(
+                                        e: ChangeEvent<HTMLInputElement>
+                                    ) =>
+                                        updateMapping({
+                                            attribute: accessor,
+                                            value: e.target.value,
+                                            key: `${attribute}.${parameter}.param`,
+                                        })
+                                    }
+                                />
+                            </Td>
+                            <Td>
+                                <Input
+                                    value={value}
+                                    onChange={(
+                                        e: ChangeEvent<HTMLInputElement>
+                                    ) =>
+                                        updateMapping({
+                                            attribute: accessor,
+                                            value: e.target.value,
+                                            key: `${attribute}.${parameter}.value`,
+                                        })
+                                    }
+                                />
+                            </Td>
+                            <Td textAlign="center">
+                                <Checkbox isChecked={forUpdates} />
+                            </Td>
+                            <Td textAlign="right">
+                                <IconButton
+                                    aria-label="delete"
+                                    bgColor="none"
+                                    icon={<DeleteIcon w={3} h={3} />}
+                                    onClick={() => {
+                                        const {
+                                            [parameter]: toRemove,
+                                            ...rest
+                                        } = getOr(
+                                            {},
+                                            `${String(accessor)}.${attribute}`,
+                                            mapping
+                                        );
+                                        updateMapping({
+                                            attribute: accessor,
+                                            value: rest,
+                                            key: attribute,
+                                        });
+                                    }}
+                                />
+                            </Td>
+                        </Tr>
+                    )
+                )}
+            </Tbody>
+            <Tfoot>
+                <Tr>
+                    <Td textAlign="right" colSpan={4}>
+                        <IconButton
+                            bgColor="none"
+                            aria-label="add"
+                            icon={<AddIcon w={3} h={3} p="0" m="0" />}
+                            size="sm"
+                            variant="ghost"
+                            _hover={{ bg: "none" }}
+                            onClick={() =>
+                                updateMapping({
+                                    attribute: accessor,
+                                    value: {
+                                        param: "",
+                                        value: "",
+                                        forUpdates: false,
+                                    },
+                                    key: `${attribute}.${generateUid()}`,
+                                })
+                            }
+                        />
+                    </Td>
+                </Tr>
+            </Tfoot>
+        </Table>
     );
 };
 
-export default function APICredentials({
+export default function APICredentials<U extends IMapping>({
     updateMapping,
     mapping,
     accessor,
     displayDHIS2Options = false,
 }: {
-    updateMapping: Event<any>;
-    mapping: Partial<IProgramMapping>;
-    accessor: string;
+    updateMapping: Event<{
+        attribute: keyof U;
+        value: any;
+        key?: string;
+    }>;
+    mapping: Partial<U>;
+    accessor: keyof U;
     displayDHIS2Options?: boolean;
 }) {
     const toast = useToast();
 
-    const { isOpen, onOpen, onClose } = useDisclosure();
     const {
         isOpen: isOpenModal,
         onOpen: onOpenModal,
@@ -208,8 +193,9 @@ export default function APICredentials({
                     const metadata: Option = JSON.parse(String(result));
                     if (isArray(metadata)) {
                         programMappingApi.update({
-                            attribute: "metadataOptions.metadata",
+                            attribute: "program",
                             value: metadata,
+                            key: "metadataOptions.metadata",
                         });
                     }
                 }
@@ -221,28 +207,28 @@ export default function APICredentials({
 
     const onOK = async () => {
         setFetching(() => true);
-        try {
-            const { data } = await metadataAuthApi.get("");
-            if (mapping.responseKey) {
-                updateMapping({
-                    attribute: "metadataOptions.metadata",
-                    value: data[mapping.responseKey],
-                });
-            } else {
-                updateMapping({
-                    attribute: "metadataOptions.metadata",
-                    value: data,
-                });
-            }
-        } catch (error: any) {
-            toast({
-                title: "Fetch Failed",
-                description: error?.message,
-                status: "error",
-                duration: 9000,
-                isClosable: true,
-            });
-        }
+        // try {
+        //     const { data } = await metadataAuthApi.get("");
+        //     if (mapping.responseKey) {
+        //         updateMapping({
+        //             attribute: "metadataOptions.",
+        //             value: data[mapping.responseKey],
+        //         });
+        //     } else {
+        //         updateMapping({
+        //             attribute: "metadataOptions.metadata",
+        //             value: data,
+        //         });
+        //     }
+        // } catch (error: any) {
+        //     toast({
+        //         title: "Fetch Failed",
+        //         description: error?.message,
+        //         status: "error",
+        //         duration: 9000,
+        //         isClosable: true,
+        //     });
+        // }
         setFetching(() => false);
         onCloseModal();
     };
@@ -253,37 +239,48 @@ export default function APICredentials({
                 <Text>URL</Text>
                 <Input
                     required
-                    value={getOr("", `${accessor}.url`, mapping)}
+                    value={getOr("", `${String(accessor)}.url`, mapping)}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         updateMapping({
-                            attribute: `${accessor}.url`,
+                            attribute: accessor,
                             value: e.target.value,
+                            key: "url",
                         })
                     }
                 />
             </Stack>
 
             <Checkbox
-                isChecked={getOr(false, `${accessor}.basicAuth`, mapping)}
+                isChecked={getOr(
+                    false,
+                    `${String(accessor)}.basicAuth`,
+                    mapping
+                )}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     updateMapping({
-                        attribute: `${accessor}.basicAuth`,
+                        attribute: accessor,
                         value: e.target.checked,
+                        key: "basicAuth",
                     })
                 }
             >
                 Basic Authentication
             </Checkbox>
-            {getOr(false, `${accessor}.basicAuth`, mapping) && (
+            {getOr(false, `${String(accessor)}.basicAuth`, mapping) && (
                 <Stack direction="row" spacing="20px">
                     <Stack w="50%">
                         <Text>Username</Text>
                         <Input
-                            value={getOr("", `${accessor}.username`, mapping)}
+                            value={getOr(
+                                "",
+                                `${String(accessor)}.username`,
+                                mapping
+                            )}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 updateMapping({
-                                    attribute: `${accessor}.username`,
+                                    attribute: accessor,
                                     value: e.target.value,
+                                    key: "username",
                                 })
                             }
                         />
@@ -292,11 +289,16 @@ export default function APICredentials({
                         <Text>Password</Text>
                         <Input
                             type="password"
-                            value={getOr("", `${accessor}.password`, mapping)}
+                            value={getOr(
+                                "",
+                                `${String(accessor)}.password`,
+                                mapping
+                            )}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 updateMapping({
-                                    attribute: `${accessor}.password`,
+                                    attribute: accessor,
                                     value: e.target.value,
+                                    key: "password",
                                 })
                             }
                         />
@@ -304,31 +306,38 @@ export default function APICredentials({
                 </Stack>
             )}
 
-            <AddableValues
-                label="Parameters"
-                updateMapping={updateMapping}
-                mapping={mapping}
-                attribute="params"
-                accessor={accessor}
-            />
-            <AddableValues
-                label="Headers"
-                updateMapping={updateMapping}
-                mapping={mapping}
-                attribute="headers"
-                accessor={accessor}
-            />
+            <Tabs>
+                <TabList>
+                    <Tab>Parameters</Tab>
+                    <Tab>Headers</Tab>
+                </TabList>
+
+                <TabPanels>
+                    <TabPanel>
+                        <AddableValues<U>
+                            label="Parameters"
+                            updateMapping={updateMapping}
+                            mapping={mapping}
+                            attribute="params"
+                            accessor={accessor}
+                        />
+                    </TabPanel>
+                    <TabPanel>
+                        <AddableValues<U>
+                            label="Headers"
+                            updateMapping={updateMapping}
+                            mapping={mapping}
+                            attribute="headers"
+                            accessor={accessor}
+                        />
+                    </TabPanel>
+                </TabPanels>
+            </Tabs>
+
             {displayDHIS2Options && (
                 <Stack direction="row" spacing="40px">
-                    {/* {getOr("", "dataSource", mapping) === "dhis2" && (
-                        <Button onClick={onOpen}>Select Program</Button>
-                    )}
-                    {getOr("", "dataSource", mapping) === "godata" && (
-                        <Button onClick={onOpen}>Select Outbreak</Button>
-                    )} */}
-
                     {!(
-                        getOr("", "dataSource", mapping) === "dhis2" ||
+                        getOr("", "dataSource", mapping) === "dhis2-program" ||
                         getOr(false, "isSource", mapping)
                     ) && (
                         <Checkbox
@@ -354,7 +363,7 @@ export default function APICredentials({
                                 <Button onClick={() => onOpenModal()}>
                                     Query Metadata from API
                                 </Button>
-                                <APICredentialsModal
+                                {/* <APICredentialsModal
                                     isOpen={isOpenModal}
                                     onClose={onCloseModal}
                                     updateMapping={updateMapping}
@@ -364,7 +373,7 @@ export default function APICredentials({
                                     fetching={fetching}
                                     labelField="metadataOptions.labelField"
                                     valueField="metadataOptions.valueField"
-                                />
+                                /> */}
 
                                 <input
                                     style={{ display: "none" }}
