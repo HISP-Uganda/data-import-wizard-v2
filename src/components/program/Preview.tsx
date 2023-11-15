@@ -5,14 +5,12 @@ import {
     convertToDHIS2,
     convertToGoData,
     fetchEvents,
+    fetchGoDataData,
     fetchRemote,
     fetchTrackedEntityInstances,
     findUniqAttributes,
     flattenTrackedEntityInstances,
-    getLowestLevelParents,
     GODataTokenGenerationResponse,
-    IGoDataData,
-    makeMetadata,
     postRemote,
     processPreviousInstances,
     TrackedEntityInstance,
@@ -31,18 +29,16 @@ import {
     $programMapping,
     $programStageMapping,
     $programStageUniqueElements,
-    $programTypes,
     $programUniqAttributes,
-    $remoteOrganisations,
     $tokens,
-    conflictsApi,
-    dataApi,
-    errorsApi,
     otherProcessedApi,
+    prevGoDataApi,
+    processedGoDataDataApi,
     processor,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import { $version } from "../../Store";
 import DHIS2Preview from "../DHIS2Preview";
+import GoDataPreview from "../GoDataPreview";
 import OtherSystemPreview from "../OtherSystemPreview";
 import Progress from "../Progress";
 
@@ -50,7 +46,6 @@ export default function Preview() {
     const version = useStore($version);
     const metadata = useStore($metadata);
     const program = useStore($program);
-    const { attributes, elements } = useStore($programTypes);
     const tokens = useStore($tokens);
     const engine = useDataEngine();
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -60,7 +55,6 @@ export default function Preview() {
     const attributeMapping = useStore($attributeMapping);
     const programUniqAttributes = useStore($programUniqAttributes);
     const programStageUniqueElements = useStore($programStageUniqueElements);
-    const remoteOrganisations = useStore($remoteOrganisations);
     const optionMapping = useStore($optionMapping);
     const goData = useStore($goData);
     const data = useStore($data);
@@ -76,14 +70,14 @@ export default function Preview() {
                 trackedEntityInstances: [],
             };
             if (
-                programMapping.dhis2Options?.programStage &&
-                programMapping.dhis2Options.programStage.length > 0
+                programMapping.program?.dhis2Options?.programStage &&
+                programMapping.program?.dhis2Options.programStage.length > 0
             ) {
                 const events = await fetchEvents(
                     { engine },
-                    programMapping.dhis2Options.programStage,
+                    programMapping.program?.dhis2Options.programStage,
                     50,
-                    programMapping.program || ""
+                    programMapping.program?.program || ""
                 );
                 instances = { trackedEntityInstances: events };
             } else {
@@ -98,7 +92,7 @@ export default function Preview() {
 
             const flattened = flattenTrackedEntityInstances(instances);
 
-            if (programMapping.dataSource === "godata") {
+            if (programMapping.dataSource === "go-data") {
                 const {
                     params,
                     basicAuth,
@@ -109,41 +103,21 @@ export default function Preview() {
                     ...rest
                 } = programMapping.authentication || {};
 
-                const response =
-                    await postRemote<GODataTokenGenerationResponse>(
-                        rest,
-                        "api/users/login",
-                        {
-                            email: username,
-                            password,
-                        }
-                    );
-
-                const prev = await fetchRemote<Array<Partial<IGoDataData>>>(
-                    rest,
-                    `api/outbreaks/${goData.id}/cases`,
-                    {
-                        auth: {
-                            param: "access_token",
-                            value: response.id,
-                            forUpdates: false,
-                        },
-                    }
+                const { metadata, prev } = await fetchGoDataData(
+                    goData,
+                    programMapping.authentication || {}
                 );
-                const { inserts, updates, errors, conflicts } = convertToGoData(
+                const responseData = convertToGoData(
                     flattened,
                     organisationUnitMapping,
                     attributeMapping,
                     goData,
                     optionMapping,
                     tokens,
-                    prev
+                    metadata
                 );
-
-                otherProcessedApi.addNewInserts(inserts);
-                otherProcessedApi.addUpdates(updates);
-                errorsApi.set(errors);
-                conflictsApi.set(conflicts);
+                processedGoDataDataApi.set(responseData);
+                prevGoDataApi.set(prev);
             } else {
                 const data = await convertFromDHIS2(
                     flattenTrackedEntityInstances(instances),
@@ -156,7 +130,7 @@ export default function Preview() {
                 otherProcessedApi.addNewInserts(data);
             }
         } else {
-            if (programMapping.dataSource === "godata") {
+            if (programMapping.dataSource === "go-data") {
                 const {
                     params,
                     basicAuth,
@@ -179,6 +153,7 @@ export default function Preview() {
 
                 if (response) {
                     const token = response.id;
+                    setMessage(() => "Fetching data from go data");
                     const goDataData = await fetchRemote<any[]>(
                         {
                             ...rest,
@@ -188,8 +163,13 @@ export default function Preview() {
                         },
                         `api/outbreaks/${goData.id}/cases`
                     );
-
-                    for (const current of chunk(goDataData, 25)) {
+                    const chunkedData = chunk(goDataData, 25);
+                    const chunkLength = chunkedData.length;
+                    let i = 0;
+                    for (const current of chunkedData) {
+                        setMessage(
+                            () => `Processing batch ${++i} of ${chunkLength}`
+                        );
                         await fetchTrackedEntityInstances(
                             { engine },
                             programMapping,
@@ -201,15 +181,16 @@ export default function Preview() {
                                     trackedEntityInstances,
                                     programUniqAttributes,
                                     programStageUniqueElements,
-                                    programMapping.program || ""
+                                    programMapping.program?.program || ""
                                 );
-                                console.log(previous);
                                 const {
                                     enrollments,
                                     events,
                                     trackedEntityInstances: processedInstances,
                                     trackedEntityInstanceUpdates,
                                     eventUpdates,
+                                    conflicts,
+                                    errors,
                                 } = await convertToDHIS2(
                                     previous,
                                     current,
@@ -219,9 +200,7 @@ export default function Preview() {
                                     programStageMapping,
                                     optionMapping,
                                     version,
-                                    program,
-                                    elements,
-                                    attributes
+                                    program
                                 );
                                 processor.addInstances(processedInstances);
                                 processor.addEnrollments(enrollments);
@@ -230,6 +209,8 @@ export default function Preview() {
                                     trackedEntityInstanceUpdates
                                 );
                                 processor.addEventUpdates(eventUpdates);
+                                processor.addErrors(errors);
+                                processor.addConflicts(conflicts);
                             }
                         );
                     }
@@ -246,7 +227,7 @@ export default function Preview() {
                             trackedEntityInstances,
                             programUniqAttributes,
                             programStageUniqueElements,
-                            programMapping.program || ""
+                            programMapping.program?.program || ""
                         );
                         const {
                             enrollments,
@@ -254,6 +235,8 @@ export default function Preview() {
                             trackedEntityInstances: processedInstances,
                             trackedEntityInstanceUpdates,
                             eventUpdates,
+                            errors,
+                            conflicts,
                         } = await convertToDHIS2(
                             previous,
                             data,
@@ -263,9 +246,7 @@ export default function Preview() {
                             programStageMapping,
                             optionMapping,
                             version,
-                            program,
-                            elements,
-                            attributes
+                            program
                         );
                         processor.addInstances(processedInstances);
                         processor.addEnrollments(enrollments);
@@ -274,6 +255,8 @@ export default function Preview() {
                             trackedEntityInstanceUpdates
                         );
                         processor.addEventUpdates(eventUpdates);
+                        processor.addErrors(errors);
+                        processor.addConflicts(conflicts);
                     }
                 );
             }
@@ -287,9 +270,17 @@ export default function Preview() {
         return () => {};
     }, []);
     return (
-        <Stack>
+        <Stack
+            h="calc(100vh - 350px)"
+            maxH="calc(100vh - 350px)"
+            overflow="auto"
+        >
             {programMapping.isSource ? (
-                <OtherSystemPreview />
+                programMapping.dataSource === "go-data" ? (
+                    <GoDataPreview />
+                ) : (
+                    <OtherSystemPreview />
+                )
             ) : (
                 <DHIS2Preview />
             )}

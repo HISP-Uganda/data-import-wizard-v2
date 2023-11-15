@@ -1,6 +1,6 @@
-import { Box, Button, Stack, Text, useToast } from "@chakra-ui/react";
+import { Stack, useToast, Text } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
-import { Step } from "chakra-ui-steps";
+import { Option, Step } from "data-import-wizard-utils";
 import dayjs from "dayjs";
 import { useStore } from "effector-react";
 
@@ -8,32 +8,40 @@ import {
     $attributeMapping,
     $disabled,
     $label,
+    $names,
     $optionMapping,
     $organisationUnitMapping,
+    $program,
     $programMapping,
     $programStageMapping,
+    processor,
     programMappingApi,
-} from "../pages/program/Store";
+} from "../pages/program";
 import { $action, $steps, actionApi, stepper } from "../Store";
+import MappingDetails from "./MappingDetails";
+import AttributeMapping from "./program/AttributeMapping";
 import DHIS2Options from "./program/DHIS2Options";
+import EventMapping from "./program/EventMapping";
+import ImportSummary from "./program/ImportSummary";
+import MappingOptions from "./program/MappingOptions";
+import OrganisationUnitMapping from "./program/OrganisationUnitMapping";
 import { OtherSystemMapping } from "./program/OtherSystemMapping";
 import Preview from "./program/Preview";
-import Step0 from "./program/step0";
-import Step1 from "./program/step1";
-import Step10 from "./program/step10";
-import Step2 from "./program/step2";
-import Step3 from "./program/step3";
-import Step4 from "./program/step4";
-import Step5 from "./program/step5";
-import Step7 from "./program/step7";
+import ProgramSelect from "./program/ProgramSelect";
 import RemoteOutbreaks from "./RemoteOutbreak";
 import RemotePrograms from "./RemoteProgram";
+import StepperButtons from "./StepperButtons";
+import StepsDisplay from "./StepsDisplay";
 
-interface Step {
-    label: string;
-    content: JSX.Element;
-    id: number;
-}
+const importTypes: Option[] = [
+    { value: "dhis2-program", label: "dhis2-program" },
+    { value: "api", label: "api" },
+    { value: "json", label: "json" },
+    { value: "go-data", label: "go-data" },
+    { value: "csv-line-list", label: "csv-line-list" },
+    { value: "xlsx-line-list", label: "xlsx-line-list" },
+];
+
 const Program = () => {
     const toast = useToast();
     const activeStep = useStore($steps);
@@ -46,34 +54,48 @@ const Program = () => {
     const label = useStore($label);
     const action = useStore($action);
     const engine = useDataEngine();
+    const names = useStore($names);
     const steps: Step[] = [
-        { label: "Saved Mappings", content: <Step0 />, id: 1 },
-        { label: "Integration Type", content: <Step2 />, id: 2 },
-        { label: "Select Program", content: <Step1 />, id: 3 },
-        { label: "Mapping Options", content: <Step10 />, id: 4 },
+        {
+            label: "Mapping Details",
+            content: (
+                <MappingDetails
+                    mapping={programMapping}
+                    updater={programMappingApi.update}
+                    importTypes={importTypes}
+                />
+            ),
+            id: 2,
+        },
+        { label: "Select Program", content: <ProgramSelect />, id: 3 },
+        { label: "Mapping Options", content: <MappingOptions />, id: 4 },
         { label: "Select Outbreak", content: <RemoteOutbreaks />, id: 5 },
         { label: "Select Program2", content: <RemotePrograms />, id: 6 },
-        { label: "Organisation Mapping", content: <Step3 />, id: 7 },
+        {
+            label: "Organisation Mapping",
+            content: <OrganisationUnitMapping />,
+            id: 7,
+        },
         { label: "System Mapping", content: <OtherSystemMapping />, id: 8 },
         {
             label: "Attribute Mapping",
-            content: <Step4 />,
+            content: <AttributeMapping />,
             id: 9,
         },
         {
             label: "Events Mapping",
-            content: <Step5 />,
+            content: <EventMapping />,
             id: 10,
         },
         { label: "DHIS2 Export Options", content: <DHIS2Options />, id: 11 },
         { label: "Import Preview", content: <Preview />, id: 12 },
-        { label: "Import Summary", content: <Step7 />, id: 13 },
+        { label: "Import Summary", content: <ImportSummary />, id: 13 },
     ];
 
     const activeSteps = () => {
         return steps.filter(({ id }) => {
             if (
-                programMapping.dataSource !== "dhis2" &&
+                programMapping.dataSource !== "dhis2-program" &&
                 programMapping.isSource
             ) {
                 if (programMapping.dataSource === "api") {
@@ -82,7 +104,7 @@ const Program = () => {
                     }
                     return [1, 2, 3, 7, 9, 11].indexOf(id) !== -1;
                 }
-                if (programMapping.dataSource === "godata") {
+                if (programMapping.dataSource === "go-data") {
                     if (programMapping.isSource) {
                         return (
                             [1, 2, 3, 5, 7, 8, 11, 12, 13].indexOf(id) !== -1
@@ -100,41 +122,45 @@ const Program = () => {
                 if (programMapping.prefetch) {
                     return [1, 2, 3, 9, 10, 11].indexOf(id) !== -1;
                 }
-                return [1, 2, 3, 9, 11].indexOf(id) !== -1;
+                return [1, 2, 3, 11].indexOf(id) !== -1;
             }
 
-            if (programMapping.dataSource === "dhis2") {
+            if (programMapping.dataSource === "dhis2-program") {
                 return [5, 8, 11].indexOf(id) === -1;
             }
-            if (programMapping.dataSource === "godata") {
+            if (programMapping.dataSource === "go-data") {
+                if (
+                    programMapping.program?.programType ===
+                    "WITHOUT_REGISTRATION"
+                ) {
+                    return [4, 6, 8, 9, 11].indexOf(id) === -1;
+                }
                 return [4, 6, 8, 11].indexOf(id) === -1;
             }
+
             return [1, 2, 3, 4, 7, 9, 10, 12, 13].indexOf(id) !== -1;
         });
     };
 
-    const onNextClick = () => {
-        if (activeStep === 0) {
-            programMappingApi.updateMany({
-                created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-            });
-            actionApi.create();
-        }
+    const onNext = () => {
         if (activeStep === activeSteps().length - 1) {
+            processor.reset();
             stepper.reset();
         } else {
             stepper.next();
         }
     };
 
-    const save = async () => {
+    const onSave = async () => {
         const type = action === "creating" ? "create" : "update";
         const mutation: any = {
             type,
-            resource: `dataStore/iw-program-mapping/${programMapping.id}`,
+            resource: `dataStore/iw-mapping/${programMapping.id}`,
             data: {
                 ...programMapping,
                 lastUpdated: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                ...names,
+                type: "individual",
             },
         };
         const mutation2: any = {
@@ -166,7 +192,6 @@ const Program = () => {
             engine.mutate(mutation5),
         ]);
 
-        actionApi.edit();
         toast({
             title: "Mapping saved",
             description: "Mapping has been successfully saved",
@@ -179,87 +204,19 @@ const Program = () => {
 
     return (
         <Stack p="20px" spacing="30px" flex={1}>
-            <Stack
-                direction="row"
-                justifyItems="space-between"
-                justifyContent="space-between"
-                alignItems=""
-                spacing="0"
-            >
-                {activeSteps().map((step, index) => (
-                    <Stack
-                        alignItems="center"
-                        justifyItems="center"
-                        alignContent="center"
-                        justifyContent="center"
-                        flex={1}
-                        key={step.label}
-                        onClick={() => (disabled ? "" : stepper.goTo(index))}
-                        cursor="pointer"
-                    >
-                        <Box
-                            borderRadius="50%"
-                            borderColor={
-                                index < activeStep
-                                    ? "green"
-                                    : index === activeStep
-                                    ? "orange.600"
-                                    : "gray.400"
-                            }
-                            borderWidth="2px"
-                            bg={
-                                index < activeStep
-                                    ? "green.500"
-                                    : index === activeStep
-                                    ? "orange.300"
-                                    : "white"
-                            }
-                            h="40px"
-                            lineHeight="40px"
-                            w="40px"
-                        >
-                            <Text
-                                textAlign="center"
-                                color={index <= activeStep ? "white" : ""}
-                                fontWeight="bold"
-                            >
-                                {index + 1}
-                            </Text>
-                        </Box>
-                        <Text>{step.label}</Text>
-                    </Stack>
-                ))}
-            </Stack>
-            <Stack flex={1}>{activeSteps()[activeStep]?.content}</Stack>
-            {activeStep === steps.length - 1 ? (
-                <Box textAlign="right">
-                    <Button onClick={() => stepper.reset()}>
-                        <Text>Finish</Text>
-                    </Button>
-                </Box>
-            ) : (
-                <Stack
-                    width="100%"
-                    direction="row"
-                    alignContent="space-between"
-                    justifyContent="space-between"
-                >
-                    <Button
-                        isDisabled={activeStep === 0}
-                        onClick={() => stepper.previous()}
-                    >
-                        Previous Step
-                    </Button>
-
-                    {activeStep >= 2 && (
-                        <Button onClick={() => save()}>Save</Button>
-                    )}
-
-                    <Button onClick={onNextClick} isDisabled={disabled}>
-                        {label}
-                    </Button>
-                </Stack>
-            )}
+            <Text>{action}</Text>
+            <StepsDisplay
+                activeStep={activeStep}
+                activeSteps={activeSteps}
+                disabled={disabled}
+            />
+            <StepperButtons
+                disabled={disabled}
+                label={label}
+                steps={steps}
+                onNext={onNext}
+                onSave={onSave}
+            />
         </Stack>
     );
 };

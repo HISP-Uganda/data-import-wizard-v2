@@ -1,0 +1,172 @@
+import { Checkbox, Input, Stack, Text, Textarea } from "@chakra-ui/react";
+import { GroupBase, Select } from "chakra-react-select";
+import { DataSource, IMapping, Option } from "data-import-wizard-utils";
+import { Event } from "effector";
+import { ChangeEvent } from "react";
+import APICredentials from "./APICredentials";
+import CSVUpload from "./CSVUpload";
+import ExcelUpload from "./fields/ExcelUpload";
+import FileUpload from "./FileUpload";
+
+export default function MappingDetails({
+    importTypes,
+    mapping,
+    updater,
+}: {
+    importTypes: Option[];
+    mapping: Partial<IMapping>;
+    updater: Event<{ attribute: keyof IMapping; value: any; key?: string }>;
+}) {
+    const getData = (dataSource: DataSource | undefined) => {
+        const options = {
+            api: (
+                <APICredentials<IMapping>
+                    updateMapping={updater}
+                    mapping={mapping}
+                    accessor="authentication"
+                    displayDHIS2Options
+                />
+            ),
+            "xlsx-line-list": mapping.isSource ? null : (
+                <ExcelUpload
+                    mapping={mapping}
+                    extraction="json"
+                    updater={updater}
+                />
+            ),
+            "csv-line-list": mapping.isSource ? null : (
+                <ExcelUpload
+                    mapping={mapping}
+                    extraction="json"
+                    updater={updater}
+                />
+            ),
+            "xlsx-tabular-data": mapping.isSource ? null : (
+                <ExcelUpload
+                    mapping={mapping}
+                    extraction="json"
+                    updater={updater}
+                />
+            ),
+            "xlsx-form": mapping.isSource ? null : (
+                <ExcelUpload
+                    mapping={mapping}
+                    extraction="json"
+                    updater={updater}
+                />
+            ),
+            csv: mapping.isSource ? null : <CSVUpload />,
+            json: mapping.isSource ? null : (
+                <FileUpload type="json" mapping={mapping} extraction="json" />
+            ),
+            "dhis2-data-set": (
+                <APICredentials<IMapping>
+                    updateMapping={updater}
+                    mapping={mapping}
+                    accessor="authentication"
+                    displayDHIS2Options
+                />
+            ),
+            "dhis2-indicators": (
+                <APICredentials<IMapping>
+                    updateMapping={updater}
+                    mapping={mapping}
+                    accessor="authentication"
+                    displayDHIS2Options
+                />
+            ),
+            "dhis2-program-indicators": (
+                <APICredentials<IMapping>
+                    updateMapping={updater}
+                    mapping={mapping}
+                    accessor="authentication"
+                    displayDHIS2Options
+                />
+            ),
+            "dhis2-program": (
+                <APICredentials<IMapping>
+                    updateMapping={updater}
+                    mapping={mapping}
+                    accessor="authentication"
+                    displayDHIS2Options
+                />
+            ),
+            "go-data": (
+                <APICredentials<IMapping>
+                    updateMapping={updater}
+                    mapping={mapping}
+                    accessor="authentication"
+                    displayDHIS2Options
+                />
+            ),
+        };
+
+        if (dataSource) {
+            return options[dataSource];
+        }
+        return null;
+    };
+    return (
+        <Stack
+            spacing="10px"
+            h="calc(100vh - 370px)"
+            maxH="calc(100vh - 370px)"
+            overflow="auto"
+        >
+            <Stack>
+                <Text>Name</Text>
+                <Input
+                    value={mapping.name}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        updater({
+                            attribute: "name",
+                            value: e.target.value,
+                        })
+                    }
+                />
+            </Stack>
+            <Stack>
+                <Text>Description</Text>
+                <Textarea
+                    value={mapping.description}
+                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                        updater({
+                            attribute: "description",
+                            value: e.target.value,
+                        })
+                    }
+                />
+            </Stack>
+            <Checkbox
+                isChecked={mapping.isSource}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                    updater({
+                        attribute: "isSource",
+                        value: e.target.checked,
+                    });
+                }}
+            >
+                Current DHIS2 Instance is Source
+            </Checkbox>
+            <Stack>
+                <Text>
+                    {mapping.isSource ? "Export Data To" : "Import From"}
+                </Text>
+                <Select<Option, false, GroupBase<Option>>
+                    value={importTypes.find(
+                        (pt) => pt.value === mapping.dataSource
+                    )}
+                    onChange={(e) => {
+                        updater({
+                            attribute: "dataSource",
+                            value: e?.value,
+                        });
+                    }}
+                    options={importTypes}
+                    isClearable
+                />
+            </Stack>
+            {getData(mapping.dataSource)}
+        </Stack>
+    );
+}

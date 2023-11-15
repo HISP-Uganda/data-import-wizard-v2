@@ -8,7 +8,7 @@ import {
     $metadata,
     $programMapping,
     programMappingApi,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 
 export default function DHIS2Options() {
     const metadata = useStore($metadata);
@@ -25,15 +25,15 @@ export default function DHIS2Options() {
                         value={metadata.sourceStages.filter((value) => {
                             const available = getOr(
                                 [],
-                                "dhis2Options.programStage",
+                                "program.dhis2Options.programStage",
                                 programMapping
                             );
                             return available.indexOf(value.value) !== -1;
                         })}
                         onChange={(e) =>
                             programMappingApi.update({
-                                attribute: "dhis2Options",
-                                key: "programStage",
+                                attribute: "program",
+                                key: "dhis2Options.programStage",
                                 value: e.map((ee) => ee.value),
                             })
                         }

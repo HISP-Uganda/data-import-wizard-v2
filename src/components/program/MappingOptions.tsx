@@ -8,14 +8,8 @@ import {
     useToast,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import {
-    IProgramMapping,
-    Option,
-    fetchRemote,
-    pullRemoteData,
-} from "data-import-wizard-utils";
+import { IMapping, Option, pullRemoteData } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { fromPairs, isArray, isString } from "lodash";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useEffect } from "react";
 import {
@@ -28,24 +22,26 @@ import {
     $tokens,
     dataApi,
     programMappingApi,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import Progress from "../Progress";
-import DHIS2Options from "./DHIS2Options";
 
 const CheckSelect = ({
     field,
     label,
     otherField,
+    otherKeys,
 }: {
-    field: keyof IProgramMapping;
-    otherField: keyof IProgramMapping;
+    field: keyof IMapping;
+    otherField: keyof IMapping;
+    otherKeys?: string;
     label: string;
 }) => {
     const programMapping = useStore($programMapping);
     const metadata = useStore($metadata);
 
     const isManual =
-        programMapping.dataSource !== "dhis2" && programMapping.isSource;
+        programMapping.dataSource !== "dhis2-program" &&
+        programMapping.isSource;
 
     return (
         <Stack spacing="40px">
@@ -101,7 +97,7 @@ const CheckSelect = ({
     );
 };
 
-export default function Step10() {
+export default function MappingOptions() {
     const toast = useToast();
     const { isOpen, onOpen, onClose } = useDisclosure();
     const programMapping = useStore($programMapping);
@@ -138,7 +134,8 @@ export default function Step10() {
     useEffect(() => {
         if (
             data.length === 0 &&
-            ["api", "godata"].indexOf(programMapping.dataSource || "") !== -1 &&
+            ["api", "go-data"].indexOf(programMapping.dataSource || "") !==
+                -1 &&
             programMapping.prefetch
         ) {
             fetchRemoteData();
@@ -157,10 +154,11 @@ export default function Step10() {
                 <Stack spacing={[1, 5]} direction={["column", "row"]}>
                     <Checkbox
                         colorScheme="green"
-                        isChecked={programMapping.createEntities}
+                        isChecked={programMapping.program?.createEntities}
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
                             programMappingApi.update({
-                                attribute: "createEntities",
+                                attribute: "program",
+                                key: "createEntities",
                                 value: e.target.checked,
                             })
                         }
@@ -169,10 +167,11 @@ export default function Step10() {
                     </Checkbox>
                     <Checkbox
                         colorScheme="green"
-                        isChecked={programMapping.createEnrollments}
+                        isChecked={programMapping.program?.createEnrollments}
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
                             programMappingApi.update({
-                                attribute: "createEnrollments",
+                                attribute: "program",
+                                key: "createEnrollments",
                                 value: e.target.checked,
                             })
                         }
@@ -181,10 +180,11 @@ export default function Step10() {
                     </Checkbox>
                     <Checkbox
                         colorScheme="green"
-                        isChecked={programMapping.updateEntities}
+                        isChecked={programMapping.program?.updateEntities}
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
                             programMappingApi.update({
-                                attribute: "updateEntities",
+                                attribute: "program",
+                                key: "updateEntities",
                                 value: e.target.checked,
                             })
                         }
@@ -194,11 +194,11 @@ export default function Step10() {
                 </Stack>
             )}
 
-            {!programMapping.isSource && (
+            {/* {!programMapping.isSource && (
                 <>
                     <CheckSelect
                         otherField="customEnrollmentDateColumn"
-                        field="enrollmentDateColumn"
+                        field="program"
                         label="Enrollment Date Column"
                     />
                     <CheckSelect
@@ -207,7 +207,7 @@ export default function Step10() {
                         label="Incident Date Column"
                     />
                 </>
-            )}
+            )} */}
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}

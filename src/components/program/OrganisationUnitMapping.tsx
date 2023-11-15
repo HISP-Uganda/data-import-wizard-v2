@@ -31,14 +31,14 @@ import {
     ouMappingApi,
     programMappingApi,
     remoteOrganisationsApi,
-} from "../../pages/program/Store";
+} from "../../pages/program";
 import { APICredentialsModal } from "../APICredentialsModal";
 import DestinationIcon from "../DestinationIcon";
 import Paginated from "../Paginated";
 import Progress from "../Progress";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
-const Step3 = () => {
+export default function OrganisationUnitMapping() {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const {
         isOpen: isOpenModal,
@@ -87,7 +87,7 @@ const Step3 = () => {
             label,
             code,
         } of metadata.destinationOrgUnits) {
-            if (!organisationUnitMapping[destinationValue]) {
+            if (!organisationUnitMapping[destinationValue ?? ""]) {
                 const search = metadata.sourceOrgUnits.find(
                     ({ value, label }) => destinationValue === value
                 );
@@ -139,7 +139,11 @@ const Step3 = () => {
     };
 
     return (
-        <Stack>
+        <Stack
+            h="calc(100vh - 350px)"
+            maxH="calc(100vh - 350px)"
+            overflow="auto"
+        >
             {programMapping.dataSource === "api" && (
                 <Stack direction="row" spacing="20px">
                     <Button onClick={() => inputRef.current?.click()}>
@@ -235,7 +239,7 @@ const Step3 = () => {
                                                     value: "",
                                                     manual: false,
                                                 },
-                                                value,
+                                                value ?? "",
                                                 organisationUnitMapping
                                             ).manual
                                         }
@@ -256,7 +260,7 @@ const Step3 = () => {
                                             value: "",
                                             manual: false,
                                         },
-                                        value,
+                                        value ?? "",
                                         organisationUnitMapping
                                     ).manual ? (
                                         <Input
@@ -266,7 +270,7 @@ const Step3 = () => {
                                                         value: "",
                                                         manual: false,
                                                     },
-                                                    value,
+                                                    value ?? "",
                                                     organisationUnitMapping
                                                 ).value
                                             }
@@ -294,7 +298,7 @@ const Step3 = () => {
                                                             value: "",
                                                             manual: false,
                                                         },
-                                                        value,
+                                                        value ?? "",
                                                         organisationUnitMapping
                                                     ).value
                                             )}
@@ -311,7 +315,8 @@ const Step3 = () => {
                                     )}
                                 </Td>
                                 <Td>
-                                    {organisationUnitMapping[value]?.value && (
+                                    {organisationUnitMapping[value ?? ""]
+                                        ?.value && (
                                         <Icon
                                             as={FiCheck}
                                             color="green.400"
@@ -349,6 +354,4 @@ const Step3 = () => {
             />
         </Stack>
     );
-};
-
-export default Step3;
+}

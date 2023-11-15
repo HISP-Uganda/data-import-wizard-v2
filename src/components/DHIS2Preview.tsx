@@ -86,6 +86,23 @@ export default function DHIS2Preview() {
         []
     );
 
+    const conflictColumns = useMemo<ColumnDef<any>[]>(
+        () =>
+            Object.keys(processed.conflicts?.[0]).map((a) => ({
+                accessorKey: a,
+                header: a,
+            })),
+        []
+    );
+    const errorColumns = useMemo<ColumnDef<any>[]>(
+        () =>
+            Object.keys(processed.errors?.[0]).map((a) => ({
+                accessorKey: a,
+                header: a,
+            })),
+        []
+    );
+
     return (
         <Tabs>
             <TabList>
@@ -126,13 +143,21 @@ export default function DHIS2Preview() {
                 </Tab>
                 <Tab>
                     <Text>Conflicts</Text>
+                    <Superscript
+                        value={processed.conflicts?.length || 0}
+                        bg="blue.500"
+                    />
                 </Tab>
                 <Tab>
                     <Text>Errors</Text>
+                    <Superscript
+                        value={processed.errors?.length || 0}
+                        bg="blue.500"
+                    />
                 </Tab>
-                <Tab>
+                {/* <Tab>
                     <Text>Duplicates</Text>
-                </Tab>
+                </Tab> */}
             </TabList>
             <TabPanels>
                 <TabPanel>
@@ -187,9 +212,26 @@ export default function DHIS2Preview() {
                         idField="event"
                     />
                 </TabPanel>
-                <TabPanel>6</TabPanel>
-                <TabPanel>7</TabPanel>
-                <TabPanel>8</TabPanel>
+                <TabPanel>
+                    <TableDisplay<any>
+                        columns={conflictColumns}
+                        generatedData={processed.conflicts || []}
+                        queryKey={[
+                            "conflicts",
+                            processed.conflicts?.length || 0,
+                        ]}
+                        idField="attribute"
+                    />
+                </TabPanel>
+                <TabPanel>
+                    <TableDisplay<any>
+                        columns={errorColumns}
+                        generatedData={processed.errors || []}
+                        queryKey={["errors", processed.errors?.length || 0]}
+                        idField="attribute"
+                    />
+                </TabPanel>
+                {/* <TabPanel>8</TabPanel> */}
             </TabPanels>
         </Tabs>
     );

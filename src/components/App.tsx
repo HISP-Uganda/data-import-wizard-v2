@@ -12,11 +12,13 @@ import {
 import { LocationGenerics } from "../Interfaces";
 import PDF from "../pages/PDF";
 import { useInitials } from "../Queries";
+import { stepper } from "../Store";
 import { decodeFromBinary, encodeToBinary } from "../utils/utils";
 import Aggregate from "./Aggregate";
 import Home from "./Home";
+import Loader from "./Loader";
+import Mappings from "./Mappings";
 import NavBar from "./NavBar";
-import Organisation from "./Orgainsation";
 import Program from "./Program";
 import Schedule from "./Schedule";
 
@@ -40,32 +42,59 @@ const routes: Route<LocationGenerics>[] = [
         },
     },
     {
-        path: "/aggregate",
+        path: "/mappings",
         children: [
             {
                 path: "/",
-                element: <Aggregate />,
+                element: <Mappings />,
+                loader: async () => {
+                    stepper.reset();
+                    return {};
+                },
             },
-        ],
-    },
-    {
-        path: "/program",
-        children: [
             {
-                path: "/",
+                path: "/individual",
                 element: <Program />,
+                loader: async () => {
+                    stepper.reset();
+                    return {};
+                },
             },
-        ],
-    },
-    {
-        path: "/organisation",
-        children: [
             {
-                path: "/",
-                element: <Organisation />,
+                path: "/aggregate",
+                element: <Aggregate />,
+                loader: async () => {
+                    stepper.reset();
+                    return {};
+                },
             },
+            // {
+            //     path: "/organisations",
+            //     element: <Aggregate />,
+            //     loader: async () => {
+            //         stepper.reset();
+            //         return {};
+            //     },
+            // },
+            // {
+            //     path: "/metadata",
+            //     element: <Aggregate />,
+            //     loader: async () => {
+            //         stepper.reset();
+            //         return {};
+            //     },
+            // },
+            // {
+            //     path: "/users",
+            //     element: <Aggregate />,
+            //     loader: async () => {
+            //         stepper.reset();
+            //         return {};
+            //     },
+            // },
         ],
     },
+
     {
         path: "/schedules",
         children: [
@@ -93,11 +122,7 @@ const App = () => {
             maxH="calc(100vh - 48px)"
             minH="calc(100vh - 48px)"
         >
-            {isLoading && (
-                <Stack alignItems="center" justifyContent="center" h="100%">
-                    <Spinner />
-                </Stack>
-            )}
+            {isLoading && <Loader message="Initializing..." />}
             {isSuccess && (
                 <Router
                     location={location}

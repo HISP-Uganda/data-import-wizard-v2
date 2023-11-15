@@ -34,7 +34,7 @@ import {
     currentOptionsApi,
     currentSourceOptionsApi,
     optionMappingApi,
-} from "../pages/program/Store";
+} from "../pages/program";
 import DestinationIcon from "./DestinationIcon";
 import SourceIcon from "./SourceIcon";
 
@@ -60,10 +60,11 @@ export default function OptionSetMapping({
                 ?.availableOptions || [];
         if (
             (programMapping.prefetch &&
-                programMapping.dataSource !== "godata" &&
+                programMapping.dataSource !== "go-data" &&
                 !programMapping.isSource) ||
-            ["xlsx", "json", "csv"].indexOf(programMapping.dataSource || "") !==
-                -1
+            ["xlsx-line-list", "json", "csv-line-list"].indexOf(
+                programMapping.dataSource || ""
+            ) !== -1
         ) {
             if (sourceOptions && sourceOptions.length > 0) {
                 currentSourceOptionsApi.set(sourceOptions);
@@ -149,7 +150,7 @@ export default function OptionSetMapping({
                                 {currentOptions.map(
                                     ({ value, code, label }) => (
                                         <Tr key={value}>
-                                            <Td w="400px">{`${label}(${value})`}</Td>
+                                            <Td w="400px">{`${label} (${value})`}</Td>
                                             <Td textAlign="center">
                                                 {currentSourceOptions.length >
                                                 0 ? (

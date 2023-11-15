@@ -1,6 +1,6 @@
 {
     "name": "data-import-wizard-v2",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "description": "",
     "license": "BSD-3-Clause",
     "private": true,
@@ -36,9 +36,11 @@
         "@tanstack/react-query": "^4.24.4",
         "@tanstack/react-table": "^8.7.9",
         "@turf/turf": "^6.5.0",
+        "antd": "^5.11.0",
         "axios": "0.27.2",
-        "chakra-react-select": "3.3.7",
+        "chakra-react-select": "3.1.2",
         "chakra-ui-steps": "^1.8.0",
+        "classnames": "^2.3.2",
         "cors": "^2.8.5",
         "date-fns": "^2.29.3",
         "dayjs": "^1.11.7",
@@ -53,9 +55,11 @@
         "immer": "^9.0.19",
         "lodash": "^4.17.21",
         "react-icons": "^4.7.1",
+        "react-intersection-observer": "^9.5.2",
+        "react-papaparse": "^4.4.0",
         "react-pdf": "^7.1.2",
         "react-virtual": "^2.10.4",
-        "xlsx": "https://cdn.sheetjs.com/xlsx-0.19.2/xlsx-0.19.2.tgz",
+        "xlsx": "^0.18.5",
         "zod": "^3.21.4"
     },
     "main": "index.js"

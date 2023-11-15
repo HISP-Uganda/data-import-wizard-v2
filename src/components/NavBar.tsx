@@ -1,95 +1,65 @@
-import React from "react";
-
-import {
-    Box,
-    Button,
-    Flex,
-    HStack,
-    Tooltip,
-    useColorModeValue,
-    useDisclosure,
-} from "@chakra-ui/react";
-import { useSearch, useNavigate } from "@tanstack/react-location";
+import { Spacer, Stack, Text, useColorModeValue } from "@chakra-ui/react";
+import { Link, useSearch } from "@tanstack/react-location";
 import { LocationGenerics } from "../Interfaces";
 
 const NavBar = () => {
     const search = useSearch<LocationGenerics>();
-    const navigate = useNavigate();
     return (
-        <Box bg={useColorModeValue("gray.100", "gray.900")} px={4} h="48px">
-            <Flex h={12} alignItems={"center"} justifyContent={"space-between"}>
-                <HStack spacing={8} alignItems={"center"}>
-                    <HStack
-                        as={"nav"}
-                        spacing={4}
-                        display={{ base: "none", md: "flex" }}
-                    >
-                        <Button
-                            fontWeight={"small"}
-                            onClick={() => {
-                                navigate({ to: "", search });
-                            }}
-                        >
-                            Overview
-                        </Button>
-                        <Tooltip label={"Import data into a tracker or event program"}>
-                            <Button
-                                fontWeight={"small"}
-                                onClick={() => {
-                                    navigate({ to: "/program", search });
-                                }}
-                            >
-                                Program
-                            </Button>
-                        </Tooltip>
+        <Stack
+            direction="row"
+            bg={useColorModeValue("gray.200", "gray.900")}
+            alignItems="center"
+            h="48px"
+            minH="48px"
+            spacing="50px"
+            px="50px"
+        >
+            <Link<LocationGenerics>
+                to=""
+                search={search}
+                activeOptions={{}}
+                getActiveProps={() => ({ className: "active" })}
+            >
+                <Text textTransform="uppercase" letterSpacing="wider">
+                    Overview
+                </Text>
+            </Link>
 
-                        <Tooltip label={"Import aggregate data"}>
-                        <Button
-                            fontWeight={"small"}
-                            onClick={() => {
-                                navigate({ to: "/aggregate", search });
-                            }}
-                        >
-                            Aggregate
-                        </Button>
-                        </Tooltip>
-                        <Tooltip label={"Schedule data import based on saved mapping"}>
-                        <Button
-                            fontWeight={"small"}
-                            onClick={() => {
-                                navigate({ to: "/schedules", search });
-                            }}
-                        >
-                            Schedule
-                        </Button>
-                        </Tooltip>
+            <Link<LocationGenerics>
+                to="/mappings"
+                search={search}
+                activeOptions={{}}
+                getActiveProps={() => ({ className: "active" })}
+            >
+                <Text textTransform="uppercase" letterSpacing="wider">
+                    Mappings
+                </Text>
+            </Link>
 
-                        <Tooltip label={"Map and import organisation units"}>
-                        <Button
-                            fontWeight={"small"}
-                            onClick={() => {
-                                navigate({ to: "/organisation", search });
-                            }}
-                        >
-                            Organisation
-                        </Button>
-                        </Tooltip>
+            <Link<LocationGenerics>
+                to="/schedules"
+                search={search}
+                activeOptions={{}}
+                getActiveProps={() => ({ className: "active" })}
+            >
+                <Text textTransform="uppercase" letterSpacing="wider">
+                    Schedules
+                </Text>
+            </Link>
 
-                        <Tooltip label={"Browse documentation"}>
-                        <Button
-                            fontWeight={"small"}
-                            onClick={() => {
-                                navigate({ to: "/docs", search });
-                            }}
-                        >
-                            Documentation
-                        </Button>
-                        </Tooltip>
+            <Spacer />
 
-                    </HStack>
-                </HStack>
-            </Flex>
-        </Box>
+            <Link<LocationGenerics>
+                to="/docs"
+                search={search}
+                activeOptions={{}}
+                getActiveProps={() => ({ className: "active" })}
+            >
+                <Text textTransform="uppercase" letterSpacing="wider">
+                    Documentation
+                </Text>
+            </Link>
+        </Stack>
     );
 };
 

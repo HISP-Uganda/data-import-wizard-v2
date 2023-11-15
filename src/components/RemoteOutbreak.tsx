@@ -1,5 +1,4 @@
 import {
-    Spinner,
     Stack,
     Table,
     Tbody,
@@ -28,9 +27,10 @@ import {
     programMappingApi,
     remoteOrganisationsApi,
     tokensApi,
-} from "../pages/program/Store";
+} from "../pages/program";
 import { useRemoteGet } from "../Queries";
 import { stepper } from "../Store";
+import Loader from "./Loader";
 import Progress from "./Progress";
 
 export default function RemoteOutbreaks() {
@@ -60,19 +60,25 @@ export default function RemoteOutbreaks() {
         onOpen();
         if (!programMapping.isSource) {
             programMappingApi.updateMany({
-                customOrgUnitColumn: true,
                 orgUnitColumn: "addresses[0].locationId",
-                createEnrollments: true,
-                createEntities: true,
-                updateEntities: true,
-                incidentDateColumn: "dateOfOnset",
-                enrollmentDateColumn: "dateOfOnset",
-                remoteProgram: outbreak.id,
+                customOrgUnitColumn: true,
+                program: {
+                    ...programMapping.program,
+                    createEnrollments: true,
+                    createEntities: true,
+                    updateEntities: true,
+                    incidentDateColumn: "dateOfOnset",
+                    enrollmentDateColumn: "dateOfOnset",
+                    remoteProgram: outbreak.id,
+                },
             });
         } else {
             programMappingApi.updateMany({
-                remoteProgram: outbreak.id,
-                ...other,
+                program: {
+                    ...programMapping.program,
+                    remoteProgram: outbreak.id,
+                    ...other,
+                },
             });
         }
         const organisations = await fetchRemote<IGoDataOrgUnit[]>(
@@ -124,21 +130,11 @@ export default function RemoteOutbreaks() {
     };
     return (
         <Stack w="100%" h="100%">
-            {isLoading && (
-                <Stack
-                    w="100%"
-                    h="100%"
-                    alignItems="center"
-                    justifyContent="center"
-                >
-                    <Spinner />
-                </Stack>
-            )}
+            {isLoading && <Loader message="Loading outbreaks..." />}
             {isSuccess && !isEmpty(data) && (
                 <Table colorScheme="facebook">
                     <Thead>
                         <Tr>
-                            <Th>Id</Th>
                             <Th>Name</Th>
                         </Tr>
                     </Thead>
@@ -149,14 +145,12 @@ export default function RemoteOutbreaks() {
                                 onClick={() => onRowSelect(outbreak)}
                                 key={outbreak.id}
                                 bg={
-                                    programMapping.remoteProgram === outbreak.id
+                                    programMapping.program?.remoteProgram ===
+                                    outbreak.id
                                         ? "gray.100"
                                         : ""
                                 }
                             >
-                                <Td>
-                                    {outbreak.id}-{programMapping.remoteProgram}
-                                </Td>
                                 <Td>{outbreak.name}</Td>
                             </Tr>
                         ))}

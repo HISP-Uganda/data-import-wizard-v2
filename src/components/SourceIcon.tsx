@@ -5,9 +5,9 @@ import { available } from "./DestinationIcon";
 export default function SourceIcon() {
     const programMapping = useStore($programMapping);
 
-    if (!programMapping.isSource) {
-        return available[programMapping.dataSource || ""];
+    if (!programMapping.isSource && programMapping.dataSource) {
+        return available[programMapping.dataSource];
     }
 
-    return available.dhis2;
+    return available["dhis2-program"];
 }

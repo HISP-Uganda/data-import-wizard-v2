@@ -1,3 +1,8 @@
+import { IMapping } from "data-import-wizard-utils";
+import { fromPairs, uniq } from "lodash";
+import { utils, WorkBook } from "xlsx";
+import { Extraction } from "../pages/aggregate/Interfaces";
+
 export function encodeToBinary(str: string): string {
     return btoa(
         encodeURIComponent(str).replace(
@@ -24,4 +29,55 @@ export const convertDataToURL = (objs: any[]) => {
             return s.param + "=" + s.value;
         })
         .join("&");
+};
+
+export const generateData = <U extends IMapping>(
+    mapping: Partial<U>,
+    workbook: WorkBook,
+    sheet: string,
+    extraction: Extraction
+) => {
+    const sheetData = workbook.Sheets[sheet];
+    if (extraction === "json") {
+        if (mapping.headerRow === 1 && mapping.dataStartRow === 2) {
+            const data = utils.sheet_to_json(sheetData, {
+                raw: true,
+                defval: "",
+            });
+            return data;
+        } else if (mapping.headerRow && mapping.dataStartRow) {
+            const data: string[][] = utils.sheet_to_json(sheetData, {
+                header: 1,
+                defval: "",
+            });
+            const header = data[mapping.headerRow - 1];
+            return data
+                .slice(mapping.dataStartRow)
+                .map((d) =>
+                    fromPairs(d.map((dx, index) => [header[index], dx]))
+                );
+        }
+        return [];
+    } else if (extraction === "column") {
+        const data = utils.sheet_to_json(sheetData, {
+            raw: true,
+            defval: "",
+            header: "A",
+        });
+        return data;
+    } else if (extraction === "cell") {
+        const {
+            ["!cols"]: cols,
+            ["!rows"]: rows,
+            ["!merges"]: merges,
+            ["!protect"]: protect,
+            ["!autofilter"]: autofilter,
+            ["!ref"]: ref,
+            ["!margins"]: margins,
+            ["!type"]: type,
+            ...rest
+        } = sheetData;
+        return [rest];
+    }
+    return [];
 };

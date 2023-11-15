@@ -1,127 +1,167 @@
-import React, {ReactElement} from "react";
-import {FcInfo, FcOrganization, FcDocument, FcOvertime, FcMultipleInputs, FcSurvey} from 'react-icons/fc'
-
-import {Box, SimpleGrid, Icon, Text, Stack, Flex, Link, Image} from '@chakra-ui/react'
-import {useNavigate, useSearch} from "@tanstack/react-location";
+import { Image, SimpleGrid, Spacer, Stack, Text } from "@chakra-ui/react";
+import { useNavigate, useSearch } from "@tanstack/react-location";
+import { LocationGenerics } from "../Interfaces";
 
 interface FeatureProps {
-    title: string
-    text: string
-    icon: ReactElement
+    title: string;
+    text: string;
+    icon: string;
 }
 
 const Feature = ({ title, text, icon }: FeatureProps) => {
+    const navigate = useNavigate<LocationGenerics>();
+
     return (
-        <Stack>
-            <Flex
-                w={16}
-                h={16}
-                align={'center'}
-                justify={'center'}
-                color={'white'}
-                rounded={'full'}
-                bg={'gray.100'}
-                mb={1}>
-                <Link>
-                    {icon}
-                </Link>
-            </Flex>
-            <Text fontWeight={600}>{title}</Text>
-            <Text color={'gray.600'}>{text}</Text>
+        <Stack
+            justifyContent="center"
+            alignItems="center"
+            h="200px"
+            spacing="2px"
+            borderRadius="10px"
+            boxShadow="md"
+            borderColor="gray.300"
+            borderStyle="solid"
+            borderWidth="1px"
+            onClick={() => navigate({ to: "/mappings" })}
+            cursor="pointer"
+        >
+            <Image src={icon} alt="godata" w="96px" h="96px" />
+            <Text textTransform="uppercase" fontSize="22px">
+                {title}
+            </Text>
+            <Text letterSpacing="wider">{text}</Text>
         </Stack>
-    )
-}
+    );
+};
 export default function Home() {
-
-    const search = useSearch();
-    const navigate = useNavigate();
     return (
-        <>
-            <Box p={4}>
-                <SimpleGrid columns={{ base: 1, md: 3 }} spacing={10}>
+        <Stack h="100%">
+            <Stack p="40px" spacing="30px">
+                <Stack p="30px" alignContent="center" spacing="20px">
+                    <Text
+                        fontSize="1.3em"
+                        textAlign="justify"
+                        fontWeight="bold"
+                    >
+                        Welcome to Import Wizard, your all-in-one data import
+                        solution!
+                    </Text>
+                    <Text fontSize="1.3em" textAlign="justify">
+                        Efficiently pull data from JSON, API, Excel, CSV, DHIS2,
+                        and Go.Data with our easy mapping tool. Save your
+                        mappings to automate future imports on your schedule.
+                        Whether you're updating tracker/event programs or
+                        aggregate data, Import Wizard streamlines the process,
+                        saving you time and hassle.
+                    </Text>
+                    <Text fontSize="1.3em" textAlign="justify">
+                        Get started and transform data management into a simple,
+                        scheduled, and systematic process. Welcome to seamless
+                        integration!
+                    </Text>
+                </Stack>
+                <SimpleGrid columns={3} spacing="30px">
                     <Feature
-                        icon={<Icon as={FcInfo} w={10} h={10} onClick={() => {
-                            navigate({
-                                to: "#",
-                                search
-                            })}}/>}
-                        title={'Overview'}
-                        text={
-                            'The import wizard helps you to import data from various sources such as JSON, API, Excel, CSV, DHIS2, Go.Data ' +
-                            'by letting you do a mapping on the data before importing it. You can use saved mapping to schedule the data import ' +
-                            'at preferred intervals. It supports importing to a tracker/event program, as well as aggregate data'
+                        title="Individual data import"
+                        icon="./personal-data.png"
+                        text="Import/Export data for tracker or event program"
+                    />
 
-                        }
-                    />
                     <Feature
-                        icon={<Icon as={FcSurvey} w={10} h={10} onClick={() => {
-                            navigate({
-                                to: "/tracker",
-                                search
-                            })}} />}
-                        title={'Program'}
-                        text={
-                            'Import data into a tracker or event program'
-                        }
+                        title="Aggregate Data Import"
+                        icon="./numeric.png"
+                        text="Import DHIS2 aggregate data"
                     />
+
                     <Feature
-                        icon={<Icon as={FcMultipleInputs} w={10} h={10} onClick={() => {
-                            navigate({
-                                to: "/aggregate",
-                                search
-                            })}} />}
-                        title={'Aggregate'}
-                        text={
-                            'Importing aggregate data'
-                        }
+                        title="Scheduling Imports"
+                        icon="./schedule.png"
+                        text="Schedule created mappings"
                     />
+
                     <Feature
-                        icon={<Icon as={FcOvertime} w={10} h={10} onClick={() => {
-                            navigate({
-                            to: "/schedules",
-                            search
-                        })}} />}
-                        title={'Schedule'}
-                        text={
-                            'Schedule data import from saved mappings'
-                        }
+                        title="Metadata import"
+                        icon="./metadata.png"
+                        text="Import DHIS2 metadata from another instance"
                     />
+
                     <Feature
-                        icon={<Icon as={FcOrganization} w={10} h={10} onClick={() => {
-                            navigate({
-                                to: "/organisation",
-                                search
-                            })}} />}
-                        title={'Organisation'}
-                        text={
-                            'Mapping organisation units from a given source to those in the DHIS2 instance'
-                        }
+                        title="Organisation Units Import"
+                        icon="./organization.png"
+                        text="Import Organisation Units to DHIS2"
                     />
+
                     <Feature
-                        icon={<Icon as={FcDocument} w={10} h={10} onClick={() => {
-                            navigate({
-                                to: "/docs",
-                                search
-                            })}} />}
-                        title={'Documentation'}
-                        text={
-                            'The application documentation'
-                        }
-                    />
-                    <Feature
-                        icon={<Image src="/godata.svg" alt="godata"  w={10} h={10} onClick={() => {
-                            navigate({
-                                to: "/program",
-                                search
-                            })}} />}
-                        title={'Go.Data Integration'}
-                        text={
-                            'Go to the Program page'
-                        }
+                        title=" Users import"
+                        icon="./group.png"
+                        text="Import DHIS2 users"
                     />
                 </SimpleGrid>
-            </Box>
+            </Stack>
 
-        </>
+            <Spacer />
+            <Text textAlign="center" textTransform="uppercase" opacity={0.6}>
+                Supported Data Sources
+            </Text>
+            <SimpleGrid
+                columns={7}
+                w="100%"
+                h="100px"
+                bg="gray.100"
+                alignItems="center"
+            >
+                <Stack justifyContent="center" alignItems="center">
+                    <Image src="./go.data.png" alt="godata" h="60px" />
+                </Stack>
+                <Stack justifyContent="center" alignItems="center">
+                    <Image src="./dhis2-text.svg" alt="godata" h="60px" />
+                </Stack>
+                <Stack
+                    justifyContent="center"
+                    alignItems="center"
+                    direction="row"
+                >
+                    <Image src="./excel.svg" alt="godata" h="60px" />
+                    <Text fontSize="24px" fontWeight="bold">
+                        EXCEL
+                    </Text>
+                </Stack>
+                <Stack
+                    justifyContent="center"
+                    alignItems="center"
+                    direction="row"
+                >
+                    <Image src="./browser.png" alt="godata" h="60px" />
+                    <Text fontSize="24px" fontWeight="bold">
+                        API
+                    </Text>
+                </Stack>
+                <Stack
+                    justifyContent="center"
+                    alignItems="center"
+                    direction="row"
+                >
+                    <Image src="./json.png" alt="godata" h="60px" />
+                    <Text fontSize="24px" fontWeight="bold">
+                        JSON
+                    </Text>
+                </Stack>
+                <Stack
+                    justifyContent="center"
+                    alignItems="center"
+                    direction="row"
+                >
+                    <Image src="./csv.png" alt="godata" h="60px" />
+                    <Text fontSize="24px" fontWeight="bold">
+                        CSV
+                    </Text>
+                </Stack>
+                <Stack justifyContent="center" alignItems="center">
+                    <Text fontSize="24px" fontWeight="bold">
+                        + MORE
+                    </Text>
+                </Stack>
+            </SimpleGrid>
+        </Stack>
     );
 }

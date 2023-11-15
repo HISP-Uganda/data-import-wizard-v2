@@ -16,7 +16,7 @@ import {
     $programMapping,
     dhis2ProgramApi,
     programMappingApi,
-} from "../pages/program/Store";
+} from "../pages/program";
 
 import { useRemoteGet, makeQueryKeys } from "../Queries";
 import { stepper } from "../Store";
@@ -40,8 +40,8 @@ export default function RemotePrograms() {
     });
     const onRowSelect = async (program: string) => {
         programMappingApi.update({
-            attribute: "remoteProgram",
-            value: program,
+            attribute: "program",
+            value: { ...programMapping.program, remoteProgram: program },
         });
         const queryParams = {
             "1": {
