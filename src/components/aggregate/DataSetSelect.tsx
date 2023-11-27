@@ -1,10 +1,10 @@
-// import { ColumnDef } from "@tanstack/react-table";
-import { Box, Spinner, Stack, useDisclosure } from "@chakra-ui/react";
+import { Box, Stack, useDisclosure } from "@chakra-ui/react";
+import { useDataEngine } from "@dhis2/app-runtime";
 import { Table } from "antd";
-import React, { useMemo, useEffect } from "react";
-import { getDHIS2Resource, loadProgram, useDHIS2Metadata } from "../../Queries";
-import TableDisplay from "../TableDisplay";
+import { ColumnsType } from "antd/es/table";
+import { IDataSet, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
+import { useEffect } from "react";
 import {
     $aggregateMapping,
     aggregateMappingApi,
@@ -12,12 +12,10 @@ import {
     indicatorApi,
     programIndicatorApi,
 } from "../../pages/aggregate";
-import Progress from "../Progress";
+import { getDHIS2Resource, loadProgram, useDHIS2Metadata } from "../../Queries";
 import { stepper } from "../../Store";
-import { useDataEngine } from "@dhis2/app-runtime";
-import { IDataSet, Option } from "data-import-wizard-utils";
-import { ColumnsType } from "antd/es/table";
 import Loader from "../Loader";
+import Progress from "../Progress";
 
 export default function DataSetSelect() {
     const aggregateMapping = useStore($aggregateMapping);
@@ -83,7 +81,6 @@ export default function DataSetSelect() {
     };
 
     const loadMetadata = async () => {
-        console.log("We are in the things");
         onOpen();
         if (aggregateMapping.dataSource === "dhis2-program-indicators") {
             const data = await getDHIS2Resource<Option>({

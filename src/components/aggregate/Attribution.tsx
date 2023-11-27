@@ -20,6 +20,7 @@ import { FiCheck } from "react-icons/fi";
 import { ChangeEvent, useEffect, useState } from "react";
 import {
     $aggMetadata,
+    $aggregateMapping,
     $attributionMapping,
     attributionMappingApi,
 } from "../../pages/aggregate";
@@ -37,6 +38,8 @@ export default function Attribution() {
     const [currentAttributes, setCurrentAttributes] = useState(
         aggregateMetadata.destinationCategoryOptionCombos
     );
+
+    const aggregateMapping = useStore($aggregateMapping);
 
     const [searchString, setSearchString] = useState<string>("");
 
@@ -165,7 +168,7 @@ export default function Attribution() {
                     <Tr>
                         <Th textTransform="none" w="50%">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
+                                <DestinationIcon mapping={aggregateMapping} />
                                 <Text> Destination Category Option Combo</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -173,7 +176,7 @@ export default function Attribution() {
 
                         <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon />
+                                <SourceIcon mapping={aggregateMapping} />
                                 <Text>Source Category Option Combo</Text>
                                 <Text>{source}</Text>
                             </Stack>

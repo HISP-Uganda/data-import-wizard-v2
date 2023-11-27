@@ -43,6 +43,7 @@ const Display = ({ data }: { data: Option[] }) => {
     const metadata = useStore($metadata);
     const attributeMapping = useStore($attributeMapping);
     const { source, destination } = useStore($names);
+    const programMapping = useStore($programMapping);
 
     const outerLimit = 4;
     const innerLimit = 4;
@@ -113,7 +114,7 @@ const Display = ({ data }: { data: Option[] }) => {
                     <Tr>
                         <Th py="10px" w="35%" textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
+                                <DestinationIcon mapping={programMapping} />
                                 <Text> Destination</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -152,7 +153,7 @@ const Display = ({ data }: { data: Option[] }) => {
                         </Th>
                         <Th py="10px" w="35%" textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon />
+                                <SourceIcon mapping={programMapping} />
                                 <Text>Source</Text>
                                 <Text>{source}</Text>
                             </Stack>

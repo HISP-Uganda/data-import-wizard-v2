@@ -194,7 +194,7 @@ export default function OrganisationUnitMapping() {
                     <Tr h="30px">
                         <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
+                                <DestinationIcon mapping={programMapping} />
                                 <Text>Destination Organization</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -209,7 +209,7 @@ export default function OrganisationUnitMapping() {
                         </Th>
                         <Th w="45%" textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon />
+                                <SourceIcon mapping={programMapping} />
                                 <Text>Source Organization</Text>
                                 <Text>{source}</Text>
                             </Stack>

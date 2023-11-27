@@ -131,7 +131,9 @@ export default function OptionSetMapping({
                                             direction="row"
                                             alignItems="center"
                                         >
-                                            <DestinationIcon />
+                                            <DestinationIcon
+                                                mapping={programMapping}
+                                            />
                                             <Text>Destination Option</Text>
                                         </Stack>
                                     </Th>
@@ -140,7 +142,9 @@ export default function OptionSetMapping({
                                             direction="row"
                                             alignItems="center"
                                         >
-                                            <SourceIcon />
+                                            <SourceIcon
+                                                mapping={programMapping}
+                                            />
                                             <Text>Source Option</Text>
                                         </Stack>
                                     </Th>

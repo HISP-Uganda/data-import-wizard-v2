@@ -70,12 +70,12 @@ export default function Preview() {
                 trackedEntityInstances: [],
             };
             if (
-                programMapping.program?.dhis2Options?.programStage &&
-                programMapping.program?.dhis2Options.programStage.length > 0
+                programMapping.dhis2Options?.programStage &&
+                programMapping.dhis2Options.programStage.length > 0
             ) {
                 const events = await fetchEvents(
                     { engine },
-                    programMapping.program?.dhis2Options.programStage,
+                    programMapping.dhis2Options.programStage,
                     50,
                     programMapping.program?.program || ""
                 );

@@ -244,10 +244,10 @@ export default function ImportSummary() {
                         );
                     }
                 } else {
-                    if (programMapping.program?.dhis2Options?.programStage) {
+                    if (programMapping.dhis2Options?.programStage) {
                         const data = await fetchEvents(
                             { engine },
-                            programMapping.program?.dhis2Options.programStage,
+                            programMapping.dhis2Options.programStage,
                             50,
                             programMapping.program?.program || ""
                         );

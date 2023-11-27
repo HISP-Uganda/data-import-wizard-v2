@@ -175,7 +175,7 @@ const DataMapping = () => {
                     <Tr>
                         <Th textTransform="none" w="50%">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
+                                <DestinationIcon mapping={aggregateMapping} />
                                 <Text> Destination Attribute</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -183,7 +183,7 @@ const DataMapping = () => {
 
                         <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon />
+                                <SourceIcon mapping={aggregateMapping} />
                                 <Text>Source Attribute</Text>
                                 <Text>{source}</Text>
                             </Stack>

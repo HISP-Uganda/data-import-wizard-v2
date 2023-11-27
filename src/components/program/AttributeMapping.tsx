@@ -235,7 +235,7 @@ export default function AttributeMapping() {
                     <Tr>
                         <Th py="20px" textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
+                                <DestinationIcon mapping={programMapping} />
                                 <Text> Destination Attribute</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -274,7 +274,7 @@ export default function AttributeMapping() {
                         </Th>
                         <Th py="20px" textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon />
+                                <SourceIcon mapping={programMapping} />
                                 <Text>Source Attribute</Text>
                                 <Text>{source}</Text>
                             </Stack>

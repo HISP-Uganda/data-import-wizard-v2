@@ -229,7 +229,7 @@ export default function OrganisationMapping() {
                     <Tr h="30px">
                         <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
+                                <DestinationIcon mapping={aggregateMapping} />
                                 <Text>Destination Organization</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -244,7 +244,7 @@ export default function OrganisationMapping() {
                         </Th>
                         <Th w="45%" textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon />
+                                <SourceIcon mapping={aggregateMapping} />
                                 <Text>Source Organization</Text>
                                 <Text>{source}</Text>
                             </Stack>

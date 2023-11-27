@@ -1,4 +1,5 @@
 import { Image, Stack } from "@chakra-ui/react";
+import { IMapping } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import React from "react";
 import { $programMapping } from "../pages/program/Store";
@@ -15,6 +16,7 @@ export const available: {
     json: React.ReactElement;
     "csv-line-list": React.ReactElement;
     "go-data": React.ReactElement;
+    "manual-dhis2-program-indicators": React.ReactElement;
 } = {
     "xlsx-line-list": (
         <Stack
@@ -137,13 +139,26 @@ export const available: {
             <Image src="./godata.svg" alt="godata" />
         </Stack>
     ),
+    "manual-dhis2-program-indicators": (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./dhis2.svg" alt="dhis2" />
+        </Stack>
+    ),
 };
 
-export default function DestinationIcon() {
-    const programMapping = useStore($programMapping);
-
-    if (programMapping.isSource && programMapping.dataSource) {
-        return available[programMapping.dataSource];
+export default function DestinationIcon({
+    mapping,
+}: {
+    mapping: Partial<IMapping>;
+}) {
+    if (mapping.isSource && mapping.dataSource) {
+        return available[mapping.dataSource];
     }
 
     return available["dhis2-program"];
