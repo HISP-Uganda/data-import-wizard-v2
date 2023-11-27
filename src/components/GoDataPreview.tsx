@@ -6,7 +6,7 @@ import {
     Tabs,
     Text,
 } from "@chakra-ui/react";
-import { ColumnDef } from "@tanstack/react-table";
+import Table, { ColumnsType } from "antd/es/table";
 import { GoResponse } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { useEffect, useState } from "react";
@@ -15,17 +15,16 @@ import {
     $processedGoDataData,
 } from "../pages/program/Store";
 import Superscript from "./Superscript";
-import TableDisplay from "./TableDisplay";
 
 export default function GoDataPreview() {
     const { processed, conflicts, errors } = useStore($processedGoDataData);
     const [columns, setColumns] = useState<{
-        person: ColumnDef<any>[];
-        epidemiology: ColumnDef<any>[];
-        events: ColumnDef<any>[];
-        relationships: ColumnDef<any>[];
-        lab: ColumnDef<any>[];
-        questionnaire: ColumnDef<any>[];
+        person: ColumnsType<any>;
+        epidemiology: ColumnsType<any>;
+        events: ColumnsType<any>;
+        relationships: ColumnsType<any>;
+        lab: ColumnsType<any>;
+        questionnaire: ColumnsType<any>;
     }>({
         person: [],
         epidemiology: [],
@@ -35,12 +34,12 @@ export default function GoDataPreview() {
         questionnaire: [],
     });
     const [updateColumns, setUpdateColumns] = useState<{
-        person: ColumnDef<any>[];
-        epidemiology: ColumnDef<any>[];
-        events: ColumnDef<any>[];
-        relationships: ColumnDef<any>[];
-        lab: ColumnDef<any>[];
-        questionnaire: ColumnDef<any>[];
+        person: ColumnsType<any>;
+        epidemiology: ColumnsType<any>;
+        events: ColumnsType<any>;
+        relationships: ColumnsType<any>;
+        lab: ColumnsType<any>;
+        questionnaire: ColumnsType<any>;
     }>({
         person: [],
         epidemiology: [],
@@ -50,12 +49,12 @@ export default function GoDataPreview() {
         questionnaire: [],
     });
     const [errorColumns, setErrorColumns] = useState<{
-        person: ColumnDef<any>[];
-        epidemiology: ColumnDef<any>[];
-        events: ColumnDef<any>[];
-        relationships: ColumnDef<any>[];
-        lab: ColumnDef<any>[];
-        questionnaire: ColumnDef<any>[];
+        person: ColumnsType<any>;
+        epidemiology: ColumnsType<any>;
+        events: ColumnsType<any>;
+        relationships: ColumnsType<any>;
+        lab: ColumnsType<any>;
+        questionnaire: ColumnsType<any>;
     }>({
         person: [],
         epidemiology: [],
@@ -65,12 +64,12 @@ export default function GoDataPreview() {
         questionnaire: [],
     });
     const [conflictColumns, setConflictColumns] = useState<{
-        person: ColumnDef<any>[];
-        epidemiology: ColumnDef<any>[];
-        events: ColumnDef<any>[];
-        relationships: ColumnDef<any>[];
-        lab: ColumnDef<any>[];
-        questionnaire: ColumnDef<any>[];
+        person: ColumnsType<any>;
+        epidemiology: ColumnsType<any>;
+        events: ColumnsType<any>;
+        relationships: ColumnsType<any>;
+        lab: ColumnsType<any>;
+        questionnaire: ColumnsType<any>;
     }>({
         person: [],
         epidemiology: [],
@@ -87,39 +86,45 @@ export default function GoDataPreview() {
                 ...prev,
                 person: Object.keys(processed.inserts.person?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 lab: Object.keys(processed.inserts.lab?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 epidemiology: Object.keys(
                     processed.inserts.epidemiology?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 events: Object.keys(processed.inserts.events?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 questionnaire: Object.keys(
                     processed.inserts.questionnaire?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 relationships: Object.keys(
                     processed.inserts.relationships?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
             }));
         }
@@ -132,39 +137,45 @@ export default function GoDataPreview() {
                 ...prev,
                 person: Object.keys(processed.updates.person?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 lab: Object.keys(processed.updates.lab?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 epidemiology: Object.keys(
                     processed.updates.epidemiology?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 events: Object.keys(processed.updates.events?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 questionnaire: Object.keys(
                     processed.updates.questionnaire?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 relationships: Object.keys(
                     processed.updates.relationships?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
             }));
         }
@@ -176,33 +187,39 @@ export default function GoDataPreview() {
             setErrorColumns((prev) => ({
                 ...prev,
                 person: Object.keys(errors.person?.[0] || []).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 lab: Object.keys(errors.lab?.[0] || []).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 epidemiology: Object.keys(errors.epidemiology?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 events: Object.keys(errors.events?.[0] || []).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 questionnaire: Object.keys(errors.questionnaire?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
                 relationships: Object.keys(errors.relationships?.[0] || []).map(
                     (col) => ({
-                        accessorKey: col,
-                        header: col,
+                        title: col,
+                        dataIndex: col,
+                        key: col,
                     })
                 ),
             }));
@@ -215,34 +232,40 @@ export default function GoDataPreview() {
             setConflictColumns((prev) => ({
                 ...prev,
                 person: Object.keys(conflicts.person?.[0] || []).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 lab: Object.keys(conflicts.lab?.[0] || []).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 epidemiology: Object.keys(
                     conflicts.epidemiology?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 events: Object.keys(conflicts.events?.[0] || []).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 questionnaire: Object.keys(
                     conflicts.questionnaire?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
                 relationships: Object.keys(
                     conflicts.relationships?.[0] || []
                 ).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    dataIndex: col,
+                    key: col,
                 })),
             }));
         }
@@ -252,12 +275,12 @@ export default function GoDataPreview() {
     const innerTabs = (
         data: GoResponse | undefined,
         realColumns: {
-            person: ColumnDef<any>[];
-            epidemiology: ColumnDef<any>[];
-            events: ColumnDef<any>[];
-            relationships: ColumnDef<any>[];
-            lab: ColumnDef<any>[];
-            questionnaire: ColumnDef<any>[];
+            person: ColumnsType<any>;
+            epidemiology: ColumnsType<any>;
+            events: ColumnsType<any>;
+            relationships: ColumnsType<any>;
+            lab: ColumnsType<any>;
+            questionnaire: ColumnsType<any>;
         },
         idField: string = mandatoryAttributes.join("")
     ) => (
@@ -308,69 +331,39 @@ export default function GoDataPreview() {
             </TabList>
             <TabPanels>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={realColumns.person}
-                        generatedData={data?.person || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(data?.person || []),
-                        ]}
-                        idField={idField}
+                        dataSource={data?.person || []}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={realColumns.epidemiology}
-                        generatedData={data?.epidemiology || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(data?.epidemiology || []),
-                        ]}
-                        idField={idField}
+                        dataSource={data?.epidemiology || []}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={realColumns.events}
-                        generatedData={data?.events || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(data?.events || []),
-                        ]}
-                        idField={idField}
+                        dataSource={data?.events || []}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={realColumns.questionnaire}
-                        generatedData={data?.questionnaire || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(data?.questionnaire || []),
-                        ]}
-                        idField={idField}
+                        dataSource={data?.questionnaire || []}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={realColumns.lab}
-                        generatedData={data?.lab || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(data?.lab || []),
-                        ]}
-                        idField={idField}
+                        dataSource={data?.lab || []}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={realColumns.relationships}
-                        generatedData={data?.relationships || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(data?.relationships || []),
-                        ]}
-                        idField={idField}
+                        dataSource={data?.relationships || []}
                     />
                 </TabPanel>
             </TabPanels>

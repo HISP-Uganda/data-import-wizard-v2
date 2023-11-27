@@ -512,7 +512,7 @@ export default function ProgramStageMapping({
                                                         ({ value }) => {
                                                             if (stage) {
                                                                 return (
-                                                                    value.indexOf(
+                                                                    value?.indexOf(
                                                                         stage
                                                                     ) !== -1
                                                                 );

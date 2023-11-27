@@ -1,22 +1,22 @@
-import { domain } from "../../Domain";
 import {
     Enrollment,
+    Event,
     GoResponse,
     IGoData,
-    IProgram,
-    IProgramMapping,
-    Mapping,
     IMapping,
+    IProgram,
+    Mapping,
+    Option,
     RealMapping,
     StageMapping,
     StageUpdate,
     TrackedEntityInstance,
     Update,
     updateObject,
-    Option,
-    Event,
 } from "data-import-wizard-utils";
 import { createApi } from "effector";
+import { Dictionary } from "lodash";
+import { set } from "lodash/fp";
 import {
     $attributeMapping,
     $conflicts,
@@ -40,8 +40,6 @@ import {
     $tokens,
     defaultMapping,
 } from "./Store";
-import { set } from "lodash/fp";
-import { Dictionary } from "lodash";
 
 // export const setIProgramProperty = domain.createEvent<{
 //     attribute: keyof IProgram;
@@ -252,7 +250,10 @@ export const dataApi = createApi($data, {
 
 export const stageMappingApi = createApi($programStageMapping, {
     update: (state, { attribute, value, stage, key }: StageUpdate) => {
-        return set(`${stage}.${attribute}.${key}`, value, state);
+        if (key) {
+            return set(`${stage}.${attribute}.${key}`, value, state);
+        }
+        return set(`${stage}.${attribute}`, value, state);
     },
     set: (_, value: StageMapping) => value,
     updateMany: (

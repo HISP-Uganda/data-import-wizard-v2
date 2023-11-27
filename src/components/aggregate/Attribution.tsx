@@ -18,32 +18,24 @@ import { useStore } from "effector-react";
 import { FiCheck } from "react-icons/fi";
 
 import { ChangeEvent, useEffect, useState } from "react";
-import { $aggMetadata, $aggregateMapping } from "../../pages/aggregate";
 import {
-    $attributeMapping,
-    $currentOptions,
-    $currentSourceOptions,
-    $names,
-    $optionMapping,
-    attributeMappingApi,
-} from "../../pages/program";
+    $aggMetadata,
+    $attributionMapping,
+    attributionMappingApi,
+} from "../../pages/aggregate";
+import { $names } from "../../pages/program";
 import DestinationIcon from "../DestinationIcon";
 import Paginated from "../Paginated";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
 
-const DataMapping = () => {
+export default function Attribution() {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const attributeMapping = useStore($attributeMapping);
-    const aggregateMapping = useStore($aggregateMapping);
+    const attributionMapping = useStore($attributionMapping);
     const aggregateMetadata = useStore($aggMetadata);
-    const currentOptions = useStore($currentOptions);
-    const optionMapping = useStore($optionMapping);
-    const currentSourceOptions = useStore($currentSourceOptions);
     const { source, destination } = useStore($names);
-
     const [currentAttributes, setCurrentAttributes] = useState(
-        aggregateMetadata.destinationColumns
+        aggregateMetadata.destinationCategoryOptionCombos
     );
 
     const [searchString, setSearchString] = useState<string>("");
@@ -67,48 +59,46 @@ const DataMapping = () => {
             inner: innerLimit,
         },
         initialState: {
-            pageSize: 7,
+            pageSize: 10,
             currentPage: 1,
         },
     });
 
     useEffect(() => {
+        onOpen();
         for (const {
             value: destinationValue,
-            unique,
             label: destinationLabel,
-            mandatory,
-        } of aggregateMetadata.destinationColumns) {
-            if (attributeMapping[destinationValue ?? ""] === undefined) {
-                const search = aggregateMetadata.sourceColumns.find(
-                    ({ value }) => value === destinationValue
-                );
+        } of aggregateMetadata.destinationCategoryOptionCombos) {
+            if (attributionMapping[destinationValue ?? ""] === undefined) {
+                const search =
+                    aggregateMetadata.sourceCategoryOptionCombos.find(
+                        ({ value }) => value === destinationValue
+                    );
                 if (search) {
-                    attributeMappingApi.updateMany({
+                    attributionMappingApi.updateMany({
                         attribute: `${destinationValue}`,
                         update: {
                             value: search.value,
-                            unique,
-                            mandatory,
                         },
                     });
                 } else {
-                    const search2 = aggregateMetadata.sourceColumns.find(
-                        ({ label }) => label === destinationLabel
-                    );
+                    const search2 =
+                        aggregateMetadata.sourceCategoryOptionCombos.find(
+                            ({ label }) => label === destinationLabel
+                        );
                     if (search2) {
-                        attributeMappingApi.updateMany({
+                        attributionMappingApi.updateMany({
                             attribute: `${destinationValue}`,
                             update: {
                                 value: search2.value,
-                                unique,
-                                mandatory,
                             },
                         });
                     }
                 }
             }
         }
+        onClose();
     }, []);
 
     const handlePageChange = (nextPage: number): void => {
@@ -121,15 +111,15 @@ const DataMapping = () => {
     };
 
     const setCustom = (attribute: string, manual: boolean) => {
-        const isSpecific = attributeMapping[attribute]?.specific;
-        attributeMappingApi.update({
+        const isSpecific = attributionMapping[attribute]?.specific;
+        attributionMappingApi.update({
             attribute,
             key: "manual",
             value: manual,
         });
 
         if (isSpecific) {
-            attributeMappingApi.update({
+            attributionMappingApi.update({
                 attribute,
                 key: "specific",
                 value: !isSpecific,
@@ -138,15 +128,15 @@ const DataMapping = () => {
     };
 
     const setSpecific = (attribute: string, specific: boolean) => {
-        attributeMappingApi.update({
+        attributionMappingApi.update({
             attribute,
             key: "specific",
             value: specific,
         });
-        const isManual = attributeMapping[attribute]?.manual;
+        const isManual = attributionMapping[attribute]?.manual;
 
         if (isManual) {
-            attributeMappingApi.update({
+            attributionMappingApi.update({
                 attribute,
                 key: "manual",
                 value: !isManual,
@@ -161,8 +151,8 @@ const DataMapping = () => {
             overflow="auto"
         >
             <Search
-                options={aggregateMetadata.destinationColumns}
-                mapping={attributeMapping}
+                options={aggregateMetadata.destinationCategoryOptionCombos}
+                mapping={attributionMapping}
                 searchString={searchString}
                 setSearchString={setSearchString}
                 action={setCurrentAttributes}
@@ -176,7 +166,7 @@ const DataMapping = () => {
                         <Th textTransform="none" w="50%">
                             <Stack direction="row" alignItems="center">
                                 <DestinationIcon />
-                                <Text> Destination Attribute</Text>
+                                <Text> Destination Category Option Combo</Text>
                                 <Text>{destination}</Text>
                             </Stack>
                         </Th>
@@ -184,7 +174,7 @@ const DataMapping = () => {
                         <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
                                 <SourceIcon />
-                                <Text>Source Attribute</Text>
+                                <Text>Source Category Option Combo</Text>
                                 <Text>{source}</Text>
                             </Stack>
                         </Th>
@@ -208,13 +198,13 @@ const DataMapping = () => {
                                 <Td>{label}</Td>
                                 <Td>
                                     <Select<Option, false, GroupBase<Option>>
-                                        value={aggregateMetadata.sourceColumns?.find(
+                                        value={aggregateMetadata.sourceCategoryOptionCombos?.find(
                                             (val) =>
                                                 val.value ===
-                                                attributeMapping[value ?? ""]
+                                                attributionMapping[value ?? ""]
                                                     ?.value
                                         )}
-                                        options={aggregateMetadata.sourceColumns?.map(
+                                        options={aggregateMetadata.sourceCategoryOptionCombos?.map(
                                             ({ value, label }) => ({
                                                 label,
                                                 value,
@@ -222,19 +212,22 @@ const DataMapping = () => {
                                         )}
                                         isClearable
                                         onChange={(e) =>
-                                            attributeMappingApi.updateMany(
-                                                attributeMappingApi.updateMany({
-                                                    attribute: value ?? "",
-                                                    update: {
-                                                        value: e?.value || "",
-                                                    },
-                                                })
+                                            attributionMappingApi.updateMany(
+                                                attributionMappingApi.updateMany(
+                                                    {
+                                                        attribute: value ?? "",
+                                                        update: {
+                                                            value:
+                                                                e?.value || "",
+                                                        },
+                                                    }
+                                                )
                                             )
                                         }
                                     />
                                 </Td>
                                 <Td textAlign="center">
-                                    {attributeMapping[value ?? ""]?.value && (
+                                    {attributionMapping[value ?? ""]?.value && (
                                         <Icon
                                             as={FiCheck}
                                             color="green.400"
@@ -251,11 +244,15 @@ const DataMapping = () => {
                         <Td colSpan={8} textAlign="right">
                             Mapped{" "}
                             {
-                                Object.values(attributeMapping).filter(
+                                Object.values(attributionMapping).filter(
                                     ({ value }) => !!value
                                 ).length
                             }{" "}
-                            of {aggregateMetadata.destinationColumns.length}
+                            of{" "}
+                            {
+                                aggregateMetadata
+                                    .destinationCategoryOptionCombos.length
+                            }
                         </Td>
                     </Tr>
                 </Tfoot>
@@ -270,6 +267,4 @@ const DataMapping = () => {
             />
         </Stack>
     );
-};
-
-export default DataMapping;
+}

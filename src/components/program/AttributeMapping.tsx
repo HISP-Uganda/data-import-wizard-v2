@@ -34,7 +34,6 @@ import {
     $attributeMapping,
     $currentOptions,
     $currentSourceOptions,
-    $data,
     $metadata,
     $names,
     $optionMapping,
@@ -305,17 +304,13 @@ export default function AttributeMapping() {
                                 availableOptions,
                                 valueType,
                             }) => (
-                                <Tr
-                                    key={value}
-                                    borderColor="green.100"
-                                    _hover={{ bg: "gray.50" }}
-                                >
+                                <Tr key={value} _hover={{ bg: "gray.50" }}>
                                     <Td>{label}</Td>
                                     <Td textAlign="center">
                                         <Checkbox
                                             isChecked={
                                                 attributeMapping[value ?? ""]
-                                                    ?.mandatory
+                                                    ?.mandatory || mandatory
                                             }
                                             isReadOnly={mandatory}
                                             onChange={(
@@ -333,7 +328,7 @@ export default function AttributeMapping() {
                                         <Checkbox
                                             isChecked={
                                                 attributeMapping[value ?? ""]
-                                                    ?.unique
+                                                    ?.unique || unique
                                             }
                                             isReadOnly={unique}
                                             onChange={(

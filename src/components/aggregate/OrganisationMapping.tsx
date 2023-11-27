@@ -21,7 +21,11 @@ import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { FiCheck } from "react-icons/fi";
 
 import { usePagination } from "@ajna/pagination";
-import { $aggMetadata, $aggregateMapping } from "../../pages/aggregate";
+import {
+    $aggMetadata,
+    $aggregateMapping,
+    aggMetadataApi,
+} from "../../pages/aggregate";
 import {
     $names,
     $organisationUnitMapping,
@@ -32,13 +36,19 @@ import Paginated from "../Paginated";
 import Progress from "../Progress";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
+import { getDHIS2Resource } from "../../Queries";
+import { useDataEngine } from "@dhis2/app-runtime";
 
-export default function Step4() {
+export default function OrganisationMapping() {
     const aggregateMetadata = useStore($aggMetadata);
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const aggregateMapping = useStore($aggregateMapping);
     const { source, destination } = useStore($names);
-
+    const [querying, setQuerying] = useState<string | undefined>(
+        aggregateMapping.orgUnitColumn
+    );
+    const [message, setMessage] = useState<string>("");
+    const engine = useDataEngine();
     const { isOpen, onOpen, onClose } = useDisclosure();
 
     const {
@@ -77,7 +87,36 @@ export default function Step4() {
         },
     });
 
+    const fetchOrganisationsByLevel = async () => {
+        onOpen();
+        if (aggregateMapping.aggregate?.indicatorGenerationLevel) {
+            setMessage(() => "Fetching organisations by level");
+            const units = await getDHIS2Resource<Option>({
+                isCurrentDHIS2: aggregateMapping.isCurrentInstance,
+                engine,
+                resource: "organisationUnits.json",
+                params: {
+                    fields: "id~rename(value),name~rename(label)",
+                    level: aggregateMapping.aggregate.indicatorGenerationLevel,
+                    paging: "false",
+                },
+                auth: aggregateMapping.authentication,
+                resourceKey: "organisationUnits",
+            });
+            aggMetadataApi.set({ key: "sourceOrgUnits", value: units });
+            setQuerying(() => "querying");
+            onClose();
+        }
+    };
+
     useEffect(() => {
+        fetchOrganisationsByLevel();
+        return () => {};
+    }, []);
+
+    useEffect(() => {
+        onOpen();
+        setMessage(() => "Trying to automatically map");
         for (const {
             value: destinationValue,
             label: destinationLabel,
@@ -130,7 +169,8 @@ export default function Step4() {
                 }
             }
         }
-    }, [aggregateMapping.orgUnitColumn]);
+        onClose();
+    }, [aggregateMapping.orgUnitColumn, querying]);
 
     const onOK = async () => {
         setFetching(() => true);
@@ -321,18 +361,6 @@ export default function Step4() {
                                                 }, 100);
                                             }}
                                         />
-                                        // <Select<
-                                        //     Option,
-                                        //     false,
-                                        //     GroupBase<Option>
-                                        // >
-
-                                        //     options={
-                                        //         aggregateMetadata.sourceOrgUnits
-                                        //     }
-                                        //     isClearable
-
-                                        // />
                                     )}
                                 </Td>
                                 <Td>
@@ -371,7 +399,7 @@ export default function Step4() {
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}
-                message="Trying to automatically map"
+                message={message}
                 onOpen={onOpen}
             />
         </Stack>

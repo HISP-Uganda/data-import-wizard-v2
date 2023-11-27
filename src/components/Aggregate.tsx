@@ -1,6 +1,6 @@
-import { Stack, toast, useToast } from "@chakra-ui/react";
+import { Stack, useToast } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
-import { Step, Option } from "data-import-wizard-utils";
+import { Option, Step } from "data-import-wizard-utils";
 import dayjs from "dayjs";
 import { useStore } from "effector-react";
 import {
@@ -12,8 +12,9 @@ import {
     $otherName,
     aggregateMappingApi,
 } from "../pages/aggregate";
-import { $organisationUnitMapping, $attributeMapping } from "../pages/program";
+import { $attributeMapping, $organisationUnitMapping } from "../pages/program";
 import { $action, $steps, actionApi, stepper } from "../Store";
+import Attribution from "./aggregate/Attribution";
 import Configuration from "./aggregate/Configuration";
 import DataMapping from "./aggregate/DataMapping";
 import DataSetSelect from "./aggregate/DataSetSelect";
@@ -35,6 +36,10 @@ const importTypes: Option[] = [
     { value: "dhis2-data-set", label: "dhis2-data-set" },
     { value: "dhis2-indicators", label: "dhis2-indicators" },
     { value: "dhis2-program-indicators", label: "dhis2-program-indicators" },
+    {
+        value: "manual-dhis2-program-indicators",
+        label: "manual-dhis2-program-indicators",
+    },
 ];
 
 const Aggregate = () => {
@@ -70,6 +75,11 @@ const Aggregate = () => {
             content: <OrganisationMapping />,
             id: 6,
         },
+        {
+            label: "Category Option Combo Mapping",
+            content: <Attribution />,
+            id: 11,
+        },
         { label: "Data Mapping", content: <DataMapping />, id: 7 },
         { label: "Options", content: <DHIS2Options />, id: 8 },
         { label: "Preview", content: <Preview />, id: 9 },
@@ -78,8 +88,8 @@ const Aggregate = () => {
 
     const activeSteps = () => {
         return steps.filter(({ id }) => {
-            const prefetch = aggregateMapping.prefetch ? [] : [9];
-            const notPrefetch = aggregateMapping.prefetch ? [9] : [];
+            const notPrefetch = aggregateMapping.prefetch ? [] : [9];
+            const prefetch = aggregateMapping.prefetch ? [9] : [];
             if (aggregateMapping.dataSource === "api") {
                 return [1, 2, 3, ...prefetch].indexOf(id) !== -1;
             }
@@ -88,10 +98,10 @@ const Aggregate = () => {
                 return [5, ...notPrefetch].indexOf(id) === -1;
             }
             if (aggregateMapping.dataSource === "dhis2-indicators") {
-                return [4, 6, 5, ...notPrefetch].indexOf(id) === -1;
+                return [4, 11, ...notPrefetch].indexOf(id) === -1;
             }
             if (aggregateMapping.dataSource === "dhis2-program-indicators") {
-                return [4, 6, 5, ...notPrefetch].indexOf(id) === -1;
+                return [4, 11, ...notPrefetch].indexOf(id) === -1;
             }
             if (
                 aggregateMapping.dataSource &&
@@ -106,14 +116,6 @@ const Aggregate = () => {
     };
 
     const onNext = () => {
-        if (activeStep === 0) {
-            const currentDate = dayjs().format("YYYY-MM-DD HH:mm:ss");
-            aggregateMappingApi.updateMany({
-                created: currentDate,
-                lastUpdated: currentDate,
-            });
-            actionApi.create();
-        }
         if (activeStep === activeSteps().length - 1) {
             stepper.reset();
         } else {

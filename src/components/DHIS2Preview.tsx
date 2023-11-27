@@ -7,6 +7,7 @@ import {
     Text,
 } from "@chakra-ui/react";
 import { ColumnDef } from "@tanstack/react-table";
+import { Table } from "antd";
 import {
     Enrollment,
     Event,
@@ -16,6 +17,7 @@ import { useStore } from "effector-react";
 import { useMemo } from "react";
 import Superscript from "./Superscript";
 
+import { ColumnsType } from "antd/es/table";
 import { $processed } from "../pages/program/Store";
 import TableDisplay from "./TableDisplay";
 export default function DHIS2Preview() {
@@ -86,21 +88,27 @@ export default function DHIS2Preview() {
         []
     );
 
-    const conflictColumns = useMemo<ColumnDef<any>[]>(
+    const conflictColumns = useMemo<ColumnsType<any>>(
         () =>
-            Object.keys(processed.conflicts?.[0]).map((a) => ({
-                accessorKey: a,
-                header: a,
-            })),
-        []
+            Object.keys(processed.conflicts?.[0] ?? {})
+                .filter((i) => i !== "id")
+                .map((a) => ({
+                    title: a,
+                    dataIndex: a,
+                    key: a,
+                })),
+        [Object.keys(processed.conflicts?.[0] ?? {})]
     );
-    const errorColumns = useMemo<ColumnDef<any>[]>(
+    const errorColumns = useMemo<ColumnsType<any>>(
         () =>
-            Object.keys(processed.errors?.[0]).map((a) => ({
-                accessorKey: a,
-                header: a,
-            })),
-        []
+            Object.keys(processed.errors?.[0] ?? {})
+                .filter((i) => i !== "id")
+                .map((a) => ({
+                    title: a,
+                    dataIndex: a,
+                    key: a,
+                })),
+        [Object.keys(processed.errors?.[0] ?? {})]
     );
 
     return (
@@ -213,25 +221,19 @@ export default function DHIS2Preview() {
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={conflictColumns}
-                        generatedData={processed.conflicts || []}
-                        queryKey={[
-                            "conflicts",
-                            processed.conflicts?.length || 0,
-                        ]}
-                        idField="attribute"
+                        dataSource={processed.conflicts}
+                        rowKey="id"
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<any>
+                    <Table
                         columns={errorColumns}
-                        generatedData={processed.errors || []}
-                        queryKey={["errors", processed.errors?.length || 0]}
-                        idField="attribute"
+                        dataSource={processed.errors}
+                        rowKey="id"
                     />
                 </TabPanel>
-                {/* <TabPanel>8</TabPanel> */}
             </TabPanels>
         </Tabs>
     );

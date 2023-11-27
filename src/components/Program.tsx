@@ -204,7 +204,6 @@ const Program = () => {
 
     return (
         <Stack p="20px" spacing="30px" flex={1}>
-            <Text>{action}</Text>
             <StepsDisplay
                 activeStep={activeStep}
                 activeSteps={activeSteps}

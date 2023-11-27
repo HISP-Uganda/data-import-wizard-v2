@@ -10,6 +10,7 @@ import {
 import { fromPairs, groupBy, isEmpty, map, pick } from "lodash";
 import { getOr } from "lodash/fp";
 import { useQuery } from "react-query";
+import { db } from "./db";
 import { closeDialog, setDataSets, setTotalDataSets } from "./Events";
 import { tokenApi } from "./pages/program";
 import { versionApi } from "./Store";
@@ -54,10 +55,9 @@ export const useDHIS2Metadata = <TData>(
         ];
     }
 
-    const stringParams = convertDataToURL(parameters);
     const metadataQuery = {
         data: {
-            resource: `${resource}.json?${stringParams}`,
+            resource: `${resource}.json`,
             params,
         },
     };
@@ -84,13 +84,48 @@ export const useInitials = () => {
         info: {
             resource: "system/info",
         },
+        organisationUnits: {
+            resource: "organisationUnits.json",
+            params: {
+                fields: "id,name,path,leaf",
+                level: 1,
+            },
+        },
+        levels: {
+            resource: "filledOrganisationUnitLevels.json",
+            params: {
+                fields: "id,level~rename(value),name~rename(label)",
+            },
+        },
+        groups: {
+            resource: "organisationUnitGroups.json",
+            params: {
+                fields: "id~rename(value),name~rename(label)",
+            },
+        },
     };
 
     return useQuery<boolean, Error>(["initials"], async () => {
         const {
             info: { version },
+            organisationUnits: { organisationUnits },
+            levels: organisationUnitLevels,
+            groups: { organisationUnitGroups },
         }: any = await engine.query(query);
         const versionNumbers = String(version).split(".");
+        const availableUnits = organisationUnits.map((unit: any) => {
+            return {
+                id: unit.id,
+                pId: unit.pId || "",
+                value: unit.id,
+                title: unit.name,
+                key: unit.id,
+                isLeaf: unit.leaf,
+            };
+        });
+        await db.organisations.bulkPut(availableUnits);
+        await db.levels.bulkPut(organisationUnitLevels);
+        await db.groups.bulkPut(organisationUnitGroups);
         versionApi.set(Number(versionNumbers[1]));
         return true;
     });

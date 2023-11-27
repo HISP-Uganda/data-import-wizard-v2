@@ -1,7 +1,10 @@
-import { Option } from "data-import-wizard-utils";
+import { Option, Period } from "data-import-wizard-utils";
 import { createApi } from "effector";
 import { WorkBook } from "xlsx";
 import { domain } from "./Domain";
+
+export const $periods = domain.createStore<Period[]>([]);
+export const $ous = domain.createStore<string[]>([]);
 
 export const $steps = domain.createStore<number>(0);
 export const $version = domain.createStore<number>(0);
@@ -35,4 +38,12 @@ export const $sheets = $workbook.map<Option[]>((workbook) => {
         return workbook.SheetNames.map((s) => ({ label: s, value: s }));
     }
     return [];
+});
+
+export const periodsApi = createApi($periods, {
+    set: (_, { periods, remove }: { periods: Period[]; remove: boolean }) =>
+        periods,
+});
+export const ousApi = createApi($ous, {
+    set: (_, ous: string[]) => ous,
 });

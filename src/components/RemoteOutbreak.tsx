@@ -1,13 +1,6 @@
-import {
-    Stack,
-    Table,
-    Tbody,
-    Td,
-    Th,
-    Thead,
-    Tr,
-    useDisclosure,
-} from "@chakra-ui/react";
+import { Stack, useDisclosure } from "@chakra-ui/react";
+import { ColumnsType } from "antd/es/table";
+import { Table } from "antd";
 import {
     fetchRemote,
     getLowestLevelParents,
@@ -37,6 +30,14 @@ export default function RemoteOutbreaks() {
     const programMapping = useStore($programMapping);
     const token = useStore($token);
     const { isOpen, onOpen, onClose } = useDisclosure();
+
+    const columns: ColumnsType<IGoData> = [
+        {
+            title: "Name",
+            dataIndex: "name",
+            key: "name",
+        },
+    ];
 
     const { isLoading, isError, isSuccess, error, data } = useRemoteGet<
         IGoData[],
@@ -132,30 +133,19 @@ export default function RemoteOutbreaks() {
         <Stack w="100%" h="100%">
             {isLoading && <Loader message="Loading outbreaks..." />}
             {isSuccess && !isEmpty(data) && (
-                <Table colorScheme="facebook">
-                    <Thead>
-                        <Tr>
-                            <Th>Name</Th>
-                        </Tr>
-                    </Thead>
-                    <Tbody>
-                        {data?.map((outbreak) => (
-                            <Tr
-                                cursor="pointer"
-                                onClick={() => onRowSelect(outbreak)}
-                                key={outbreak.id}
-                                bg={
-                                    programMapping.program?.remoteProgram ===
-                                    outbreak.id
-                                        ? "gray.100"
-                                        : ""
-                                }
-                            >
-                                <Td>{outbreak.name}</Td>
-                            </Tr>
-                        ))}
-                    </Tbody>
-                </Table>
+                <Table
+                    columns={columns}
+                    dataSource={data}
+                    rowKey="id"
+                    pagination={{ pageSize: 25 }}
+                    rowSelection={{
+                        type: "radio",
+                        selectedRowKeys: programMapping.program?.remoteProgram
+                            ? [programMapping.program?.remoteProgram]
+                            : [],
+                        onSelect: (outbreak) => onRowSelect(outbreak),
+                    }}
+                />
             )}
             {isError && <pre>{JSON.stringify(error, null, 2)}</pre>}
 

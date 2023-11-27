@@ -1,4 +1,4 @@
-import { Stack, Text } from "@chakra-ui/react";
+import { Checkbox, Stack, Text } from "@chakra-ui/react";
 import { GroupBase, Select, SingleValue } from "chakra-react-select";
 import { IMapping, Option } from "data-import-wizard-utils";
 import { Event } from "effector";
@@ -29,7 +29,7 @@ export default function ExcelUpload<U extends IMapping>({
             value: e?.value,
         });
 
-        if (workbook && e) {
+        if (workbook && e && e.value) {
             const actual = generateData<U>(
                 mapping,
                 workbook,
@@ -43,7 +43,7 @@ export default function ExcelUpload<U extends IMapping>({
     const callback = () => {};
 
     return (
-        <Stack>
+        <Stack spacing="30px">
             <FileUpload<U>
                 type="xlsx"
                 mapping={mapping}

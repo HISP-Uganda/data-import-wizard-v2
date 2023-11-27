@@ -60,7 +60,7 @@ export default function StepsDisplay({
                                 {index + 1}
                             </Text>
                         </Box>
-                        <Text>{step.label}</Text>
+                        <Text textAlign="center">{step.label}</Text>
                     </Stack>
                 ))}
             </Stack>

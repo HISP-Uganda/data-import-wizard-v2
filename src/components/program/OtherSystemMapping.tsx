@@ -187,7 +187,7 @@ const Display = ({ data }: { data: Option[] }) => {
                                         <Checkbox
                                             isChecked={
                                                 attributeMapping[value ?? ""]
-                                                    ?.mandatory
+                                                    ?.mandatory || mandatory
                                             }
                                             isReadOnly={mandatory}
                                             onChange={(
@@ -205,7 +205,7 @@ const Display = ({ data }: { data: Option[] }) => {
                                         <Checkbox
                                             isChecked={
                                                 attributeMapping[value ?? ""]
-                                                    ?.unique
+                                                    ?.unique || unique
                                             }
                                             isReadOnly={unique}
                                             onChange={(
