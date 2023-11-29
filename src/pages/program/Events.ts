@@ -222,7 +222,7 @@ export const programApi = createApi($program, {
     set: (_, program: Partial<IProgram>) => {
         return program;
     },
-    reset: () => ({}),
+    reset: () => defaultMapping,
 });
 
 export const programMappingApi = createApi($programMapping, {

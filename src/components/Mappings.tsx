@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-location";
 import Table, { ColumnsType } from "antd/es/table";
 import { IMapping } from "data-import-wizard-utils";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LocationGenerics } from "../Interfaces";
 import { programMappingApi } from "../pages/program";
 import { useNamespace } from "../Queries";
@@ -17,8 +17,26 @@ export default function Mappings() {
     const navigate = useNavigate<LocationGenerics>();
     const { onClose, onOpen, isOpen } = useDisclosure();
     const [message, setMessage] = useState<string>("");
-    const { isLoading, isSuccess, isError, error, data } =
+    let { isLoading, isSuccess, isError, error, data } =
         useNamespace<IMapping>("iw-mapping");
+
+    const [currentData, setCurrentData] = useState<IMapping[] | undefined>(
+        data
+    );
+
+    const afterDelete = async (id: string) => {
+        setCurrentData((prev) => {
+            if (prev) {
+                return prev.filter(({ id: mappingId }) => mappingId !== id);
+            }
+            return prev;
+        });
+    };
+
+    useEffect(() => {
+        setCurrentData(() => data);
+        return () => {};
+    }, [data?.length]);
 
     const columns: ColumnsType<Partial<IMapping>> = [
         {
@@ -69,6 +87,7 @@ export default function Mappings() {
                     message={message}
                     isOpen={isOpen}
                     setMessage={setMessage}
+                    afterDelete={afterDelete}
                 />
             ),
         },
@@ -164,15 +183,13 @@ export default function Mappings() {
     if (isLoading) return <Loader message="Loading saved mappings..." />;
     if (isSuccess) {
         return (
-            <Stack
-                // alignContent="center"
-                // alignItems="center"
-                // justifyItems="center"
-                h="100%"
-                width="100%"
-                p="10px"
-            >
-                <Table columns={columns} dataSource={data} rowKey="id" />\
+            <Stack h="100%" width="100%" p="10px">
+                <Table
+                    columns={columns}
+                    dataSource={currentData}
+                    rowKey="id"
+                    loading={isLoading}
+                />
                 <FAB actions={actions} />
                 <Progress
                     onClose={onClose}

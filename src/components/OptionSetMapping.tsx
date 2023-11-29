@@ -9,15 +9,17 @@ import {
     ModalHeader,
     ModalOverlay,
     Stack,
-    Table,
-    Tbody,
-    Td,
-    Th,
-    Thead,
-    Tr,
+    // Table,
+    // Tbody,
+    // Td,
+    // Th,
+    // Thead,
+    // Tr,
     useDisclosure,
     Text,
 } from "@chakra-ui/react";
+import { Table } from "antd";
+import { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
 import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
@@ -28,9 +30,11 @@ import {
     $currentOptions,
     $currentSourceOptions,
     $data,
+    $goDataOptions,
     $metadata,
     $optionMapping,
     $programMapping,
+    $tokens,
     currentOptionsApi,
     currentSourceOptionsApi,
     optionMappingApi,
@@ -53,49 +57,96 @@ export default function OptionSetMapping({
     const programMapping = useStore($programMapping);
     const attributeMapping = useStore($attributeMapping);
     const metadata = useStore($metadata);
+    const allTokens = useStore($tokens);
+    const goDataOptions = useStore($goDataOptions);
+
+    const columns: ColumnsType<Partial<Option>> = [
+        {
+            title: (
+                <Stack direction="row" alignItems="center">
+                    <DestinationIcon mapping={programMapping} />
+                    <Text>Destination Option</Text>
+                </Stack>
+            ),
+            width: "50%",
+            render: (text, { label, code, value }) => `${label} (${value})`,
+            key: "label",
+        },
+        {
+            title: (
+                <Stack direction="row" alignItems="center">
+                    <SourceIcon mapping={programMapping} />
+                    <Text>Source Option</Text>
+                </Stack>
+            ),
+            width: "50%",
+            render: (text, { label, code }) => {
+                if (currentSourceOptions.length > 0) {
+                    return (
+                        <Select<Option, false, GroupBase<Option>>
+                            value={currentSourceOptions.find(
+                                (val) =>
+                                    val.value ===
+                                    getOr("", code || "", optionMapping)
+                            )}
+                            options={currentSourceOptions}
+                            isClearable
+                            onChange={(e) =>
+                                optionMappingApi.add({
+                                    key: value || "",
+                                    value: e?.value || "",
+                                })
+                            }
+                        />
+                    );
+                } else {
+                    <Input
+                        value={optionMapping[code || ""]}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            optionMappingApi.add({
+                                key: code || "",
+                                value: e.target.value,
+                            })
+                        }
+                    />;
+                }
+            },
+            key: "label",
+        },
+    ];
 
     const openOptionSetDialog = (id: string, destinationOptions?: Option[]) => {
-        const sourceOptions =
-            metadata.sourceColumns.find(({ value }) => value === id)
-                ?.availableOptions || [];
         if (
-            (programMapping.prefetch &&
-                programMapping.dataSource !== "go-data" &&
-                !programMapping.isSource) ||
             ["xlsx-line-list", "json", "csv-line-list"].indexOf(
                 programMapping.dataSource || ""
             ) !== -1
         ) {
-            if (sourceOptions && sourceOptions.length > 0) {
-                currentSourceOptionsApi.set(sourceOptions);
-            } else {
-                const allOptions = data.flatMap((d) => {
-                    const value: string = getOr("", id, d);
-                    if (value) {
-                        const opt: Option = {
-                            value,
-                            label: value,
-                        };
-                        return opt;
-                    }
-                    return [];
-                });
-                currentSourceOptionsApi.set(allOptions);
-            }
-        } else if (programMapping.isSource) {
+            const sourceOptions = data.flatMap((d) => {
+                const value: string = getOr("", id, d);
+                if (value) {
+                    const opt: Option = {
+                        value,
+                        label: value,
+                    };
+                    return opt;
+                }
+                return [];
+            });
             currentSourceOptionsApi.set(sourceOptions);
+        } else if (id) {
+            const filteredOptions =
+                metadata.sourceColumns.find(({ value }) => value === id)
+                    ?.availableOptions ?? [];
+            if (filteredOptions.length > 0) {
+                currentSourceOptionsApi.set(filteredOptions);
+            }
+        } else if (programMapping.dataSource === "go-data") {
+            currentSourceOptionsApi.set(
+                goDataOptions.map(({ id }) => {
+                    return { label: allTokens[id] || id, value: id };
+                })
+            );
         }
-        // else if (
-        //     programMapping.dataSource === "godata" &&
-        //     !programMapping.isSource &&
-        //     sourceOptions.length > 0
-        // ) {
-        //     currentSourceOptionsApi.set(sourceOptions);
-        // } else if (
-        //     programMapping.dataSource === "godata" &&
-        //     !programMapping.isSource
-        // ) {
-        // }
         currentOptionsApi.set(destinationOptions || []);
         onOpen();
     };
@@ -123,7 +174,14 @@ export default function OptionSetMapping({
                     <ModalHeader>Option Set Mapping</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody>
-                        <Table size="sm">
+                        <Table
+                            columns={columns}
+                            dataSource={currentOptions}
+                            rowKey="value"
+                            pagination={{ pageSize: 7 }}
+                            size="small"
+                        />
+                        {/* <Table size="sm">
                             <Thead>
                                 <Tr>
                                     <Th py="20px">
@@ -217,7 +275,7 @@ export default function OptionSetMapping({
                                     )
                                 )}
                             </Tbody>
-                        </Table>
+                        </Table> */}
                     </ModalBody>
                     <ModalFooter>
                         <Button colorScheme="blue" mr={3} onClick={onClose}>

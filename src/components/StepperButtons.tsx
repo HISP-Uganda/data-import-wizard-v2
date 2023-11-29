@@ -6,25 +6,33 @@ import { LocationGenerics } from "../Interfaces";
 import { $steps, stepper } from "../Store";
 export default function StepperButtons({
     steps,
-    label,
     disabled,
     onNext,
     onSave,
+    onFinish,
 }: {
     steps: Step[];
-    label: string;
     disabled: boolean;
     onNext: () => void;
     onSave: () => void;
+    onFinish: () => void;
 }) {
     const activeStep = useStore($steps);
     const navigate = useNavigate<LocationGenerics>();
+    const step = steps[activeStep];
     return (
         <>
             {activeStep === steps.length - 1 ? (
                 <Box textAlign="right">
-                    <Button onClick={() => stepper.reset()}>
-                        <Text>Finish</Text>
+                    <Button
+                        colorScheme="blue"
+                        onClick={() => {
+                            stepper.reset();
+                            onFinish();
+                            navigate({ to: "/mappings" });
+                        }}
+                    >
+                        <Text>Go to Mappings</Text>
                     </Button>
                 </Box>
             ) : (
@@ -59,7 +67,7 @@ export default function StepperButtons({
                         onClick={onNext}
                         isDisabled={disabled}
                     >
-                        {label}
+                        {step.nextLabel}
                     </Button>
                 </Stack>
             )}

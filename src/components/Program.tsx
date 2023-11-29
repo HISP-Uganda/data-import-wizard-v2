@@ -1,4 +1,4 @@
-import { Stack, useToast, Text } from "@chakra-ui/react";
+import { Stack, useToast } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { Option, Step } from "data-import-wizard-utils";
 import dayjs from "dayjs";
@@ -6,25 +6,36 @@ import { useStore } from "effector-react";
 
 import {
     $attributeMapping,
+    $data,
+    $dhis2Program,
     $disabled,
+    $goData,
+    $goDataOptions,
     $label,
+    $metadata,
     $names,
     $optionMapping,
     $organisationUnitMapping,
+    $prevGoData,
+    $processed,
+    $processedGoDataData,
     $program,
     $programMapping,
     $programStageMapping,
+    $programTypes,
+    $token,
+    $tokens,
     processor,
     programMappingApi,
 } from "../pages/program";
 import { $action, $steps, actionApi, stepper } from "../Store";
 import MappingDetails from "./MappingDetails";
+import OrganisationUnitMapping from "./OrganisationUnitMapping";
 import AttributeMapping from "./program/AttributeMapping";
 import DHIS2Options from "./program/DHIS2Options";
 import EventMapping from "./program/EventMapping";
 import ImportSummary from "./program/ImportSummary";
 import MappingOptions from "./program/MappingOptions";
-import OrganisationUnitMapping from "./program/OrganisationUnitMapping";
 import { OtherSystemMapping } from "./program/OtherSystemMapping";
 import Preview from "./program/Preview";
 import ProgramSelect from "./program/ProgramSelect";
@@ -55,6 +66,7 @@ const Program = () => {
     const action = useStore($action);
     const engine = useDataEngine();
     const names = useStore($names);
+    const { sourceOrgUnits, destinationOrgUnits } = useStore($metadata);
     const steps: Step[] = [
         {
             label: "Mapping Details",
@@ -66,30 +78,81 @@ const Program = () => {
                 />
             ),
             id: 2,
+            nextLabel: "Next Step",
         },
-        { label: "Select Program", content: <ProgramSelect />, id: 3 },
-        { label: "Mapping Options", content: <MappingOptions />, id: 4 },
-        { label: "Select Outbreak", content: <RemoteOutbreaks />, id: 5 },
-        { label: "Select Program2", content: <RemotePrograms />, id: 6 },
+        {
+            label: "Select Program",
+            content: <ProgramSelect />,
+            nextLabel: "Next Step",
+            id: 3,
+        },
+        {
+            label: "Mapping Options",
+            content: <MappingOptions />,
+            nextLabel: "Next Step",
+            id: 4,
+        },
+        {
+            label: "Select Outbreak",
+            content: <RemoteOutbreaks />,
+            nextLabel: "Next Step",
+            id: 5,
+        },
+        {
+            label: "Select Program2",
+            content: <RemotePrograms />,
+            nextLabel: "Next Step",
+            id: 6,
+        },
         {
             label: "Organisation Mapping",
-            content: <OrganisationUnitMapping />,
+            content: (
+                <OrganisationUnitMapping
+                    mapping={programMapping}
+                    sourceOrgUnits={sourceOrgUnits}
+                    destinationOrgUnits={destinationOrgUnits}
+                    update={programMappingApi.update}
+                />
+            ),
+            nextLabel: "Next Step",
             id: 7,
         },
-        { label: "System Mapping", content: <OtherSystemMapping />, id: 8 },
+        {
+            label: "System Mapping",
+            content: <OtherSystemMapping />,
+            nextLabel: "Next Step",
+            id: 8,
+        },
         {
             label: "Attribute Mapping",
             content: <AttributeMapping />,
+            nextLabel: "Next Step",
             id: 9,
         },
         {
             label: "Events Mapping",
             content: <EventMapping />,
+            nextLabel: "Next Step",
             id: 10,
         },
-        { label: "DHIS2 Export Options", content: <DHIS2Options />, id: 11 },
-        { label: "Import Preview", content: <Preview />, id: 12 },
-        { label: "Import Summary", content: <ImportSummary />, id: 13 },
+        {
+            label: "DHIS2 Export Options",
+            content: <DHIS2Options />,
+            nextLabel: "Next Step",
+            id: 11,
+        },
+        {
+            label: "Import Preview",
+            content: <Preview />,
+            nextLabel: "Import",
+            id: 12,
+        },
+        {
+            label: "Import Summary",
+            content: <ImportSummary />,
+            nextLabel: "Go to Mappings",
+            id: 13,
+        },
     ];
 
     const activeSteps = () => {
@@ -191,7 +254,7 @@ const Program = () => {
             engine.mutate(mutation4),
             engine.mutate(mutation5),
         ]);
-
+        actionApi.edit();
         toast({
             title: "Mapping saved",
             description: "Mapping has been successfully saved",
@@ -200,6 +263,24 @@ const Program = () => {
             isClosable: true,
         });
         return data;
+    };
+    const onFinish = () => {
+        programMappingApi.reset();
+        $attributeMapping.reset();
+        $program.reset();
+        $optionMapping.reset();
+        $organisationUnitMapping.reset();
+        $programStageMapping.reset();
+        $processed.reset();
+        $prevGoData.reset();
+        $data.reset();
+        $goData.reset();
+        $programTypes.reset();
+        $tokens.reset();
+        $processedGoDataData.reset();
+        $token.reset();
+        $goDataOptions.reset();
+        $dhis2Program.reset();
     };
 
     return (
@@ -211,10 +292,10 @@ const Program = () => {
             />
             <StepperButtons
                 disabled={disabled}
-                label={label}
-                steps={steps}
+                steps={activeSteps()}
                 onNext={onNext}
                 onSave={onSave}
+                onFinish={onFinish}
             />
         </Stack>
     );

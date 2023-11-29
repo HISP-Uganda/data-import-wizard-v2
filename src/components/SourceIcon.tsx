@@ -1,6 +1,4 @@
 import { IMapping } from "data-import-wizard-utils";
-import { useStore } from "effector-react";
-import { $programMapping } from "../pages/program/Store";
 import { available } from "./DestinationIcon";
 
 export default function SourceIcon({

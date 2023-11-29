@@ -14,28 +14,41 @@ export default function Search({
     mapping,
     action,
     options,
-    setCurrentPage,
     setSearchString,
     searchString,
     label,
+    label2,
     placeholder,
 }: {
     mapping: Mapping;
     options: Option[];
     action: React.Dispatch<React.SetStateAction<Option[]>>;
-    setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
     setSearchString: React.Dispatch<React.SetStateAction<string>>;
     searchString: string;
     placeholder: string;
     label: string;
+    label2: string;
 }) {
     const filterUnits = (checked: boolean) => {
         const mapped = Object.keys(mapping);
         if (checked) {
             action(() =>
-                options.filter(({ value }) => mapped.indexOf(value) !== -1)
+                options.filter(
+                    ({ value }) => mapped.indexOf(value ?? "") !== -1
+                )
             );
-            setCurrentPage(1);
+        } else {
+            action(() => options);
+        }
+    };
+    const filterUnmapped = (checked: boolean) => {
+        const mapped = Object.keys(mapping);
+        if (checked) {
+            action(() =>
+                options.filter(
+                    ({ value }) => mapped.indexOf(value ?? "") === -1
+                )
+            );
         } else {
             action(() => options);
         }
@@ -55,6 +68,13 @@ export default function Search({
             <Checkbox
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
                     filterUnits(e.target.checked)
+                }
+            >
+                {label}
+            </Checkbox>
+            <Checkbox
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    filterUnmapped(e.target.checked)
                 }
             >
                 {label}

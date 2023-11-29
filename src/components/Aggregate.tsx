@@ -4,7 +4,10 @@ import { Option, Step } from "data-import-wizard-utils";
 import dayjs from "dayjs";
 import { useStore } from "effector-react";
 import {
+    $aggMetadata,
     $aggregateMapping,
+    $dataSet,
+    $dhis2DataSet,
     $disabled,
     $label,
     $name,
@@ -12,7 +15,11 @@ import {
     $otherName,
     aggregateMappingApi,
 } from "../pages/aggregate";
-import { $attributeMapping, $organisationUnitMapping } from "../pages/program";
+import {
+    $attributeMapping,
+    $data,
+    $organisationUnitMapping,
+} from "../pages/program";
 import { $action, $steps, actionApi, stepper } from "../Store";
 import Attribution from "./aggregate/Attribution";
 import Configuration from "./aggregate/Configuration";
@@ -20,10 +27,10 @@ import DataMapping from "./aggregate/DataMapping";
 import DataSetSelect from "./aggregate/DataSetSelect";
 import DHIS2Options from "./aggregate/DHIS2Options";
 import ImportSummary from "./aggregate/ImportSummary";
-import OrganisationMapping from "./aggregate/OrganisationMapping";
 import Preview from "./aggregate/Preview";
 import RemoteDataSets from "./aggregate/RemoteDataSets";
 import MappingDetails from "./MappingDetails";
+import OrganisationUnitMapping from "./OrganisationUnitMapping";
 import StepperButtons from "./StepperButtons";
 import StepsDisplay from "./StepsDisplay";
 const importTypes: Option[] = [
@@ -55,6 +62,7 @@ const Aggregate = () => {
     const engine = useDataEngine();
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const attributeMapping = useStore($attributeMapping);
+    const { destinationOrgUnits, sourceOrgUnits } = useStore($aggMetadata);
     const steps: Step[] = [
         {
             label: "Mapping Details",
@@ -65,25 +73,70 @@ const Aggregate = () => {
                     importTypes={importTypes}
                 />
             ),
+            nextLabel: "Next Step",
             id: 2,
         },
-        { label: `${name} Data Set`, content: <DataSetSelect />, id: 3 },
-        { label: `${otherName} Data Set`, content: <RemoteDataSets />, id: 4 },
-        { label: "Configuration", content: <Configuration />, id: 5 },
+        {
+            label: `${name} Data Set`,
+            content: <DataSetSelect />,
+            nextLabel: "Next Step",
+            id: 3,
+        },
+        {
+            label: `${otherName} Data Set`,
+            content: <RemoteDataSets />,
+            nextLabel: "Next Step",
+            id: 4,
+        },
+        {
+            label: "Configuration",
+            content: <Configuration />,
+            nextLabel: "Next Step",
+            id: 5,
+        },
         {
             label: "Organisation Mapping",
-            content: <OrganisationMapping />,
+            content: (
+                <OrganisationUnitMapping
+                    mapping={aggregateMapping}
+                    sourceOrgUnits={sourceOrgUnits}
+                    destinationOrgUnits={destinationOrgUnits}
+                    update={aggregateMappingApi.update}
+                />
+            ),
+            nextLabel: "Next Step",
             id: 6,
         },
         {
             label: "Category Option Combo Mapping",
             content: <Attribution />,
+            nextLabel: "Next Step",
             id: 11,
         },
-        { label: "Data Mapping", content: <DataMapping />, id: 7 },
-        { label: "Options", content: <DHIS2Options />, id: 8 },
-        { label: "Preview", content: <Preview />, id: 9 },
-        { label: "Import Summary", content: <ImportSummary />, id: 10 },
+        {
+            label: "Data Mapping",
+            content: <DataMapping />,
+            nextLabel: "Next Step",
+            id: 7,
+        },
+        {
+            label: "Options",
+            content: <DHIS2Options />,
+            nextLabel: "Next Step",
+            id: 8,
+        },
+        {
+            label: "Preview",
+            content: <Preview />,
+            nextLabel: "Next Step",
+            id: 9,
+        },
+        {
+            label: "Import Summary",
+            content: <ImportSummary />,
+            nextLabel: "Next Step",
+            id: 10,
+        },
     ];
 
     const activeSteps = () => {
@@ -162,6 +215,15 @@ const Aggregate = () => {
         });
         return data;
     };
+    const onFinish = () => {
+        aggregateMappingApi.reset();
+        $attributeMapping.reset();
+        $organisationUnitMapping.reset();
+        $data.reset();
+        $dataSet.reset();
+        $dhis2DataSet.reset();
+    };
+
     return (
         <Stack p="20px" spacing="30px" flex={1}>
             <StepsDisplay
@@ -171,10 +233,10 @@ const Aggregate = () => {
             />
             <StepperButtons
                 disabled={disabled}
-                label={label}
-                steps={steps}
+                steps={activeSteps()}
                 onNext={onNext}
                 onSave={onSave}
+                onFinish={onFinish}
             />
         </Stack>
     );

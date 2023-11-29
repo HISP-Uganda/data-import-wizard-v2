@@ -61,6 +61,7 @@ export default function DropdownMenu({
     isOpen,
     onOpen,
     onClose,
+    afterDelete,
 }: {
     id: string;
     data: any[];
@@ -69,6 +70,7 @@ export default function DropdownMenu({
     isOpen: boolean;
     onOpen: () => void;
     onClose: () => void;
+    afterDelete: (id: string) => void;
 }) {
     const engine = useDataEngine();
     const queryClient = useQueryClient();
@@ -104,12 +106,17 @@ export default function DropdownMenu({
 
         setMessage(() => "Loading program for saved mapping");
 
-        const program = await loadProgram<IProgram>({
-            engine,
-            resource: "programs",
-            id: mapping.program?.program || "",
-            fields: "id,name,trackedEntityType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
-        });
+        let program = {};
+
+        if (mapping.program?.program) {
+            program = await loadProgram<IProgram>({
+                engine,
+                resource: "programs",
+                id: mapping.program.program,
+                fields: "id,name,trackedEntityType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
+            });
+        }
+
         return {
             programStageMapping,
             attributeMapping,
@@ -407,9 +414,7 @@ export default function DropdownMenu({
         } catch (e: any) {
             console.log(e?.message);
         }
-        queryClient.fetchQuery<IMapping[]>(["namespaces", "iw-mapping"], () => {
-            return data?.filter(({ id: programId }) => id !== programId);
-        });
+        afterDelete(id);
         toast({
             title: "Mapping deleted.",
             description: "Mapping has been deleted",
