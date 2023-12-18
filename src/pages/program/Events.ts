@@ -10,6 +10,7 @@ import {
     RealMapping,
     StageMapping,
     StageUpdate,
+    Step,
     TrackedEntityInstance,
     Update,
     updateObject,
@@ -18,6 +19,7 @@ import { createApi } from "effector";
 import { Dictionary } from "lodash";
 import { set } from "lodash/fp";
 import {
+    $activeSteps,
     $attributeMapping,
     $conflicts,
     $currentOptions,
@@ -317,4 +319,8 @@ export const ouMappingApi = createApi($organisationUnitMapping, {
 
 export const remoteOrganisationsApi = createApi($remoteOrganisations, {
     set: (_, remoteOrganisations: any[]) => remoteOrganisations,
+});
+
+export const activeStepsApi = createApi($activeSteps, {
+    set: (_, steps: Step[]) => steps,
 });

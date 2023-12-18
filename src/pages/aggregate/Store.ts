@@ -24,7 +24,7 @@ export const defaultMapping: Partial<IMapping> = {
     authentication,
     dataStartRow: 2,
     headerRow: 1,
-    dataSource: "dhis2-indicators",
+    dataSource: "manual-dhis2-program-indicators",
     isCurrentInstance: true,
     aggregate: {},
 };

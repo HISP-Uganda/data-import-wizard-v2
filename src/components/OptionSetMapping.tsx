@@ -9,12 +9,6 @@ import {
     ModalHeader,
     ModalOverlay,
     Stack,
-    // Table,
-    // Tbody,
-    // Td,
-    // Th,
-    // Thead,
-    // Tr,
     useDisclosure,
     Text,
 } from "@chakra-ui/react";
@@ -59,7 +53,6 @@ export default function OptionSetMapping({
     const metadata = useStore($metadata);
     const allTokens = useStore($tokens);
     const goDataOptions = useStore($goDataOptions);
-
     const columns: ColumnsType<Partial<Option>> = [
         {
             title: (
@@ -69,7 +62,7 @@ export default function OptionSetMapping({
                 </Stack>
             ),
             width: "50%",
-            render: (text, { label, code, value }) => `${label} (${value})`,
+            render: (_, { label, code, value }) => `${label} (${value})`,
             key: "label",
         },
         {
@@ -80,14 +73,18 @@ export default function OptionSetMapping({
                 </Stack>
             ),
             width: "50%",
-            render: (text, { label, code }) => {
+            render: (_, { label, code, value }) => {
                 if (currentSourceOptions.length > 0) {
                     return (
                         <Select<Option, false, GroupBase<Option>>
                             value={currentSourceOptions.find(
                                 (val) =>
                                     val.value ===
-                                    getOr("", code || "", optionMapping)
+                                    getOr(
+                                        "",
+                                        value || code || label || "",
+                                        optionMapping
+                                    )
                             )}
                             options={currentSourceOptions}
                             isClearable
@@ -141,6 +138,7 @@ export default function OptionSetMapping({
                 currentSourceOptionsApi.set(filteredOptions);
             }
         } else if (programMapping.dataSource === "go-data") {
+            // console.log("Are here");
             currentSourceOptionsApi.set(
                 goDataOptions.map(({ id }) => {
                     return { label: allTokens[id] || id, value: id };
@@ -154,21 +152,16 @@ export default function OptionSetMapping({
     return (
         <Stack>
             <Button
-                onClick={() =>
+                onClick={() => {
                     openOptionSetDialog(
                         String(getOr("", `${value}.value`, attributeMapping)),
                         destinationOptions
-                    )
-                }
+                    );
+                }}
             >
                 Map Options
             </Button>
-            <Modal
-                isOpen={isOpen}
-                onClose={onClose}
-                // scrollBehavior="inside"
-                size="6xl"
-            >
+            <Modal isOpen={isOpen} onClose={onClose} size="6xl">
                 <ModalOverlay />
                 <ModalContent>
                     <ModalHeader>Option Set Mapping</ModalHeader>
@@ -181,101 +174,6 @@ export default function OptionSetMapping({
                             pagination={{ pageSize: 7 }}
                             size="small"
                         />
-                        {/* <Table size="sm">
-                            <Thead>
-                                <Tr>
-                                    <Th py="20px">
-                                        <Stack
-                                            direction="row"
-                                            alignItems="center"
-                                        >
-                                            <DestinationIcon
-                                                mapping={programMapping}
-                                            />
-                                            <Text>Destination Option</Text>
-                                        </Stack>
-                                    </Th>
-                                    <Th textAlign="center" py="20px">
-                                        <Stack
-                                            direction="row"
-                                            alignItems="center"
-                                        >
-                                            <SourceIcon
-                                                mapping={programMapping}
-                                            />
-                                            <Text>Source Option</Text>
-                                        </Stack>
-                                    </Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {currentOptions.map(
-                                    ({ value, code, label }) => (
-                                        <Tr key={value}>
-                                            <Td w="400px">{`${label} (${value})`}</Td>
-                                            <Td textAlign="center">
-                                                {currentSourceOptions.length >
-                                                0 ? (
-                                                    <Select<
-                                                        Option,
-                                                        false,
-                                                        GroupBase<Option>
-                                                    >
-                                                        value={currentSourceOptions.find(
-                                                            (val) =>
-                                                                val.value ===
-                                                                getOr(
-                                                                    "",
-                                                                    code || "",
-                                                                    optionMapping
-                                                                )
-                                                        )}
-                                                        options={
-                                                            currentSourceOptions
-                                                        }
-                                                        isClearable
-                                                        onChange={(e) =>
-                                                            optionMappingApi.add(
-                                                                {
-                                                                    key:
-                                                                        value ||
-                                                                        "",
-                                                                    value:
-                                                                        e?.value ||
-                                                                        "",
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                ) : (
-                                                    <Input
-                                                        value={
-                                                            optionMapping[
-                                                                code || ""
-                                                            ]
-                                                        }
-                                                        onChange={(
-                                                            e: ChangeEvent<HTMLInputElement>
-                                                        ) =>
-                                                            optionMappingApi.add(
-                                                                {
-                                                                    key:
-                                                                        code ||
-                                                                        "",
-                                                                    value: e
-                                                                        .target
-                                                                        .value,
-                                                                }
-                                                            )
-                                                        }
-                                                    />
-                                                )}
-                                            </Td>
-                                        </Tr>
-                                    )
-                                )}
-                            </Tbody>
-                        </Table> */}
                     </ModalBody>
                     <ModalFooter>
                         <Button colorScheme="blue" mr={3} onClick={onClose}>

@@ -14,6 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { ColumnDef } from "@tanstack/react-table";
+import Table, { ColumnsType } from "antd/es/table";
 import {
     convertFromDHIS2,
     convertToGoData,
@@ -27,7 +28,8 @@ import {
     TrackedEntityInstance,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { chunk, groupBy, isArray } from "lodash";
+import { chunk, groupBy, isArray, isObject, uniq } from "lodash";
+import { getOr } from "lodash/fp";
 import { useEffect, useMemo, useState } from "react";
 import {
     $attributeMapping,
@@ -67,22 +69,13 @@ export default function ImportSummary() {
     const [message, setMessage] = useState<string>("");
     const [inserted, setInserted] = useState<any[]>([]);
     const [errored, setErrored] = useState<any[]>([]);
-    const [conflicted, setConflicted] = useState<any[]>([]);
     const [updates, setUpdates] = useState<any[]>([]);
 
-    const [insertedColumns, setInsertedColumns] = useState<ColumnDef<any>[]>(
+    const [insertedColumns, setInsertedColumns] = useState<ColumnsType<any>>(
         []
     );
-    const [updatedColumns, setUpdatedColumns] = useState<ColumnDef<any>[]>([]);
-    const [erroredColumns, setErroredColumns] = useState<ColumnDef<any>[]>([]);
-
-    const [feedback, setFeedback] = useState<{
-        total: number;
-        updated: number;
-        deleted: number;
-        ignored: number;
-        imported: number;
-    }>({ total: 0, updated: 0, deleted: 0, ignored: 0, imported: 0 });
+    const [updatedColumns, setUpdatedColumns] = useState<ColumnsType<any>>([]);
+    const [erroredColumns, setErroredColumns] = useState<ColumnsType<any>>([]);
 
     const [instanceFeedback, setInstanceFeedback] = useState<{
         total: number;
@@ -114,9 +107,15 @@ export default function ImportSummary() {
     useEffect(() => {
         if (isArray(inserted) && inserted.length > 0) {
             setInsertedColumns(() =>
-                Object.keys(inserted[0]).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                uniq(inserted.flatMap((e) => Object.keys(e))).map((col) => ({
+                    title: col,
+                    render: (_, data) => {
+                        let value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
                 }))
             );
         }
@@ -126,22 +125,36 @@ export default function ImportSummary() {
     useEffect(() => {
         if (isArray(updates) && updates.length > 0) {
             setInsertedColumns(() =>
-                Object.keys(inserted[0]).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                uniq(updates.flatMap((e) => Object.keys(e))).map((col) => ({
+                    title: col,
+                    render: (_, data) => {
+                        let value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
                 }))
             );
         }
         return () => {};
-    }, [JSON.stringify(inserted)]);
+    }, [JSON.stringify(updates)]);
 
     useEffect(() => {
         if (errored.length > 0) {
             setErroredColumns(() =>
-                Object.keys(errored[0]).map((col) => ({
-                    accessorKey: col,
-                    header: col,
-                }))
+                uniq(errored.flatMap((e) => Object.keys(e)))
+                    .filter((c) => c !== "details")
+                    .map((col) => ({
+                        title: col,
+                        render: (_, data) => {
+                            let value = getOr("", col, data);
+                            if (isArray(value)) return JSON.stringify(value);
+                            if (isObject(value)) return JSON.stringify(value);
+                            return value;
+                        },
+                        key: col,
+                    }))
             );
         }
         return () => {};
@@ -151,8 +164,14 @@ export default function ImportSummary() {
         if (updates.length > 0) {
             setUpdatedColumns(() =>
                 Object.keys(updates[0]).map((col) => ({
-                    accessorKey: col,
-                    header: col,
+                    title: col,
+                    render: (_, data) => {
+                        let value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
                 }))
             );
         }
@@ -160,6 +179,34 @@ export default function ImportSummary() {
     }, [JSON.stringify(updates)]);
 
     const fetchAndInsert = async () => {
+        setErrored(() => []);
+        setUpdates(() => []);
+        setInserted(() => []);
+        setInstanceConflicts(() => []);
+        setEnrollmentConflicts(() => []);
+        setEventConflicts(() => []);
+        setEventFeedback(() => ({
+            deleted: 0,
+            total: 0,
+            ignored: 0,
+            updated: 0,
+            imported: 0,
+        }));
+        setEnrollmentFeedback(() => ({
+            deleted: 0,
+            total: 0,
+            ignored: 0,
+            updated: 0,
+            imported: 0,
+        }));
+        setInstanceFeedback(() => ({
+            deleted: 0,
+            total: 0,
+            ignored: 0,
+            updated: 0,
+            imported: 0,
+        }));
+
         onOpen();
         if (programMapping.isSource) {
             if (programMapping.dataSource === "dhis2-program") {
@@ -187,7 +234,8 @@ export default function ImportSummary() {
                             programMapping.authentication || {},
                             setMessage,
                             setInserted,
-                            setUpdates
+                            setUpdates,
+                            setErrored
                         );
                     }
                 } else {
@@ -227,7 +275,8 @@ export default function ImportSummary() {
                                 programMapping.authentication || {},
                                 setMessage,
                                 setInserted,
-                                setUpdates
+                                setUpdates,
+                                setErrored
                             );
                         }
                     );
@@ -737,36 +786,38 @@ export default function ImportSummary() {
 
                 <TabPanels>
                     <TabPanel>
-                        <TableDisplay<any>
+                        <Table
                             columns={insertedColumns}
-                            generatedData={inserted}
-                            idField="visualId"
-                            queryKey={[
-                                "created",
-                                JSON.stringify(inserted || []),
-                            ]}
+                            dataSource={inserted}
+                            rowKey="visualId"
+                            pagination={{ pageSize: 5 }}
+                            scroll={{ x: true }}
                         />
                     </TabPanel>
                     <TabPanel>
-                        <TableDisplay<any>
+                        <Table
                             columns={updatedColumns}
-                            generatedData={updates}
-                            idField="visualId"
-                            queryKey={[
-                                "updated",
-                                JSON.stringify(updates || []),
-                            ]}
+                            dataSource={updates}
+                            rowKey="visualId"
                         />
                     </TabPanel>
                     <TabPanel>
-                        <TableDisplay<any>
+                        <Table
                             columns={erroredColumns}
-                            generatedData={errored}
-                            idField="visualId"
-                            queryKey={[
-                                "errored",
-                                JSON.stringify(errored || []),
-                            ]}
+                            dataSource={errored}
+                            rowKey="id"
+                            pagination={{ pageSize: 5 }}
+                            expandable={{
+                                expandedRowRender: (record) => (
+                                    <Text textAlign="center">
+                                        {JSON.stringify(
+                                            record.details,
+                                            null,
+                                            2
+                                        )}
+                                    </Text>
+                                ),
+                            }}
                         />
                     </TabPanel>
                 </TabPanels>

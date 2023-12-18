@@ -9,7 +9,6 @@ import {
     $dataSet,
     $dhis2DataSet,
     $disabled,
-    $label,
     $name,
     $names,
     $otherName,
@@ -27,6 +26,7 @@ import DataMapping from "./aggregate/DataMapping";
 import DataSetSelect from "./aggregate/DataSetSelect";
 import DHIS2Options from "./aggregate/DHIS2Options";
 import ImportSummary from "./aggregate/ImportSummary";
+import Pivot from "./aggregate/Pivot";
 import Preview from "./aggregate/Preview";
 import RemoteDataSets from "./aggregate/RemoteDataSets";
 import MappingDetails from "./MappingDetails";
@@ -53,7 +53,6 @@ const Aggregate = () => {
     const activeStep = useStore($steps);
     const aggregateMapping = useStore($aggregateMapping);
     const disabled = useStore($disabled);
-    const label = useStore($label);
     const name = useStore($name);
     const action = useStore($action);
     const otherName = useStore($otherName);
@@ -95,6 +94,12 @@ const Aggregate = () => {
             id: 5,
         },
         {
+            label: "Pivot",
+            content: <Pivot />,
+            nextLabel: "Next Step",
+            id: 12,
+        },
+        {
             label: "Organisation Mapping",
             content: (
                 <OrganisationUnitMapping
@@ -128,7 +133,7 @@ const Aggregate = () => {
         {
             label: "Preview",
             content: <Preview />,
-            nextLabel: "Next Step",
+            nextLabel: "Import",
             id: 9,
         },
         {
@@ -148,13 +153,13 @@ const Aggregate = () => {
             }
 
             if (aggregateMapping.dataSource === "dhis2-data-set") {
-                return [5, ...notPrefetch].indexOf(id) === -1;
+                return [5, 12, ...notPrefetch].indexOf(id) === -1;
             }
             if (aggregateMapping.dataSource === "dhis2-indicators") {
-                return [4, 11, ...notPrefetch].indexOf(id) === -1;
+                return [4, 11, 12, ...notPrefetch].indexOf(id) === -1;
             }
             if (aggregateMapping.dataSource === "dhis2-program-indicators") {
-                return [4, 11, ...notPrefetch].indexOf(id) === -1;
+                return [4, 11, 12, ...notPrefetch].indexOf(id) === -1;
             }
             if (
                 aggregateMapping.dataSource &&
@@ -162,9 +167,15 @@ const Aggregate = () => {
                     aggregateMapping.dataSource
                 ) !== -1
             ) {
-                return [4, 8, 7].indexOf(id) === -1;
+                return [4, 8, 7, 12].indexOf(id) === -1;
             }
-            return [4, 8].indexOf(id) === -1;
+            if (
+                aggregateMapping.dataSource ===
+                "manual-dhis2-program-indicators"
+            ) {
+                return [3, 4, 11, 6, 9].indexOf(id) === -1;
+            }
+            return [4, 8, 12].indexOf(id) === -1;
         });
     };
 

@@ -25,6 +25,7 @@ import {
     $metadata,
     $optionMapping,
     $organisationUnitMapping,
+    $processedGoDataData,
     $program,
     $programMapping,
     $programStageMapping,
@@ -61,6 +62,8 @@ export default function Preview() {
     const [message, setMessage] = useState<string>("");
 
     const process = async () => {
+        processor.reset();
+        processedGoDataDataApi.reset();
         onOpen();
         setMessage(() => "Fetching previous data");
         if (programMapping.isSource) {
@@ -191,17 +194,17 @@ export default function Preview() {
                                     eventUpdates,
                                     conflicts,
                                     errors,
-                                } = await convertToDHIS2(
-                                    previous,
-                                    current,
-                                    programMapping,
+                                } = await convertToDHIS2({
+                                    previousData: previous,
+                                    data: current,
+                                    mapping: programMapping,
                                     organisationUnitMapping,
                                     attributeMapping,
                                     programStageMapping,
                                     optionMapping,
                                     version,
-                                    program
-                                );
+                                    program,
+                                });
                                 processor.addInstances(processedInstances);
                                 processor.addEnrollments(enrollments);
                                 processor.addEvents(events);
@@ -237,17 +240,17 @@ export default function Preview() {
                             eventUpdates,
                             errors,
                             conflicts,
-                        } = await convertToDHIS2(
-                            previous,
+                        } = await convertToDHIS2({
+                            previousData: previous,
                             data,
-                            programMapping,
+                            mapping: programMapping,
                             organisationUnitMapping,
                             attributeMapping,
                             programStageMapping,
                             optionMapping,
                             version,
-                            program
-                        );
+                            program,
+                        });
                         processor.addInstances(processedInstances);
                         processor.addEnrollments(enrollments);
                         processor.addEvents(events);

@@ -27,6 +27,9 @@ import DestinationIcon from "./DestinationIcon";
 import Progress from "./Progress";
 import Search from "./Search";
 import SourceIcon from "./SourceIcon";
+import { getDHIS2Resource } from "../Queries";
+import { useDataEngine } from "@dhis2/app-runtime";
+import { aggMetadataApi } from "../pages/aggregate";
 export default function OrganisationUnitMapping({
     destinationOrgUnits,
     sourceOrgUnits,
@@ -39,6 +42,7 @@ export default function OrganisationUnitMapping({
     update: Event<{ attribute: keyof IMapping; value: any; key?: string }>;
 }) {
     const { isOpen, onOpen, onClose } = useDisclosure();
+    const engine = useDataEngine();
     const {
         isOpen: isOpenModal,
         onOpen: onOpenModal,
@@ -48,6 +52,10 @@ export default function OrganisationUnitMapping({
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const remoteOrganisationApi = useStore($remoteOrganisationApi);
     const [fetching, setFetching] = useState<boolean>(false);
+    const [message, setMessage] = useState<string>("");
+    const [querying, setQuerying] = useState<string | undefined>(
+        mapping.orgUnitColumn
+    );
     const inputRef = useRef<HTMLInputElement>(null);
     const [currentOrganisations, setCurrentOrganisations] =
         useState(destinationOrgUnits);
@@ -181,7 +189,36 @@ export default function OrganisationUnitMapping({
         },
     ];
 
+    const fetchOrganisationsByLevel = async () => {
+        onOpen();
+        if (mapping.aggregate?.indicatorGenerationLevel) {
+            setMessage(() => "Fetching organisations by level");
+            const units = await getDHIS2Resource<Option>({
+                isCurrentDHIS2: mapping.isCurrentInstance,
+                engine,
+                resource: "organisationUnits.json",
+                params: {
+                    fields: "id~rename(value),name~rename(label)",
+                    level: mapping.aggregate.indicatorGenerationLevel,
+                    paging: "false",
+                },
+                auth: mapping.authentication,
+                resourceKey: "organisationUnits",
+            });
+            aggMetadataApi.set({ key: "sourceOrgUnits", value: units });
+            setQuerying(() => "querying");
+        }
+        onClose();
+    };
+
     useEffect(() => {
+        fetchOrganisationsByLevel();
+        return () => {};
+    }, []);
+
+    useEffect(() => {
+        onOpen();
+        setMessage(() => "Trying to automatically map");
         for (const {
             value: destinationValue,
             label,
@@ -200,7 +237,8 @@ export default function OrganisationUnitMapping({
                 }
             }
         }
-    }, [mapping.orgUnitColumn]);
+        onClose();
+    }, [mapping.orgUnitColumn, querying]);
 
     const onOK = async () => {
         setFetching(() => true);
@@ -285,10 +323,11 @@ export default function OrganisationUnitMapping({
                     </Text>
                 )}
             />
+            <pre>{JSON.stringify(organisationUnitMapping, null, 2)}</pre>
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}
-                message="Trying to automatically map"
+                message={message}
                 onOpen={onOpen}
             />
         </Stack>

@@ -176,6 +176,21 @@ export default function MappingDetails({
                                     attribute: "dataSource",
                                     value: e?.value,
                                 });
+
+                                if (e && e.value === "go-data") {
+                                    updater({
+                                        attribute: "authentication",
+                                        value: true,
+                                        key: "basicAuth",
+                                    });
+                                    if (mapping.isSource) {
+                                        updater({
+                                            attribute: "program",
+                                            value: "CASE",
+                                            key: "responseKey",
+                                        });
+                                    }
+                                }
                             }}
                             options={importTypes}
                             isClearable

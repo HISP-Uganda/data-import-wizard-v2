@@ -20,14 +20,23 @@ export default function Mappings() {
     let { isLoading, isSuccess, isError, error, data } =
         useNamespace<IMapping>("iw-mapping");
 
-    const [currentData, setCurrentData] = useState<IMapping[] | undefined>(
-        data
-    );
+    const [currentData, setCurrentData] = useState<
+        Array<Partial<IMapping>> | undefined
+    >(data);
 
     const afterDelete = async (id: string) => {
         setCurrentData((prev) => {
             if (prev) {
                 return prev.filter(({ id: mappingId }) => mappingId !== id);
+            }
+            return prev;
+        });
+    };
+
+    const afterClone = async (mapping: Partial<IMapping>) => {
+        setCurrentData((prev) => {
+            if (prev !== undefined) {
+                return prev.concat(mapping);
             }
             return prev;
         });
@@ -76,8 +85,7 @@ export default function Mappings() {
         },
         {
             title: "Action",
-            dataIndex: "lastUpdated",
-            key: "lastUpdated",
+            key: "action",
             render: (value, record, index) => (
                 <DropdownMenu
                     id={record.id ?? ""}
@@ -88,6 +96,8 @@ export default function Mappings() {
                     isOpen={isOpen}
                     setMessage={setMessage}
                     afterDelete={afterDelete}
+                    afterClone={afterClone}
+                    name={record.name ?? ""}
                 />
             ),
         },
@@ -100,8 +110,8 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                    type: "users",
                 });
-                programMappingApi.update({ attribute: "type", value: "users" });
                 navigate({ to: "./users" });
             },
         },
@@ -114,10 +124,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "metadata",
+                    type: "metadata",
                 });
                 navigate({ to: "./metadata" });
             },
@@ -131,10 +138,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "organisations",
+                    type: "organisation-units",
                 });
                 navigate({ to: "./organisations" });
             },
@@ -148,10 +152,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "aggregate",
+                    type: "aggregate",
                 });
                 navigate({ to: "./aggregate" });
             },
@@ -170,10 +171,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "individual",
+                    type: "individual",
                 });
                 navigate({ to: "./individual" });
             },

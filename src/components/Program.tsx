@@ -11,11 +11,12 @@ import {
     $disabled,
     $goData,
     $goDataOptions,
-    $label,
     $metadata,
+    $name,
     $names,
     $optionMapping,
     $organisationUnitMapping,
+    $otherName,
     $prevGoData,
     $processed,
     $processedGoDataData,
@@ -25,10 +26,12 @@ import {
     $programTypes,
     $token,
     $tokens,
+    activeStepsApi,
     processor,
     programMappingApi,
 } from "../pages/program";
 import { $action, $steps, actionApi, stepper } from "../Store";
+import { saveProgramMapping } from "../utils/utils";
 import MappingDetails from "./MappingDetails";
 import OrganisationUnitMapping from "./OrganisationUnitMapping";
 import AttributeMapping from "./program/AttributeMapping";
@@ -62,7 +65,8 @@ const Program = () => {
     const attributeMapping = useStore($attributeMapping);
     const programStageMapping = useStore($programStageMapping);
     const optionMapping = useStore($optionMapping);
-    const label = useStore($label);
+    const name = useStore($name);
+    const otherName = useStore($otherName);
     const action = useStore($action);
     const engine = useDataEngine();
     const names = useStore($names);
@@ -81,7 +85,7 @@ const Program = () => {
             nextLabel: "Next Step",
         },
         {
-            label: "Select Program",
+            label: `${name} Program`,
             content: <ProgramSelect />,
             nextLabel: "Next Step",
             id: 3,
@@ -99,7 +103,7 @@ const Program = () => {
             id: 5,
         },
         {
-            label: "Select Program2",
+            label: `${otherName} Program`,
             content: <RemotePrograms />,
             nextLabel: "Next Step",
             id: 6,
@@ -156,7 +160,7 @@ const Program = () => {
     ];
 
     const activeSteps = () => {
-        return steps.filter(({ id }) => {
+        const activeSteps = steps.filter(({ id }) => {
             if (
                 programMapping.dataSource !== "dhis2-program" &&
                 programMapping.isSource
@@ -189,7 +193,7 @@ const Program = () => {
             }
 
             if (programMapping.dataSource === "dhis2-program") {
-                return [5, 8, 11].indexOf(id) === -1;
+                return [5, 4, 8, 11].indexOf(id) === -1;
             }
             if (programMapping.dataSource === "go-data") {
                 if (
@@ -203,6 +207,8 @@ const Program = () => {
 
             return [1, 2, 3, 4, 7, 9, 10, 12, 13].indexOf(id) !== -1;
         });
+        activeStepsApi.set(activeSteps);
+        return activeSteps;
     };
 
     const onNext = () => {
@@ -215,45 +221,20 @@ const Program = () => {
     };
 
     const onSave = async () => {
-        const type = action === "creating" ? "create" : "update";
-        const mutation: any = {
-            type,
-            resource: `dataStore/iw-mapping/${programMapping.id}`,
-            data: {
+        const result = await saveProgramMapping({
+            engine,
+            programMapping: {
                 ...programMapping,
-                lastUpdated: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                 ...names,
                 type: "individual",
             },
-        };
-        const mutation2: any = {
-            type,
-            resource: `dataStore/iw-ou-mapping/${programMapping.id}`,
-            data: organisationUnitMapping,
-        };
-        const mutation3: any = {
-            type,
-            resource: `dataStore/iw-attribute-mapping/${programMapping.id}`,
-            data: attributeMapping,
-        };
-        const mutation4: any = {
-            type,
-            resource: `dataStore/iw-stage-mapping/${programMapping.id}`,
-            data: programStageMapping,
-        };
-        const mutation5: any = {
-            type,
-            resource: `dataStore/iw-option-mapping/${programMapping.id}`,
-            data: optionMapping,
-        };
+            action,
+            organisationUnitMapping,
+            programStageMapping,
+            attributeMapping,
+            optionMapping,
+        });
 
-        const data = await Promise.all([
-            engine.mutate(mutation),
-            engine.mutate(mutation2),
-            engine.mutate(mutation3),
-            engine.mutate(mutation4),
-            engine.mutate(mutation5),
-        ]);
         actionApi.edit();
         toast({
             title: "Mapping saved",
@@ -262,7 +243,7 @@ const Program = () => {
             duration: 9000,
             isClosable: true,
         });
-        return data;
+        return result;
     };
     const onFinish = () => {
         programMappingApi.reset();

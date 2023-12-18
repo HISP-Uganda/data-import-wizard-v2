@@ -1,10 +1,21 @@
 import {
+    Button,
     IconButton,
+    Input,
     Menu,
     MenuButton,
     MenuItem,
     MenuList,
+    Stack,
+    Text,
     useToast,
+    Modal,
+    ModalOverlay,
+    ModalContent,
+    ModalHeader,
+    ModalFooter,
+    ModalBody,
+    ModalCloseButton,
 } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { useNavigate } from "@tanstack/react-location";
@@ -16,6 +27,7 @@ import {
     fetchRemote,
     fetchTrackedEntityInstances,
     flattenTrackedEntityInstances,
+    generateUid,
     getGoDataToken,
     getLowestLevelParents,
     groupGoData4Insert,
@@ -33,7 +45,7 @@ import {
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { chunk } from "lodash";
-import { useState } from "react";
+import { ChangeEvent, useState } from "react";
 import { BiDotsVerticalRounded } from "react-icons/bi";
 import { LocationGenerics } from "../Interfaces";
 import { aggregateMappingApi, dataSetApi } from "../pages/aggregate";
@@ -52,6 +64,7 @@ import {
 } from "../pages/program";
 import { loadPreviousMapping, loadProgram } from "../Queries";
 import { $version, actionApi } from "../Store";
+import { saveProgramMapping } from "../utils/utils";
 
 export default function DropdownMenu({
     id,
@@ -62,6 +75,8 @@ export default function DropdownMenu({
     onOpen,
     onClose,
     afterDelete,
+    afterClone,
+    name,
 }: {
     id: string;
     data: any[];
@@ -71,6 +86,8 @@ export default function DropdownMenu({
     onOpen: () => void;
     onClose: () => void;
     afterDelete: (id: string) => void;
+    afterClone: (mapping: Partial<IMapping>) => void;
+    name: string;
 }) {
     const engine = useDataEngine();
     const queryClient = useQueryClient();
@@ -80,8 +97,66 @@ export default function DropdownMenu({
     const [conflicted, setConflicted] = useState<any[]>([]);
     const [updated, setUpdated] = useState<any[]>([]);
     const navigate = useNavigate<LocationGenerics>();
+    const [currentMapping, setCurrentMapping] = useState<string>("");
+    const [currentName, setCurrentName] = useState<string>(`Copy of ${name}`);
 
     const version = useStore($version);
+
+    const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
+
+    const clone = async (id: string) => {
+        const previousMappings = await loadPreviousMapping(
+            engine,
+            ["iw-mapping"],
+            id
+        );
+        const mapping: Partial<IMapping> = previousMappings["iw-mapping"] ?? {};
+        if (mapping.type === "individual") {
+            const {
+                programStageMapping,
+                attributeMapping,
+                organisationUnitMapping,
+                optionMapping,
+            } = await getPreviousProgramMapping(mapping);
+            const programMapping = {
+                ...mapping,
+                id: generateUid(),
+                name: currentName,
+            };
+
+            await saveProgramMapping({
+                engine,
+                programMapping,
+                action: "creating",
+                organisationUnitMapping,
+                programStageMapping,
+                attributeMapping,
+                optionMapping,
+            });
+            setLoading(() => false);
+            setOpen(() => false);
+            afterClone(programMapping);
+            await loadMapping(programMapping.id);
+        } else if (mapping.type === "aggregate") {
+            const { attributeMapping, organisationUnitMapping, dataSet } =
+                await getPreviousAggregateMapping(mapping);
+        }
+    };
+
+    const showModal = (id: string) => {
+        setCurrentMapping(() => id);
+        setOpen(() => true);
+    };
+
+    const handleOk = async () => {
+        setLoading(() => true);
+        await clone(currentMapping);
+    };
+
+    const handleCancel = () => {
+        setOpen(() => false);
+    };
 
     const getPreviousProgramMapping = async (mapping: Partial<IMapping>) => {
         setMessage(() => "Fetching other mappings");
@@ -229,7 +304,8 @@ export default function DropdownMenu({
                             mapping.authentication || {},
                             setMessage,
                             setInserted,
-                            setUpdated
+                            setUpdated,
+                            setErrored
                         );
                     }
                 );
@@ -265,19 +341,17 @@ export default function DropdownMenu({
                                 programStageUniqElements(programStageMapping),
                                 mapping.program?.program || ""
                             );
-                            const results = await convertToDHIS2(
-                                previous,
-                                current,
+                            const results = await convertToDHIS2({
+                                previousData: previous,
+                                data: current,
                                 mapping,
                                 organisationUnitMapping,
                                 attributeMapping,
                                 programStageMapping,
                                 optionMapping,
                                 version,
-                                program
-                                // elements,
-                                // attributes
-                            );
+                                program,
+                            });
                         }
                     );
                 }
@@ -304,6 +378,7 @@ export default function DropdownMenu({
         }
         onClose();
     };
+
     const loadMapping = async (id: string) => {
         onOpen();
         actionApi.edit();
@@ -340,13 +415,20 @@ export default function DropdownMenu({
                     outbreak,
                     tokens,
                     goDataOptions,
+                    hierarchy,
                 } = await loadPreviousGoData(token, mapping);
                 goDataApi.set(outbreak);
                 tokensApi.set(tokens);
                 goDataOptionsApi.set(goDataOptions);
                 currentSourceOptionsApi.set(options);
                 remoteOrganisationsApi.set(
-                    getLowestLevelParents(organisations)
+                    hierarchy.flat().map(({ id, name, parentInfo }) => ({
+                        id,
+                        name: `${[
+                            ...parentInfo.map(({ name }) => name),
+                            name,
+                        ].join("/")}`,
+                    }))
                 );
             }
             onClose();
@@ -424,25 +506,77 @@ export default function DropdownMenu({
         });
     };
     return (
-        <Menu>
-            <MenuButton
-                as={IconButton}
-                icon={
-                    <BiDotsVerticalRounded
-                        style={{
-                            width: "20px",
-                            height: "20px",
-                        }}
-                    />
-                }
-                bg="none"
-            />
-            <MenuList>
-                <MenuItem onClick={() => run(id)}>Run</MenuItem>
-                <MenuItem onClick={() => loadMapping(id)}>Edit</MenuItem>
-                <MenuItem>Download</MenuItem>
-                <MenuItem onClick={() => deleteMapping(id)}>Delete</MenuItem>
-            </MenuList>
-        </Menu>
+        <>
+            <Menu>
+                <MenuButton
+                    as={IconButton}
+                    icon={
+                        <BiDotsVerticalRounded
+                            style={{
+                                width: "20px",
+                                height: "20px",
+                            }}
+                        />
+                    }
+                    bg="none"
+                />
+                <MenuList>
+                    <MenuItem onClick={() => run(id)}>Run</MenuItem>
+                    <MenuItem onClick={() => loadMapping(id)}>Edit</MenuItem>
+                    <MenuItem onClick={() => showModal(id)}>Clone</MenuItem>
+                    {/* <MenuItem>Download</MenuItem> */}
+                    <MenuItem onClick={() => deleteMapping(id)}>
+                        Delete
+                    </MenuItem>
+                </MenuList>
+            </Menu>
+
+            <Modal
+                isOpen={open}
+                onClose={() => setOpen(() => false)}
+                isCentered
+                autoFocus
+            >
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>Set mapping name</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                        <Stack>
+                            <Text>New name</Text>
+                            <Input
+                                value={currentName}
+                                onChange={(
+                                    e: ChangeEvent<HTMLInputElement>
+                                ) => {
+                                    e.persist();
+                                    setCurrentName(() => e.target.value);
+                                }}
+                            />
+                        </Stack>
+                    </ModalBody>
+
+                    <ModalFooter>
+                        <Stack
+                            direction="row"
+                            spacing="20px"
+                            justifyContent="flex-end"
+                            key="Buttons"
+                        >
+                            <Button onClick={handleCancel} colorScheme="red">
+                                Cancel
+                            </Button>
+                            <Button
+                                isLoading={loading}
+                                onClick={handleOk}
+                                colorScheme="green"
+                            >
+                                Clone
+                            </Button>
+                        </Stack>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+        </>
     );
 }

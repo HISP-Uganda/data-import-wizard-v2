@@ -8,6 +8,7 @@ export const $ous = domain.createStore<string[]>([]);
 
 export const $steps = domain.createStore<number>(0);
 export const $version = domain.createStore<number>(0);
+export const $hasError = domain.createStore<boolean>(false);
 
 export const stepper = createApi($steps, {
     next: (state) => state + 1,
@@ -46,4 +47,7 @@ export const periodsApi = createApi($periods, {
 });
 export const ousApi = createApi($ous, {
     set: (_, ous: string[]) => ous,
+});
+export const hasErrorApi = createApi($hasError, {
+    set: (_, hasError: boolean) => hasError,
 });

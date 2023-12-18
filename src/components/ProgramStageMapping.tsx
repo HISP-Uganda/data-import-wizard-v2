@@ -71,6 +71,7 @@ export default function ProgramStageMapping({
 
     const value = programStageMapping[psId]?.["info"]?.eventDateColumn || "";
     const stage = programStageMapping[psId]?.["info"]?.stage || "";
+    const stageMapping = programStageMapping[psId];
 
     const eventIdColumn =
         programStageMapping[psId]?.["info"]?.eventIdColumn || "";
@@ -188,7 +189,8 @@ export default function ProgramStageMapping({
                         return (
                             <Select<Option, false, GroupBase<Option>>
                                 value={metadata.sourceColumns.find(
-                                    (val) => val.value === value
+                                    (val) =>
+                                        val.value === stageMapping?.[id]?.value
                                 )}
                                 options={metadata.sourceColumns.filter(
                                     ({ value }) => {
@@ -332,10 +334,13 @@ export default function ProgramStageMapping({
 
     const updateStageAttributes = () => {
         for (const element of programStageDataElements) {
-            if (rest[element.dataElement.id] === undefined) {
-                const search = metadata.sourceColumns.find(
-                    ({ value }) => value === element.dataElement.name
-                );
+            if (rest[`${element.dataElement.id}`] === undefined) {
+                const search = metadata.sourceColumns.find(({ value }) => {
+                    return (
+                        value ===
+                        `last.${psId}.values.${element.dataElement.id}`
+                    );
+                });
                 if (search) {
                     stageMappingApi.update({
                         stage: psId,
@@ -406,12 +411,34 @@ export default function ProgramStageMapping({
                     Mark Event Date As Unique
                 </Checkbox>
             </Stack>
-            <Stack direction="row" spacing="20px">
+            <Stack direction="row" spacing="20px" alignItems="center">
+                {programMapping.dataSource === "dhis2-program" && (
+                    <Stack flex={1} direction="row" alignItems="center">
+                        <Text>Specific Stage</Text>
+                        <Box flex={1}>
+                            <Select<Option, false, GroupBase<Option>>
+                                value={metadata.destinationStages.find(
+                                    (val) => val.value === stage
+                                )}
+                                options={metadata.destinationStages}
+                                isClearable
+                                onChange={(e) => {
+                                    stageMappingApi.update({
+                                        stage: psId,
+                                        attribute: "info",
+                                        key: "stage",
+                                        value: e?.value || "",
+                                    });
+                                }}
+                            />
+                        </Box>
+                    </Stack>
+                )}
                 <Stack
                     spacing="20px"
                     direction="row"
                     alignItems="center"
-                    w="50%"
+                    flex={1}
                 >
                     <Text>Event Date Column</Text>
                     <Stack spacing="0" flex={1}>
@@ -469,7 +496,7 @@ export default function ProgramStageMapping({
                     spacing="20px"
                     direction="row"
                     alignItems="center"
-                    w="50%"
+                    flex={1}
                 >
                     <Text>Event Id Column</Text>
                     <Stack spacing="0" flex={1}>
@@ -522,29 +549,6 @@ export default function ProgramStageMapping({
                         </Box>
                     </Stack>
                 </Stack>
-
-                {programMapping.dataSource === "dhis2-program" && (
-                    <Stack spacing="20px" flex={1}>
-                        <Text>Specific Stage</Text>
-                        <Box w="100%">
-                            <Select<Option, false, GroupBase<Option>>
-                                value={metadata.destinationStages.find(
-                                    (val) => val.value === stage
-                                )}
-                                options={metadata.destinationStages}
-                                isClearable
-                                onChange={(e) => {
-                                    stageMappingApi.update({
-                                        stage: psId,
-                                        attribute: "info",
-                                        key: "stage",
-                                        value: e?.value || "",
-                                    });
-                                }}
-                            />
-                        </Box>
-                    </Stack>
-                )}
             </Stack>
 
             <Stack direction="row">
@@ -575,7 +579,7 @@ export default function ProgramStageMapping({
             <Table
                 columns={columns}
                 dataSource={currentElements}
-                rowKey="value"
+                rowKey={({ dataElement }) => dataElement?.id ?? ""}
                 pagination={{ pageSize: 5, hideOnSinglePage: true }}
                 size="middle"
                 footer={() => (
@@ -589,6 +593,7 @@ export default function ProgramStageMapping({
                     </Text>
                 )}
             />
+            <pre>{JSON.stringify(programStageMapping, null, 2)}</pre>
         </Stack>
     );
 }

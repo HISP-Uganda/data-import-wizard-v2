@@ -1,7 +1,8 @@
-import { Stack, useDisclosure } from "@chakra-ui/react";
+import { Stack, useDisclosure, Text } from "@chakra-ui/react";
 import { ColumnsType } from "antd/es/table";
 import { Table } from "antd";
 import {
+    fetchGoDataHierarchy,
     fetchRemote,
     getLowestLevelParents,
     GODataOption,
@@ -22,9 +23,10 @@ import {
     tokensApi,
 } from "../pages/program";
 import { useRemoteGet } from "../Queries";
-import { stepper } from "../Store";
+import { stepper, $hasError, hasErrorApi } from "../Store";
 import Loader from "./Loader";
 import Progress from "./Progress";
+import { useEffect } from "react";
 
 export default function RemoteOutbreaks() {
     const programMapping = useStore($programMapping);
@@ -54,6 +56,15 @@ export default function RemoteOutbreaks() {
         url: "api/outbreaks",
     });
 
+    useEffect(() => {
+        if (isError) {
+            hasErrorApi.set(true);
+        }
+        return () => {
+            hasErrorApi.set(false);
+        };
+    }, [isError]);
+
     const onRowSelect = async (outbreak: IGoData) => {
         const other = programMapping.isSource
             ? { destination: outbreak.name }
@@ -82,6 +93,11 @@ export default function RemoteOutbreaks() {
                 },
             });
         }
+
+        const hierarchy = await fetchGoDataHierarchy({
+            ...programMapping.authentication,
+            params: { auth: { param: "access_token", value: token } },
+        });
         const organisations = await fetchRemote<IGoDataOrgUnit[]>(
             {
                 ...programMapping.authentication,
@@ -123,9 +139,14 @@ export default function RemoteOutbreaks() {
             goDataOptionsApi.set(goDataOptions);
         }
         goDataApi.set(outbreak);
-        if (organisations) {
-            remoteOrganisationsApi.set(getLowestLevelParents(organisations));
-        }
+        remoteOrganisationsApi.set(
+            hierarchy.flat().map(({ id, name, parentInfo }) => ({
+                id,
+                name: `${[...parentInfo.map(({ name }) => name), name].join(
+                    "/"
+                )}`,
+            }))
+        );
         onClose();
         stepper.next();
     };
@@ -147,7 +168,19 @@ export default function RemoteOutbreaks() {
                     }}
                 />
             )}
-            {isError && <pre>{JSON.stringify(error, null, 2)}</pre>}
+            {isError && (
+                <Stack
+                    justifyContent="center"
+                    alignItems="center"
+                    w="100%"
+                    h="100%"
+                >
+                    <Text fontSize="3xl">Go.Data Error</Text>
+                    <Text color="red.500" fontSize="2xl">
+                        {error.message}
+                    </Text>
+                </Stack>
+            )}
 
             <Progress
                 onClose={onClose}

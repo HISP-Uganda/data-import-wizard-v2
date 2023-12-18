@@ -28,7 +28,7 @@ export default function StepsDisplay({
                         justifyContent="center"
                         flex={1}
                         key={step.label}
-                        onClick={() => (disabled ? "" : stepper.goTo(index))}
+                        onClick={() => (disabled ? {} : stepper.goTo(index))}
                         cursor="pointer"
                     >
                         <Box

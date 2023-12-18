@@ -14,7 +14,10 @@ import {
     Text,
     useDisclosure,
 } from "@chakra-ui/react";
-import { generateFixedPeriods } from "@dhis2/multi-calendar-dates";
+import {
+    generateFixedPeriods,
+    getNowInCalendar,
+} from "@dhis2/multi-calendar-dates";
 import { DatePicker } from "antd";
 import { GroupBase, Select } from "chakra-react-select";
 import dayjs from "dayjs";

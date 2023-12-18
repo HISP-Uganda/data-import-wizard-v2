@@ -6,9 +6,12 @@ import {
     Tabs,
     Text,
 } from "@chakra-ui/react";
-import { ColumnDef } from "@tanstack/react-table";
 import { Table } from "antd";
+import type { TableColumnsType } from "antd";
+
 import {
+    Attribute,
+    DataValue,
     Enrollment,
     Event,
     TrackedEntityInstance,
@@ -18,71 +21,111 @@ import { useMemo } from "react";
 import Superscript from "./Superscript";
 
 import { ColumnsType } from "antd/es/table";
-import { $processed } from "../pages/program/Store";
-import TableDisplay from "./TableDisplay";
+import { $allNames, $processed } from "../pages/program/Store";
 export default function DHIS2Preview() {
     const processed = useStore($processed);
+    const allNames = useStore($allNames);
+
+    const columns: TableColumnsType<Partial<Attribute>> = [
+        {
+            title: "Attribute",
+            render: (_, record) =>
+                allNames[record["attribute"] ?? ""] || record["attribute"],
+            key: "attribute",
+        },
+        { title: "Value", dataIndex: "value", key: "value" },
+    ];
+
+    const dataValueColumns: TableColumnsType<Partial<DataValue>> = [
+        {
+            title: "Data Element",
+            render: (_, record) =>
+                allNames[record["dataElement"] ?? ""] || record["dataElement"],
+            key: "dataElement",
+        },
+        {
+            title: "Value",
+            key: "value",
+            render: (_, record) => JSON.stringify(record.value),
+        },
+    ];
     const instanceColumns = useMemo<
-        ColumnDef<Partial<TrackedEntityInstance>>[]
+        ColumnsType<Partial<TrackedEntityInstance>>
     >(
         () => [
             {
-                accessorKey: "trackedEntityInstance",
-                header: "Tracked Entity Instance",
+                key: "trackedEntityInstance",
+                dataIndex: "trackedEntityInstance",
+                title: "Tracked Entity Instance",
             },
             {
-                accessorKey: "orgUnit",
-                header: "Organisation",
+                key: "orgUnit",
+                render: (_, record) =>
+                    allNames[record["orgUnit"] ?? ""] || record["orgUnit"],
+                title: "Organisation",
             },
             {
-                accessorKey: "trackedEntityType",
-                header: "Tracked Entity Type",
-            },
-        ],
-        []
-    );
-    const enrollmentColumns = useMemo<ColumnDef<Partial<Enrollment>>[]>(
-        () => [
-            {
-                accessorKey: "enrollment",
-                header: "Enrollment",
-            },
-            {
-                accessorKey: "trackedEntityInstance",
-                header: "Tracked Entity Instance",
-            },
-            {
-                accessorKey: "enrollmentDate",
-                header: "Enrollment Date",
-            },
-            {
-                accessorKey: "incidentDate",
-                header: "Incident Date",
+                key: "trackedEntityType",
+                dataIndex: "trackedEntityType",
+                title: "Tracked Entity Type",
             },
         ],
         []
     );
-    const eventColumns = useMemo<ColumnDef<Partial<Event>>[]>(
+    const enrollmentColumns = useMemo<ColumnsType<Partial<Enrollment>>>(
         () => [
             {
-                accessorKey: "event",
-                header: "Event",
+                key: "enrollment",
+                dataIndex: "enrollment",
+                title: "Enrollment",
             },
             {
-                accessorKey: "eventDate",
-                header: "Event Date",
+                key: "trackedEntityInstance",
+                dataIndex: "trackedEntityInstance",
+                title: "Tracked Entity Instance",
             },
             {
-                accessorKey: "orgUnit",
-                header: "Organisation",
+                key: "enrollmentDate",
+                dataIndex: "enrollmentDate",
+                title: "Enrollment Date",
             },
             {
-                accessorKey: "programStage",
-                header: "Program Stage",
+                key: "incidentDate",
+                dataIndex: "incidentDate",
+                title: "Incident Date",
+            },
+        ],
+        []
+    );
+    const eventColumns = useMemo<ColumnsType<Partial<Event>>>(
+        () => [
+            {
+                dataIndex: "event",
+                key: "event",
+                title: "Event",
             },
             {
-                accessorKey: "trackedEntityInstance",
-                header: "Tracked Entity Instance",
+                dataIndex: "eventDate",
+                key: "eventDate",
+                title: "Event Date",
+            },
+            {
+                render: (_, record) =>
+                    allNames[record["orgUnit"] ?? ""] || record["orgUnit"],
+                key: "orgUnit",
+                title: "Organisation",
+            },
+            {
+                render: (_, record) =>
+                    allNames[record["programStage"] ?? ""] ||
+                    record["programStage"],
+                key: "programStage",
+                title: "Program Stage",
+            },
+            {
+                dataIndex: "trackedEntityInstance",
+                key: "trackedEntityInstance",
+                title: "Tracked Entity Instance",
             },
         ],
         []
@@ -94,8 +137,8 @@ export default function DHIS2Preview() {
                 .filter((i) => i !== "id")
                 .map((a) => ({
                     title: a,
-                    dataIndex: a,
                     key: a,
+                    render: (_, record) => allNames[record[a]] || record[a],
                 })),
         [Object.keys(processed.conflicts?.[0] ?? {})]
     );
@@ -105,7 +148,7 @@ export default function DHIS2Preview() {
                 .filter((i) => i !== "id")
                 .map((a) => ({
                     title: a,
-                    dataIndex: a,
+                    render: (_, record) => allNames[record[a]] || record[a],
                     key: a,
                 })),
         [Object.keys(processed.errors?.[0] ?? {})]
@@ -169,55 +212,58 @@ export default function DHIS2Preview() {
             </TabList>
             <TabPanels>
                 <TabPanel>
-                    <TableDisplay<Partial<TrackedEntityInstance>>
+                    <Table
                         columns={instanceColumns}
-                        generatedData={processed.trackedEntities || []}
-                        queryKey={[
-                            "instances",
-                            processed.trackedEntities?.length || 0,
-                        ]}
-                        idField="trackedEntityInstance"
+                        dataSource={processed.trackedEntities}
+                        rowKey="trackedEntityInstance"
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<Partial<Enrollment>>
+                    <Table
                         columns={enrollmentColumns}
-                        generatedData={processed.enrollments || []}
-                        queryKey={[
-                            "enrollments",
-                            processed.enrollments?.length || 0,
-                        ]}
-                        idField="enrollment"
+                        dataSource={processed.enrollments}
+                        rowKey="enrollment"
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<Partial<Event>>
+                    <Table
                         columns={eventColumns}
-                        generatedData={processed.events || []}
-                        queryKey={["events", processed.events?.length || 0]}
-                        idField="event"
+                        dataSource={processed.events}
+                        rowKey="event"
+                        expandable={{
+                            expandedRowRender: (record) => (
+                                <Table
+                                    columns={dataValueColumns}
+                                    dataSource={record.dataValues}
+                                    pagination={false}
+                                    rowKey="dataElement"
+                                />
+                            ),
+                        }}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<Partial<TrackedEntityInstance>>
+                    <Table
                         columns={instanceColumns}
-                        generatedData={processed.trackedEntityUpdates || []}
-                        queryKey={[
-                            "instances-updates",
-                            processed.trackedEntityUpdates?.length || 0,
-                        ]}
-                        idField="trackedEntityInstance"
+                        dataSource={processed.trackedEntityUpdates}
+                        rowKey="trackedEntityInstance"
+                        expandable={{
+                            expandedRowRender: (record) => (
+                                <Table
+                                    columns={columns}
+                                    dataSource={record.attributes}
+                                    pagination={false}
+                                    rowKey="attribute"
+                                />
+                            ),
+                        }}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <TableDisplay<Partial<TrackedEntityInstance>>
+                    <Table
                         columns={eventColumns}
-                        generatedData={processed.eventsUpdates || []}
-                        queryKey={[
-                            "events-updates",
-                            processed.eventsUpdates?.length || 0,
-                        ]}
-                        idField="event"
+                        dataSource={processed.eventsUpdates}
+                        rowKey="event"
                     />
                 </TabPanel>
                 <TabPanel>

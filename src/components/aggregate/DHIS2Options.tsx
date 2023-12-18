@@ -1,9 +1,9 @@
-import { Stack, Checkbox, Text } from "@chakra-ui/react";
+import { Checkbox, Stack, Text } from "@chakra-ui/react";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
-import React, { ChangeEvent } from "react";
+import { ChangeEvent } from "react";
 import { $aggregateMapping, aggregateMappingApi } from "../../pages/aggregate";
-import { $ous, $periods, ousApi, periodsApi } from "../../Store";
+import { $ous, $periods } from "../../Store";
 import OUTree from "../OuTree";
 import PeriodPicker from "../PeriodPicker";
 

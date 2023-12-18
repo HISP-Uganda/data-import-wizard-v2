@@ -2,6 +2,19 @@ import { MakeGenerics } from "@tanstack/react-location";
 import { Event } from "effector";
 import type { DataNode as IDataNode } from "antd/es/tree";
 
+export interface Threshold {
+    id: string;
+    value: number;
+    color: string;
+}
+export type Column = {
+    label: string;
+    value: string;
+    span: number;
+    actual: string;
+    position: number;
+    key: string;
+};
 export interface DataNode extends IDataNode {
     id?: string;
     value?: string;

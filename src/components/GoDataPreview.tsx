@@ -9,6 +9,8 @@ import {
 import Table, { ColumnsType } from "antd/es/table";
 import { GoResponse } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
+import { isArray, isObject, uniq } from "lodash";
+import { getOr } from "lodash/fp";
 import { useEffect, useState } from "react";
 import {
     $mandatoryAttribute,
@@ -84,46 +86,82 @@ export default function GoDataPreview() {
         if (processed && processed.inserts) {
             setColumns((prev) => ({
                 ...prev,
-                person: Object.keys(processed.inserts.person?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
-                lab: Object.keys(processed.inserts.lab?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
-                epidemiology: Object.keys(
-                    processed.inserts.epidemiology?.[0] || []
+                person: uniq(
+                    processed.inserts.person.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        let value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                events: Object.keys(processed.inserts.events?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
-                questionnaire: Object.keys(
-                    processed.inserts.questionnaire?.[0] || []
+                lab: uniq(
+                    processed.inserts.lab.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                relationships: Object.keys(
-                    processed.inserts.relationships?.[0] || []
+                epidemiology: uniq(
+                    processed.inserts.epidemiology.flatMap((p) =>
+                        Object.keys(p)
+                    )
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                events: uniq(
+                    processed.inserts.events.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                questionnaire: uniq(
+                    processed.inserts.questionnaire.flatMap((p) =>
+                        Object.keys(p)
+                    )
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                relationships: uniq(
+                    processed.inserts.relationships.flatMap((p) =>
+                        Object.keys(p)
+                    )
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
             }));
@@ -135,46 +173,82 @@ export default function GoDataPreview() {
         if (processed && processed.updates) {
             setUpdateColumns((prev) => ({
                 ...prev,
-                person: Object.keys(processed.updates.person?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
-                lab: Object.keys(processed.updates.lab?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
-                epidemiology: Object.keys(
-                    processed.updates.epidemiology?.[0] || []
+                person: uniq(
+                    processed.updates.person.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        let value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                events: Object.keys(processed.updates.events?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
-                questionnaire: Object.keys(
-                    processed.updates.questionnaire?.[0] || []
+                lab: uniq(
+                    processed.updates.lab.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                relationships: Object.keys(
-                    processed.updates.relationships?.[0] || []
+                epidemiology: uniq(
+                    processed.updates.epidemiology.flatMap((p) =>
+                        Object.keys(p)
+                    )
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                events: uniq(
+                    processed.updates.events.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                questionnaire: uniq(
+                    processed.updates.questionnaire.flatMap((p) =>
+                        Object.keys(p)
+                    )
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                relationships: uniq(
+                    processed.updates.relationships.flatMap((p) =>
+                        Object.keys(p)
+                    )
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
             }));
@@ -186,42 +260,78 @@ export default function GoDataPreview() {
         if (errors) {
             setErrorColumns((prev) => ({
                 ...prev,
-                person: Object.keys(errors.person?.[0] || []).map((col) => ({
-                    title: col,
-                    dataIndex: col,
-                    key: col,
-                })),
-                lab: Object.keys(errors.lab?.[0] || []).map((col) => ({
-                    title: col,
-                    dataIndex: col,
-                    key: col,
-                })),
-                epidemiology: Object.keys(errors.epidemiology?.[0] || []).map(
+                person: uniq(errors.person.flatMap((p) => Object.keys(p))).map(
                     (col) => ({
                         title: col,
-                        dataIndex: col,
+                        render: (_, data) => {
+                            let value = getOr("", col, data);
+                            if (isArray(value)) return JSON.stringify(value);
+                            if (isObject(value)) return JSON.stringify(value);
+                            return value;
+                        },
                         key: col,
                     })
                 ),
-                events: Object.keys(errors.events?.[0] || []).map((col) => ({
+                lab: uniq(errors.lab.flatMap((p) => Object.keys(p))).map(
+                    (col) => ({
+                        title: col,
+                        render: (_, data) => {
+                            const value = getOr("", col, data);
+                            if (isArray(value)) return JSON.stringify(value);
+                            if (isObject(value)) return JSON.stringify(value);
+                            return value;
+                        },
+                        key: col,
+                    })
+                ),
+                epidemiology: uniq(
+                    errors.epidemiology.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                questionnaire: Object.keys(errors.questionnaire?.[0] || []).map(
+                events: uniq(errors.events.flatMap((p) => Object.keys(p))).map(
                     (col) => ({
                         title: col,
-                        dataIndex: col,
+                        render: (text, data) => {
+                            const value = getOr("", col, data);
+                            if (isArray(value)) return JSON.stringify(value);
+                            if (isObject(value)) return JSON.stringify(value);
+                            return value;
+                        },
                         key: col,
                     })
                 ),
-                relationships: Object.keys(errors.relationships?.[0] || []).map(
-                    (col) => ({
-                        title: col,
-                        dataIndex: col,
-                        key: col,
-                    })
-                ),
+                questionnaire: uniq(
+                    errors.questionnaire.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                relationships: uniq(
+                    errors.relationships.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
             }));
         }
         return () => {};
@@ -231,40 +341,76 @@ export default function GoDataPreview() {
         if (conflicts) {
             setConflictColumns((prev) => ({
                 ...prev,
-                person: Object.keys(conflicts.person?.[0] || []).map((col) => ({
-                    title: col,
-                    dataIndex: col,
-                    key: col,
-                })),
-                lab: Object.keys(conflicts.lab?.[0] || []).map((col) => ({
-                    title: col,
-                    dataIndex: col,
-                    key: col,
-                })),
-                epidemiology: Object.keys(
-                    conflicts.epidemiology?.[0] || []
+                person: uniq(
+                    conflicts.person.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        let value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                events: Object.keys(conflicts.events?.[0] || []).map((col) => ({
-                    title: col,
-                    dataIndex: col,
-                    key: col,
-                })),
-                questionnaire: Object.keys(
-                    conflicts.questionnaire?.[0] || []
+                lab: uniq(conflicts.lab.flatMap((p) => Object.keys(p))).map(
+                    (col) => ({
+                        title: col,
+                        render: (_, data) => {
+                            const value = getOr("", col, data);
+                            if (isArray(value)) return JSON.stringify(value);
+                            if (isObject(value)) return JSON.stringify(value);
+                            return value;
+                        },
+                        key: col,
+                    })
+                ),
+                epidemiology: uniq(
+                    conflicts.epidemiology.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (_, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
-                relationships: Object.keys(
-                    conflicts.relationships?.[0] || []
+                events: uniq(
+                    conflicts.events.flatMap((p) => Object.keys(p))
                 ).map((col) => ({
                     title: col,
-                    dataIndex: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                questionnaire: uniq(
+                    conflicts.questionnaire.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
+                    key: col,
+                })),
+                relationships: uniq(
+                    conflicts.relationships.flatMap((p) => Object.keys(p))
+                ).map((col) => ({
+                    title: col,
+                    render: (text, data) => {
+                        const value = getOr("", col, data);
+                        if (isArray(value)) return JSON.stringify(value);
+                        if (isObject(value)) return JSON.stringify(value);
+                        return value;
+                    },
                     key: col,
                 })),
             }));
@@ -333,37 +479,34 @@ export default function GoDataPreview() {
                 <TabPanel>
                     <Table
                         columns={realColumns.person}
-                        dataSource={data?.person || []}
+                        dataSource={data?.person}
                     />
                 </TabPanel>
                 <TabPanel>
                     <Table
                         columns={realColumns.epidemiology}
-                        dataSource={data?.epidemiology || []}
+                        dataSource={data?.epidemiology}
                     />
                 </TabPanel>
                 <TabPanel>
                     <Table
                         columns={realColumns.events}
-                        dataSource={data?.events || []}
+                        dataSource={data?.events}
                     />
                 </TabPanel>
                 <TabPanel>
                     <Table
                         columns={realColumns.questionnaire}
-                        dataSource={data?.questionnaire || []}
+                        dataSource={data?.questionnaire}
                     />
                 </TabPanel>
                 <TabPanel>
-                    <Table
-                        columns={realColumns.lab}
-                        dataSource={data?.lab || []}
-                    />
+                    <Table columns={realColumns.lab} dataSource={data?.lab} />
                 </TabPanel>
                 <TabPanel>
                     <Table
                         columns={realColumns.relationships}
-                        dataSource={data?.relationships || []}
+                        dataSource={data?.relationships}
                     />
                 </TabPanel>
             </TabPanels>

@@ -61,6 +61,7 @@ export default function ImportSummary() {
                     type: "create",
                     resource: "dataValueSets",
                     data: { dataValues: ch },
+                    // params: { async: true },
                 });
 
                 setSummary(({ imported, deleted, ignored, updated }) => ({

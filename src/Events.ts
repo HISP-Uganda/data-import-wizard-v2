@@ -1,13 +1,7 @@
+import { IDataSet, IMapping, IProgram } from "data-import-wizard-utils";
 import { domain } from "./Domain";
-import {
-    IMapping,
-    ICategoryOption,
-    ICategoryCombo,
-    ICategory,
-} from "./Interfaces";
+
 import { ISchedule } from "./pages/schedules/Interfaces";
-import { IProgram } from "./pages/program/Interfaces";
-import { IDataSet } from "./pages/aggregate/Interfaces";
 
 export const loadDefaults = domain.createEvent<{
     mappings: string[];
@@ -50,20 +44,3 @@ export const setMappings = domain.createEvent<IMapping[]>();
 // export const setPaging = domain.createEvent<>();
 
 export const changeElementPage = domain.createEvent<string>();
-
-// Category Events
-export const setCategoryProperty = domain.createEvent<{
-    attribute: keyof ICategory;
-    value: ICategory[keyof ICategory]; // this references all value types in Category
-}>();
-export const setCategoryMapping = domain.createEvent<IMapping>();
-export const setCategoryOptions = domain.createEvent<ICategoryOption[]>();
-
-// CategoryCombo Events
-export const setCategoryComboProperty = domain.createEvent<{
-    attribute: keyof ICategoryCombo;
-    value: ICategoryCombo[keyof ICategoryCombo];
-}>();
-export const setCategoryComboOptions = domain.createEvent<ICategoryOption[]>();
-
-// CategoryOptionCombo Events

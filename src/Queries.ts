@@ -875,3 +875,100 @@ export const useInfiniteDHIS2Query = <T>({
         }
     );
 };
+
+export const makeSQLQuery = async (
+    engine: any,
+    id: string,
+    query: string,
+    name: string
+) => {
+    const sqlQuery = {
+        description: name,
+        type: "QUERY",
+        id,
+        sqlQuery: query,
+        sharing: {
+            public: "rwrw----",
+        },
+        name,
+        cacheStrategy: "NO_CACHE",
+    };
+
+    const mutation: any = {
+        type: "create",
+        resource: `metadata`,
+        data: { sqlViews: [sqlQuery] },
+    };
+    await engine.mutate(mutation);
+};
+
+export const useSQLViewMetadata = (program: string, mapping: string) => {
+    const engine = useDataEngine();
+    return useQuery<any, Error>(
+        ["sql-view-metadata", program, mapping],
+        async () => {
+            await makeSQLQuery(
+                engine,
+                mapping,
+                `select * from analytics_event_${program.toLowerCase()}`,
+                mapping
+            );
+
+            const metadataQuery = {
+                data: {
+                    resource: `sqlViews/${mapping}/data.json`,
+                },
+            };
+
+            const { data }: any = await engine.query(metadataQuery);
+
+            let {
+                listGrid: { headers, rows },
+            } = data;
+
+            const withIds = headers.flatMap((h: any) => {
+                if (
+                    h.name.length === 11 &&
+                    ["lastupdated", "teigeometry"].indexOf(h.name) === -1
+                ) {
+                    return h.name;
+                }
+                return [];
+            });
+
+            if (withIds.length > 0) {
+                const query = {
+                    data2: {
+                        resource: "metadata",
+                        params: {
+                            filter: `id:in:[${withIds.join(",")}]`,
+                        },
+                    },
+                };
+                const {
+                    data2: { system, ...rest },
+                }: any = await engine.query(query);
+
+                const allObjects = fromPairs(
+                    Object.values(rest).flatMap((a: any) =>
+                        a.map(({ id, name }: any) => [id, name])
+                    )
+                );
+
+                headers = headers.map((h: any) => {
+                    if (withIds.indexOf(h.name) !== -1) {
+                        return {
+                            ...h,
+                            name: allObjects[h.name] ?? h.name,
+                            column: allObjects[h.name] ?? h.name,
+                        };
+                    }
+                    return h;
+                });
+            }
+            return rows.map((row: string[]) =>
+                fromPairs(row.map((r, index) => [headers[index].name, r]))
+            );
+        }
+    );
+};
