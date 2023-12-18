@@ -1,9 +1,10 @@
-import { ColumnDef } from "@tanstack/react-table";
-import { Box, Spinner, Stack, useDisclosure } from "@chakra-ui/react";
-import React, { useMemo, useEffect } from "react";
-import { getDHIS2Resource, loadProgram, useDHIS2Metadata } from "../../Queries";
-import TableDisplay from "../TableDisplay";
+import { Box, Stack, useDisclosure } from "@chakra-ui/react";
+import { useDataEngine } from "@dhis2/app-runtime";
+import { Table } from "antd";
+import { ColumnsType } from "antd/es/table";
+import { IDataSet, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
+import { useEffect } from "react";
 import {
     $aggregateMapping,
     aggregateMappingApi,
@@ -11,10 +12,10 @@ import {
     indicatorApi,
     programIndicatorApi,
 } from "../../pages/aggregate";
-import Progress from "../Progress";
+import { getDHIS2Resource, loadProgram, useDHIS2Metadata } from "../../Queries";
 import { stepper } from "../../Store";
-import { useDataEngine } from "@dhis2/app-runtime";
-import { IDataSet, Option } from "data-import-wizard-utils";
+import Loader from "../Loader";
+import Progress from "../Progress";
 
 export default function DataSetSelect() {
     const aggregateMapping = useStore($aggregateMapping);
@@ -25,46 +26,63 @@ export default function DataSetSelect() {
         name: string;
     }>("dataSets", 1, 100, "id,name");
 
-    const columns = useMemo<ColumnDef<Partial<{ id: string; name: string }>>[]>(
-        () => [
-            {
-                accessorKey: "id",
-                header: "ID",
-                size: 20,
-            },
-            {
-                accessorKey: "name",
-                header: "Name",
-                size: 20,
-            },
-        ],
-        []
-    );
+    const columns: ColumnsType<
+        Partial<{
+            id: string;
+            name: string;
+        }>
+    > = [
+        {
+            title: "ID",
+            dataIndex: "id",
+            key: "id",
+        },
+        {
+            title: "Name",
+            dataIndex: "name",
+            key: "name",
+        },
+    ];
 
-    const dataSetSelect = async (id: string) => {
-        onOpen();
-        const dataSet = await loadProgram<IDataSet>({
-            resource: "dataSets",
-            engine,
-            id,
-            fields: "id,name,code,organisationUnits[id,name,code],categoryCombo[categories[id,name,code,categoryOptions[id,name,code]],categoryOptionCombos[code,name,id,categoryOptions[id,name,code]]],dataSetElements[dataElement[id,name,code,categoryCombo[categories[id,name,code,categoryOptions[id,name,code]],categoryOptionCombos[code,name,id,categoryOptions[id,name,code]]]]]",
-        });
-        dataSetApi.set(dataSet);
-        aggregateMappingApi.update({
-            attribute: "aggregate",
-            key: "dataSet",
-            value: id,
-        });
-        onClose();
-        stepper.next();
+    // const columns = useMemo<ColumnDef<Partial<{ id: string; name: string }>>[]>(
+    //     () => [
+    //         {
+    //             accessorKey: "id",
+    //             header: "ID",
+    //             size: 20,
+    //         },
+    //         {
+    //             accessorKey: "name",
+    //             header: "Name",
+    //             size: 20,
+    //         },
+    //     ],
+    //     []
+    // );
+
+    const dataSetSelect = async (id?: string) => {
+        if (id) {
+            onOpen();
+            const dataSet = await loadProgram<IDataSet>({
+                resource: "dataSets",
+                engine,
+                id,
+                fields: "id,name,code,organisationUnits[id,name,code],categoryCombo[categories[id,name,code,categoryOptions[id,name,code]],categoryOptionCombos[code,name,id,categoryOptions[id,name,code]]],dataSetElements[dataElement[id,name,code,categoryCombo[categories[id,name,code,categoryOptions[id,name,code]],categoryOptionCombos[code,name,id,categoryOptions[id,name,code]]]]]",
+            });
+            dataSetApi.set(dataSet);
+            aggregateMappingApi.update({
+                attribute: "aggregate",
+                key: "dataSet",
+                value: id,
+            });
+            onClose();
+            stepper.next();
+        }
     };
 
     const loadMetadata = async () => {
         onOpen();
-        if (
-            aggregateMapping.aggregate?.dataSource ===
-            "dhis2-program-indicators"
-        ) {
+        if (aggregateMapping.dataSource === "dhis2-program-indicators") {
             const data = await getDHIS2Resource<Option>({
                 isCurrentDHIS2: aggregateMapping.isCurrentInstance,
                 engine,
@@ -77,7 +95,7 @@ export default function DataSetSelect() {
             });
             programIndicatorApi.set(data);
         }
-        if (aggregateMapping.aggregate?.dataSource === "dhis2-indicators") {
+        if (aggregateMapping.dataSource === "dhis2-indicators") {
             const data = await getDHIS2Resource<Option>({
                 isCurrentDHIS2: aggregateMapping.isCurrentInstance,
                 engine,
@@ -110,25 +128,19 @@ export default function DataSetSelect() {
                     whiteSpace="nowrap"
                     h="calc(100vh - 350px)"
                 >
-                    {isLoading && (
-                        <Stack
-                            h="100%"
-                            alignItems="center"
-                            justifyContent="center"
-                            justifyItems="center"
-                            alignContent="center"
-                        >
-                            <Spinner />
-                        </Stack>
-                    )}
-                    {isLoading && <Spinner />}
+                    {isLoading && <Loader />}
                     {isSuccess && (
-                        <TableDisplay<Partial<{ id: string; name: string }>>
-                            generatedData={data.data}
+                        <Table
                             columns={columns}
-                            onRowClick={(id) => dataSetSelect(id)}
-                            queryKey={["step2"]}
-                            selected={aggregateMapping.aggregate?.dataSet}
+                            dataSource={data.data}
+                            rowKey="id"
+                            onRow={(record) => {
+                                return {
+                                    onClick: () => {
+                                        dataSetSelect(record.id);
+                                    },
+                                };
+                            }}
                         />
                     )}
                     {isError && JSON.stringify(error)}

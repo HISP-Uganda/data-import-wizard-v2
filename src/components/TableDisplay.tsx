@@ -33,7 +33,7 @@ type TableProps<TData> = {
     onRowClick?: (id: string) => void;
     onCellClick?: (id: string) => void;
     selected?: string;
-    idField?: string;
+    idField?: string | string[];
 };
 
 export default function TableDisplay<TData>({
@@ -194,11 +194,33 @@ export default function TableDisplay<TData>({
                             const row = rows[virtualRow.index] as Row<TData>;
                             return (
                                 <Tr
-                                    key={row.getValue(String(idField))}
+                                    key={
+                                        isArray(idField)
+                                            ? idField
+                                                  .map((f) =>
+                                                      row.getValue(String(f))
+                                                  )
+                                                  .join("-")
+                                            : row.getValue(String(idField))
+                                    }
                                     onClick={() =>
                                         onRowClick
                                             ? onRowClick(
-                                                  row.getValue(String(idField))
+                                                  row.getValue(
+                                                      isArray(idField)
+                                                          ? idField
+                                                                .map((f) =>
+                                                                    row.getValue(
+                                                                        String(
+                                                                            f
+                                                                        )
+                                                                    )
+                                                                )
+                                                                .join("-")
+                                                          : row.getValue(
+                                                                String(idField)
+                                                            )
+                                                  )
                                               )
                                             : undefined
                                     }

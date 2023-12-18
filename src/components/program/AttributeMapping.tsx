@@ -1,104 +1,239 @@
-import { usePagination } from "@ajna/pagination";
 import {
     Box,
-    Button,
     Checkbox,
     Icon,
     Input,
-    Modal,
-    ModalBody,
-    ModalCloseButton,
-    ModalContent,
-    ModalFooter,
-    ModalHeader,
-    ModalOverlay,
     Stack,
-    Table,
-    Tbody,
-    Td,
     Text,
-    Tfoot,
-    Th,
-    Thead,
-    Tr,
-    useDisclosure,
+    useToast,
 } from "@chakra-ui/react";
+import { Table } from "antd";
+import { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
 import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { getOr } from "lodash/fp";
 import { FiCheck } from "react-icons/fi";
 
 import { ChangeEvent, useEffect, useState } from "react";
 import {
     $attributeMapping,
-    $currentOptions,
-    $currentSourceOptions,
-    $data,
     $metadata,
     $names,
     $optionMapping,
     $programMapping,
     attributeMappingApi,
-    optionMappingApi,
     programMappingApi,
 } from "../../pages/program";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
-import Paginated from "../Paginated";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
 
 export default function AttributeMapping() {
-    const { isOpen, onOpen, onClose } = useDisclosure();
     const attributeMapping = useStore($attributeMapping);
     const programMapping = useStore($programMapping);
-    const metadata = useStore($metadata);
-    const currentOptions = useStore($currentOptions);
     const optionMapping = useStore($optionMapping);
-    const currentSourceOptions = useStore($currentSourceOptions);
+    const toast = useToast();
+    const metadata = useStore($metadata);
     const { source, destination } = useStore($names);
-
-    const [currentAttributes, setCurrentAttributes] = useState(
+    const [attributes, setCurrentAttributes] = useState(
         metadata.destinationAttributes
     );
 
     const [searchString, setSearchString] = useState<string>("");
 
-    const outerLimit = 4;
-    const innerLimit = 4;
+    const currentMappingValues = Object.values(attributeMapping).map(
+        ({ value }) => value
+    );
 
-    // pagination hook
-    const {
-        pages,
-        pagesCount,
-        currentPage,
-        setCurrentPage,
-
-        pageSize,
-        setPageSize,
-    } = usePagination({
-        total: currentAttributes.length,
-        limits: {
-            outer: outerLimit,
-            inner: innerLimit,
+    const columns: ColumnsType<Partial<Option>> = [
+        {
+            title: (
+                <Stack direction="row" alignItems="center">
+                    <DestinationIcon mapping={programMapping} />
+                    <Text> Destination Attribute</Text>
+                    <Text>{destination}</Text>
+                </Stack>
+            ),
+            dataIndex: "label",
+            key: "label",
         },
-        initialState: {
-            pageSize: 7,
-            currentPage: 1,
+        {
+            title: "Mandatory",
+            key: "mandatory",
+            width: "100px",
+            align: "center",
+            render: (text, { value, mandatory }) => (
+                <Checkbox
+                    isChecked={
+                        attributeMapping[value ?? ""]?.mandatory || mandatory
+                    }
+                    isReadOnly={mandatory}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        attributeMappingApi.update({
+                            attribute: value ?? "",
+                            key: "mandatory",
+                            value: e.target.checked,
+                        })
+                    }
+                />
+            ),
         },
-    });
-
+        {
+            title: "Unique",
+            key: "unique",
+            width: "100px",
+            align: "center",
+            render: (text, { value, unique }) => (
+                <Checkbox
+                    isChecked={attributeMapping[value ?? ""]?.unique || unique}
+                    isReadOnly={unique}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        attributeMappingApi.update({
+                            attribute: value ?? "",
+                            key: "unique",
+                            value: e.target.checked,
+                        });
+                    }}
+                />
+            ),
+        },
+        {
+            title: "Custom",
+            key: "manual",
+            width: "100px",
+            align: "center",
+            render: (text, { value }) => (
+                <Checkbox
+                    isChecked={attributeMapping[value ?? ""]?.manual}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setCustom(value ?? "", e.target.checked)
+                    }
+                />
+            ),
+        },
+        {
+            title: "Specific",
+            key: "specific",
+            width: "100px",
+            align: "center",
+            render: (text, { value }) => (
+                <Checkbox
+                    isChecked={attributeMapping[value ?? ""]?.specific}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        setSpecific(value ?? "", e.target.checked)
+                    }
+                />
+            ),
+        },
+        {
+            title: (
+                <Stack direction="row" alignItems="center">
+                    <SourceIcon mapping={programMapping} />
+                    <Text>Source Attribute</Text>
+                    <Text>{source}</Text>
+                </Stack>
+            ),
+            key: "source",
+            render: (text, { value, valueType, unique }) => {
+                if (
+                    attributeMapping[value ?? ""]?.manual ||
+                    attributeMapping[value ?? ""]?.specific
+                ) {
+                    return (
+                        <Input
+                            value={attributeMapping[value ?? ""]?.value}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                attributeMappingApi.update({
+                                    attribute: `${value}`,
+                                    key: "value",
+                                    value: e.target.value,
+                                })
+                            }
+                        />
+                    );
+                }
+                return (
+                    <Select<Option, false, GroupBase<Option>>
+                        value={metadata.sourceAttributes?.find(
+                            (val) =>
+                                val.value ===
+                                attributeMapping[value ?? ""]?.value
+                        )}
+                        options={metadata.sourceAttributes}
+                        isClearable
+                        size="md"
+                        onChange={(e) => {
+                            attributeMappingApi.updateMany(
+                                attributeMappingApi.updateMany({
+                                    attribute: value ?? "",
+                                    update: {
+                                        value: e?.value || "",
+                                        unique:
+                                            attributeMapping[value ?? ""]
+                                                ?.unique || unique,
+                                        valueType,
+                                    },
+                                })
+                            );
+                            if (
+                                e &&
+                                e.value &&
+                                currentMappingValues.indexOf(e.value) !== -1
+                            ) {
+                                toast({
+                                    title: "Variable reused",
+                                    description: `Variable ${e.label} already used`,
+                                    status: "warning",
+                                    duration: 9000,
+                                    isClosable: true,
+                                });
+                            }
+                        }}
+                    />
+                );
+            },
+        },
+        {
+            title: "Options",
+            key: "value",
+            width: "200px",
+            render: (text, { value, optionSetValue, availableOptions }) => {
+                if (optionSetValue) {
+                    return (
+                        <OptionSetMapping
+                            value={value ?? ""}
+                            destinationOptions={availableOptions || []}
+                        />
+                    );
+                }
+                return null;
+            },
+        },
+        {
+            title: "Mapped",
+            width: "100px",
+            render: (text, { value }) => {
+                if (attributeMapping[value ?? ""]?.value) {
+                    return (
+                        <Icon as={FiCheck} color="green.400" fontSize="2xl" />
+                    );
+                }
+                return null;
+            },
+            key: "mapped",
+        },
+    ];
     useEffect(() => {
         for (const {
             value: destinationValue,
             unique,
-            label,
+            label: destinationLabel,
             mandatory,
         } of metadata.destinationAttributes) {
             if (attributeMapping[destinationValue ?? ""] === undefined) {
                 const search = metadata.sourceAttributes.find(
-                    ({ value }) => value === label
+                    ({ value }) => value === destinationValue
                 );
                 if (search) {
                     attributeMappingApi.updateMany({
@@ -109,19 +244,24 @@ export default function AttributeMapping() {
                             mandatory,
                         },
                     });
+                } else {
+                    const search2 = metadata.sourceAttributes.find(
+                        ({ label }) => label === destinationLabel
+                    );
+                    if (search2) {
+                        attributeMappingApi.updateMany({
+                            attribute: `${destinationValue}`,
+                            update: {
+                                value: search2.value,
+                                unique,
+                                mandatory,
+                            },
+                        });
+                    }
                 }
             }
         }
     }, []);
-
-    const handlePageChange = (nextPage: number): void => {
-        setCurrentPage(nextPage);
-    };
-
-    const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        const pageSize = Number(event.target.value);
-        setPageSize(pageSize);
-    };
 
     const setCustom = (attribute: string, manual: boolean) => {
         const isSpecific = attributeMapping[attribute]?.specific;
@@ -163,63 +303,67 @@ export default function AttributeMapping() {
             maxH="calc(100vh - 350px)"
             overflow="auto"
         >
-            <Stack spacing="20px" direction="row" alignItems="center">
-                <Text>Tracked Entity Column</Text>
-                <Stack spacing="0">
-                    <Checkbox
-                        isChecked={
-                            programMapping.program
-                                ?.trackedEntityInstanceColumnIsManual
-                        }
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            programMappingApi.update({
-                                attribute: "program",
-                                key: "trackedEntityInstanceColumnIsManual",
-                                value: e.target.checked,
-                            })
-                        }
-                    >
-                        Custom Tracked Entity Column
-                    </Checkbox>
-                    <Box w="500px">
-                        {programMapping.program
-                            ?.trackedEntityInstanceColumnIsManual ? (
-                            <Input
-                                value={
-                                    programMapping.program
-                                        ?.trackedEntityInstanceColumn
-                                }
-                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                    programMappingApi.update({
-                                        attribute: "program",
-                                        key: "trackedEntityInstanceColumn",
-                                        value: e.target.value,
-                                    })
-                                }
-                            />
-                        ) : (
-                            <Select<Option, false, GroupBase<Option>>
-                                value={metadata.sourceColumns.find(
-                                    (val) =>
-                                        val.value ===
+            {programMapping.dataSource !== "go-data" && (
+                <Stack spacing="20px" direction="row" alignItems="center">
+                    <Text>Tracked Entity Column</Text>
+                    <Stack spacing="0">
+                        <Checkbox
+                            isChecked={
+                                programMapping.program
+                                    ?.trackedEntityInstanceColumnIsManual
+                            }
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                programMappingApi.update({
+                                    attribute: "program",
+                                    key: "trackedEntityInstanceColumnIsManual",
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Custom Tracked Entity Column
+                        </Checkbox>
+                        <Box w="500px">
+                            {programMapping.program
+                                ?.trackedEntityInstanceColumnIsManual ? (
+                                <Input
+                                    value={
                                         programMapping.program
                                             ?.trackedEntityInstanceColumn
-                                )}
-                                options={metadata.sourceColumns}
-                                isClearable
-                                placeholder="Select tracked entity column"
-                                onChange={(e) =>
-                                    programMappingApi.update({
-                                        attribute: "program",
-                                        key: "trackedEntityInstanceColumn",
-                                        value: e?.value || "",
-                                    })
-                                }
-                            />
-                        )}
-                    </Box>
+                                    }
+                                    onChange={(
+                                        e: ChangeEvent<HTMLInputElement>
+                                    ) =>
+                                        programMappingApi.update({
+                                            attribute: "program",
+                                            key: "trackedEntityInstanceColumn",
+                                            value: e.target.value,
+                                        })
+                                    }
+                                />
+                            ) : (
+                                <Select<Option, false, GroupBase<Option>>
+                                    value={metadata.sourceAttributes.find(
+                                        (val) =>
+                                            val.value ===
+                                            programMapping.program
+                                                ?.trackedEntityInstanceColumn
+                                    )}
+                                    options={metadata.sourceAttributes}
+                                    isClearable
+                                    placeholder="Select tracked entity column"
+                                    onChange={(e) =>
+                                        programMappingApi.update({
+                                            attribute: "program",
+                                            key: "trackedEntityInstanceColumn",
+                                            value: e?.value || "",
+                                        })
+                                    }
+                                />
+                            )}
+                        </Box>
+                    </Stack>
                 </Stack>
-            </Stack>
+            )}
 
             <Search
                 options={metadata.destinationAttributes}
@@ -227,350 +371,25 @@ export default function AttributeMapping() {
                 searchString={searchString}
                 setSearchString={setSearchString}
                 action={setCurrentAttributes}
-                setCurrentPage={setCurrentPage}
                 placeholder="Search attributes"
                 label="Show Mapped Attributes Only"
+                label2="Show Unmapped Attributes Only"
             />
-            <Table size="sm">
-                <Thead>
-                    <Tr>
-                        <Th py="20px" textTransform="none">
-                            <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
-                                <Text> Destination Attribute</Text>
-                                <Text>{destination}</Text>
-                            </Stack>
-                        </Th>
-                        <Th
-                            textAlign="center"
-                            py="20px"
-                            w="100px"
-                            textTransform="none"
-                        >
-                            Mandatory
-                        </Th>
-                        <Th
-                            textAlign="center"
-                            py="20px"
-                            w="100px"
-                            textTransform="none"
-                        >
-                            Unique
-                        </Th>
-                        <Th
-                            textAlign="center"
-                            py="20px"
-                            w="150px"
-                            textTransform="none"
-                        >
-                            Custom
-                        </Th>
-                        <Th
-                            py="10px"
-                            w="50px"
-                            textAlign="center"
-                            textTransform="none"
-                        >
-                            Specify
-                        </Th>
-                        <Th py="20px" textTransform="none">
-                            <Stack direction="row" alignItems="center">
-                                <SourceIcon />
-                                <Text>Source Attribute</Text>
-                                <Text>{source}</Text>
-                            </Stack>
-                        </Th>
-                        <Th w="200px" textTransform="none">
-                            Options
-                        </Th>
-                        <Th w="75px" py="20px" textTransform="none">
-                            Mapped?
-                        </Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {currentAttributes
-                        .slice(
-                            currentPage * pageSize - pageSize,
-                            pageSize * currentPage
-                        )
-                        .map(
-                            ({
-                                value,
-                                label,
-                                unique,
-                                optionSetValue,
-                                code,
-                                mandatory,
-                                availableOptions,
-                                valueType,
-                            }) => (
-                                <Tr
-                                    key={value}
-                                    borderColor="green.100"
-                                    _hover={{ bg: "gray.50" }}
-                                >
-                                    <Td>{label}</Td>
-                                    <Td textAlign="center">
-                                        <Checkbox
-                                            isChecked={
-                                                attributeMapping[value ?? ""]
-                                                    ?.mandatory
-                                            }
-                                            isReadOnly={mandatory}
-                                            onChange={(
-                                                e: ChangeEvent<HTMLInputElement>
-                                            ) =>
-                                                attributeMappingApi.update({
-                                                    attribute: value ?? "",
-                                                    key: "mandatory",
-                                                    value: e.target.checked,
-                                                })
-                                            }
-                                        />
-                                    </Td>
-                                    <Td textAlign="center">
-                                        <Checkbox
-                                            isChecked={
-                                                attributeMapping[value ?? ""]
-                                                    ?.unique
-                                            }
-                                            isReadOnly={unique}
-                                            onChange={(
-                                                e: ChangeEvent<HTMLInputElement>
-                                            ) => {
-                                                attributeMappingApi.update({
-                                                    attribute: value ?? "",
-                                                    key: "unique",
-                                                    value: e.target.checked,
-                                                });
-                                            }}
-                                        />
-                                    </Td>
-                                    <Td textAlign="center">
-                                        <Checkbox
-                                            isChecked={
-                                                attributeMapping[value ?? ""]
-                                                    ?.manual
-                                            }
-                                            onChange={(
-                                                e: ChangeEvent<HTMLInputElement>
-                                            ) =>
-                                                setCustom(
-                                                    value ?? "",
-                                                    e.target.checked
-                                                )
-                                            }
-                                        />
-                                    </Td>
-                                    <Td textAlign="center">
-                                        <Checkbox
-                                            isChecked={
-                                                attributeMapping[value ?? ""]
-                                                    ?.specific
-                                            }
-                                            onChange={(
-                                                e: ChangeEvent<HTMLInputElement>
-                                            ) =>
-                                                setSpecific(
-                                                    value ?? "",
-                                                    e.target.checked
-                                                )
-                                            }
-                                        />
-                                    </Td>
-                                    <Td>
-                                        {attributeMapping[value ?? ""]
-                                            ?.manual ||
-                                        attributeMapping[value ?? ""]
-                                            ?.specific ? (
-                                            <Input
-                                                value={
-                                                    attributeMapping[
-                                                        value ?? ""
-                                                    ]?.value
-                                                }
-                                                onChange={(
-                                                    e: ChangeEvent<HTMLInputElement>
-                                                ) =>
-                                                    attributeMappingApi.update({
-                                                        attribute: `${value}`,
-                                                        key: "value",
-                                                        value: e.target.value,
-                                                    })
-                                                }
-                                            />
-                                        ) : (
-                                            <Select<
-                                                Option,
-                                                false,
-                                                GroupBase<Option>
-                                            >
-                                                value={metadata.sourceColumns?.find(
-                                                    (val) =>
-                                                        val.value ===
-                                                        attributeMapping[
-                                                            value ?? ""
-                                                        ]?.value
-                                                )}
-                                                options={metadata.sourceColumns}
-                                                isClearable
-                                                onChange={(e) =>
-                                                    attributeMappingApi.updateMany(
-                                                        attributeMappingApi.updateMany(
-                                                            {
-                                                                attribute:
-                                                                    value ?? "",
-                                                                update: {
-                                                                    value:
-                                                                        e?.value ||
-                                                                        "",
-                                                                    unique:
-                                                                        attributeMapping[
-                                                                            value ??
-                                                                                ""
-                                                                        ]
-                                                                            ?.unique ||
-                                                                        unique,
-                                                                    valueType,
-                                                                },
-                                                            }
-                                                        )
-                                                    )
-                                                }
-                                            />
-                                        )}
-                                    </Td>
-                                    <Td>
-                                        {optionSetValue && (
-                                            <OptionSetMapping
-                                                value={value ?? ""}
-                                                destinationOptions={
-                                                    availableOptions || []
-                                                }
-                                            />
-                                        )}
-                                    </Td>
-                                    <Td textAlign="center">
-                                        {attributeMapping[value ?? ""]
-                                            ?.value && (
-                                            <Icon
-                                                as={FiCheck}
-                                                color="green.400"
-                                                fontSize="2xl"
-                                            />
-                                        )}
-                                    </Td>
-                                </Tr>
-                            )
-                        )}
-                </Tbody>
 
-                <Tfoot>
-                    <Tr>
-                        <Td colSpan={8} textAlign="right">
-                            Mapped{" "}
-                            {
-                                Object.values(attributeMapping).filter(
-                                    ({ value }) => !!value
-                                ).length
-                            }{" "}
-                            of {metadata.destinationAttributes.length}
-                        </Td>
-                    </Tr>
-                </Tfoot>
-            </Table>
-            <Paginated
-                pages={pages}
-                pagesCount={pagesCount}
-                currentPage={currentPage}
-                handlePageSizeChange={handlePageSizeChange}
-                handlePageChange={handlePageChange}
-                pageSize={pageSize}
+            <Table
+                columns={columns}
+                dataSource={attributes}
+                rowKey="value"
+                pagination={{ pageSize: 8, hideOnSinglePage: true }}
+                size="middle"
+                footer={() => (
+                    <Text textAlign="right">
+                        Mapped {Object.keys(attributeMapping || {}).length} of{" "}
+                        {metadata.destinationAttributes?.length || 0}
+                    </Text>
+                )}
             />
-            <Modal
-                isOpen={isOpen}
-                onClose={onClose}
-                scrollBehavior="inside"
-                size="6xl"
-            >
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Option Set Mapping</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        <Table size="sm">
-                            <Thead>
-                                <Tr>
-                                    <Th py="20px">Destination Option</Th>
-                                    <Th textAlign="center" py="20px">
-                                        Source Option
-                                    </Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {currentOptions.map(({ label, code }) => (
-                                    <Tr key={code}>
-                                        <Td w="400px">{label}</Td>
-                                        <Td textAlign="center">
-                                            {currentSourceOptions.length > 0 ? (
-                                                <Select<
-                                                    Option,
-                                                    false,
-                                                    GroupBase<Option>
-                                                >
-                                                    value={currentSourceOptions.find(
-                                                        (val) =>
-                                                            val.value ===
-                                                            getOr(
-                                                                "",
-                                                                code || "",
-                                                                optionMapping
-                                                            )
-                                                    )}
-                                                    options={
-                                                        currentSourceOptions
-                                                    }
-                                                    isClearable
-                                                    onChange={(e) =>
-                                                        optionMappingApi.add({
-                                                            key: code || "",
-                                                            value:
-                                                                e?.value || "",
-                                                        })
-                                                    }
-                                                />
-                                            ) : (
-                                                <Input
-                                                    value={
-                                                        optionMapping[
-                                                            code || ""
-                                                        ]
-                                                    }
-                                                    onChange={(
-                                                        e: ChangeEvent<HTMLInputElement>
-                                                    ) =>
-                                                        optionMappingApi.add({
-                                                            key: code || "",
-                                                            value: e.target
-                                                                .value,
-                                                        })
-                                                    }
-                                                />
-                                            )}
-                                        </Td>
-                                    </Tr>
-                                ))}
-                            </Tbody>
-                        </Table>
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button colorScheme="blue" mr={3} onClick={onClose}>
-                            Close
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
+            <pre>{JSON.stringify(programMapping, null, 2)}</pre>
         </Stack>
     );
 }

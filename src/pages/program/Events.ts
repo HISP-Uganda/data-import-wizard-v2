@@ -1,23 +1,25 @@
-import { domain } from "../../Domain";
 import {
     Enrollment,
+    Event,
     GoResponse,
     IGoData,
-    IProgram,
-    IProgramMapping,
-    Mapping,
     IMapping,
+    IProgram,
+    Mapping,
+    Option,
     RealMapping,
     StageMapping,
     StageUpdate,
+    Step,
     TrackedEntityInstance,
     Update,
     updateObject,
-    Option,
-    Event,
 } from "data-import-wizard-utils";
 import { createApi } from "effector";
+import { Dictionary } from "lodash";
+import { set } from "lodash/fp";
 import {
+    $activeSteps,
     $attributeMapping,
     $conflicts,
     $currentOptions,
@@ -40,8 +42,6 @@ import {
     $tokens,
     defaultMapping,
 } from "./Store";
-import { set } from "lodash/fp";
-import { Dictionary } from "lodash";
 
 // export const setIProgramProperty = domain.createEvent<{
 //     attribute: keyof IProgram;
@@ -224,7 +224,7 @@ export const programApi = createApi($program, {
     set: (_, program: Partial<IProgram>) => {
         return program;
     },
-    reset: () => ({}),
+    reset: () => defaultMapping,
 });
 
 export const programMappingApi = createApi($programMapping, {
@@ -252,7 +252,10 @@ export const dataApi = createApi($data, {
 
 export const stageMappingApi = createApi($programStageMapping, {
     update: (state, { attribute, value, stage, key }: StageUpdate) => {
-        return set(`${stage}.${attribute}.${key}`, value, state);
+        if (key) {
+            return set(`${stage}.${attribute}.${key}`, value, state);
+        }
+        return set(`${stage}.${attribute}`, value, state);
     },
     set: (_, value: StageMapping) => value,
     updateMany: (
@@ -316,4 +319,8 @@ export const ouMappingApi = createApi($organisationUnitMapping, {
 
 export const remoteOrganisationsApi = createApi($remoteOrganisations, {
     set: (_, remoteOrganisations: any[]) => remoteOrganisations,
+});
+
+export const activeStepsApi = createApi($activeSteps, {
+    set: (_, steps: Step[]) => steps,
 });

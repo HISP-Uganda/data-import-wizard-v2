@@ -383,31 +383,6 @@ export default function APICredentials<U extends IMapping>({
                                 />
                             </Stack>
                         )}
-                    {/* <Modal isOpen={isOpen} onClose={onClose} size="2xl">
-                        <ModalOverlay />
-                        <ModalContent>
-                            <ModalHeader>
-                                Select{" "}
-                                {mapping.dataSource === "dhis2"
-                                    ? "Program"
-                                    : mapping.dataSource === "godata"
-                                    ? "Outbreak"
-                                    : ""}
-                            </ModalHeader>
-                            <ModalCloseButton />
-                            <ModalBody
-                                display="flex"
-                                alignItems="center"
-                                justifyContent="center"
-                            >
-                                {mapping.dataSource === "dhis2" ? (
-                                    <RemotePrograms onClose={onClose} />
-                                ) : mapping.dataSource === "godata" ? (
-                                    <RemoteOutbreaks onClose={onClose} />
-                                ) : null}
-                            </ModalBody>
-                        </ModalContent>
-                    </Modal> */}
                 </Stack>
             )}
             {/* <MetadataOptions /> */}

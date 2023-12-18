@@ -1,10 +1,12 @@
 import {
+    AggDataValue,
     aggLabel,
     Authentication,
     generateUid,
     IDataSet,
     IMapping,
     makeAggMetadata,
+    Mapping,
     Option,
 } from "data-import-wizard-utils";
 import { combine } from "effector";
@@ -14,17 +16,17 @@ import { $data } from "../program";
 
 const authentication: Partial<Authentication> = {};
 
-const defaultMapping: Partial<IMapping> = {
+export const defaultMapping: Partial<IMapping> = {
     id: generateUid(),
-    name: "Example Mapping",
-    description: "This an example mapping",
+    name: "",
+    description: "",
     isSource: false,
     authentication,
     dataStartRow: 2,
     headerRow: 1,
-    aggregate: {
-        dataSource: "xlsx-tabular-data",
-    },
+    dataSource: "manual-dhis2-program-indicators",
+    isCurrentInstance: true,
+    aggregate: {},
 };
 
 export const $aggregateMapping =
@@ -54,6 +56,7 @@ export const $dataSet = domain.createStore<Partial<IDataSet>>({});
 export const $dhis2DataSet = domain.createStore<Partial<IDataSet>>({});
 export const $programIndicators = domain.createStore<Option[]>([]);
 export const $indicators = domain.createStore<Option[]>([]);
+export const $attributionMapping = domain.createStore<Mapping>({});
 
 export const $aggMetadata = combine(
     $aggregateMapping,
@@ -109,3 +112,54 @@ export const $names = combine(
         return result;
     }
 );
+
+export const $processedData = domain.createStore<AggDataValue[]>([]);
+
+const all: { [key: string]: string[] } = {
+    "csv-line-list": [
+        "header-row",
+        "data-start-row",
+        "data-element-column",
+        "ou-column",
+        "pe-column",
+        "coc-column",
+        "aoc-column",
+        "value-column",
+    ],
+    "xlsx-line-list": [
+        "header-row",
+        "data-start-row",
+        "data-element-column",
+        "ou-column",
+        "pe-column",
+        "coc-column",
+        "aoc-column",
+        "value-column",
+    ],
+    "xlsx-tabular-data": [
+        "data-start-row",
+        "ou-column",
+        "pe-column",
+        "attribution",
+    ],
+    "xlsx-form": [
+        "data-element-column",
+        "ou-column",
+        "pe-column",
+        "coc-column",
+        "aoc-column",
+        "value-column",
+    ],
+    "dhis2-indicators": ["indicator-generation-level"],
+    "dhis2-program-indicators": ["indicator-generation-level"],
+};
+
+export const $configList = $aggregateMapping.map((state) => {
+    if (state.dataSource) {
+        if (state.useColumnLetters) {
+            return all[state.dataSource]?.filter((x) => x !== "header-row");
+        }
+        return all[state.dataSource] || [];
+    }
+    return [];
+});

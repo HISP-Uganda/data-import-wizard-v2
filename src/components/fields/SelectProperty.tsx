@@ -3,6 +3,7 @@ import { Stack, Text, StackProps, Box } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
 import { IMapping, Option } from "data-import-wizard-utils";
 import { Event } from "effector";
+import { getOr } from "lodash/fp";
 
 export default function SelectField<U extends IMapping>({
     title,
@@ -45,13 +46,13 @@ export default function SelectField<U extends IMapping>({
                                         Object(mapping[attribute])?.[otherKeys]
                                     )
                                         .split(",")
-                                        .indexOf(pt.value) !== -1
+                                        .indexOf(pt.value ?? "") !== -1
                                 );
                             }
                             return (
                                 String(mapping[attribute])
                                     .split(",")
-                                    .indexOf(pt.value) !== -1
+                                    .indexOf(pt.value ?? "") !== -1
                             );
                         })}
                         onChange={(e) =>
@@ -80,11 +81,14 @@ export default function SelectField<U extends IMapping>({
                         value={options.find((pt) => {
                             if (otherKeys) {
                                 return (
-                                    String(Object(mapping[attribute])) ===
-                                    pt.value
+                                    getOr(
+                                        "",
+                                        `${otherKeys}`,
+                                        mapping[attribute]
+                                    ) === pt.value
                                 );
                             }
-                            return pt.value === String(mapping[attribute]);
+                            return pt.value === getOr("", attribute, mapping);
                         })}
                         onChange={(e) =>
                             api({

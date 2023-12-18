@@ -23,6 +23,7 @@ import {
     programUniqAttributes,
     programUniqColumns,
     StageMapping,
+    Step,
 } from "data-import-wizard-utils";
 
 import { combine, createApi } from "effector";
@@ -30,16 +31,18 @@ import { Dictionary } from "lodash";
 import { isEmpty } from "lodash/fp";
 import { z } from "zod";
 import { domain } from "../../Domain";
-import { $steps } from "../../Store";
+import { $hasError, $steps } from "../../Store";
 import { OtherProcessed } from "./Interfaces";
 
-const authentication: Partial<Authentication> = {
-    basicAuth: true,
-    url: "https://go.sk-engine.cloud",
-    username: "colupot@hispuganda.org",
-    password: "Tesocollege77",
-};
-
+const authentication: Partial<Authentication> =
+    process.env.NODE_ENV === "development"
+        ? {
+              basicAuth: true,
+              url: process.env.REACT_APP_GO_DATA_URL,
+              username: process.env.REACT_APP_GO_DATA_USERNAME,
+              password: process.env.REACT_APP_GO_DATA_PASSWORD,
+          }
+        : {};
 export const defaultMapping: Partial<IMapping> = {
     id: generateUid(),
     name: "Example Mapping",
@@ -49,8 +52,8 @@ export const defaultMapping: Partial<IMapping> = {
     prefetch: true,
     headerRow: 1,
     dataStartRow: 2,
-    dataSource: "go-data",
     program: {},
+    isCurrentInstance: true,
 };
 const mySchema = z.string().url();
 
@@ -128,6 +131,8 @@ export const $goData = domain.createStore<Partial<IGoData>>({});
 
 export const $tokens = domain.createStore<Dictionary<string>>({});
 
+export const $activeSteps = domain.createStore<Step[]>([]);
+
 export const $metadata = combine(
     $programMapping,
     $program,
@@ -162,29 +167,44 @@ export const $metadata = combine(
 );
 
 export const $disabled = combine(
+    $program,
     $programMapping,
+    $activeSteps,
     $steps,
     $programStageMapping,
     $attributeMapping,
     $organisationUnitMapping,
     $metadata,
+    $data,
+    $hasError,
     (
+        program,
         programMapping,
+        activeSteps,
         step,
         programStageMapping,
         attributeMapping,
         organisationUnitMapping,
-        metadata
-    ) =>
-        isDisabled(
+        metadata,
+        data,
+        hasError
+    ) => {
+        return isDisabled({
             programMapping,
             programStageMapping,
             attributeMapping,
             organisationUnitMapping,
-            step,
-            mySchema as any,
-            metadata.destinationColumns
-        )
+            step: activeSteps.length > 0 ? activeSteps[step].id : 2,
+            mySchema: mySchema as any,
+            destinationFields: programMapping.isSource
+                ? metadata.destinationColumns
+                : metadata.destinationAttributes,
+            data,
+            program,
+            metadata,
+            hasError,
+        });
+    }
 );
 export const $flattenedProgram = $program.map((state) => {
     if (!isEmpty(state)) {
@@ -262,3 +282,32 @@ export const $names = combine(
         return result;
     }
 );
+
+export const $otherName = $programMapping.map((state) => {
+    if (state.isSource) return "Destination";
+    return "Source";
+});
+
+export const $name = $programMapping.map((state) => {
+    if (state.isSource) return "Source";
+    return "Destination";
+});
+
+export const $allNames = $program.map((state) => {
+    const names: { [key: string]: string } = {};
+    state.programTrackedEntityAttributes?.forEach(
+        ({ trackedEntityAttribute: { id, name } }) => {
+            names[id] = name;
+        }
+    );
+    state.programStages?.forEach(({ programStageDataElements, id, name }) => {
+        names[id] = name;
+        programStageDataElements.forEach(({ dataElement: { id, name } }) => {
+            names[id] = name;
+        });
+    });
+    state.organisationUnits?.forEach(({ id, name }) => {
+        names[id] = name;
+    });
+    return names;
+});

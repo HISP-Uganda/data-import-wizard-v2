@@ -1,4 +1,4 @@
-import { Button, Flex, Stack } from "@chakra-ui/react";
+import { Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { useStore } from "effector-react";
 import { useState } from "react";
 import { $program } from "../../pages/program";
@@ -6,9 +6,27 @@ import ProgramStageMapping from "../ProgramStageMapping";
 
 export default function EventMapping() {
     const program = useStore($program);
-    const [active, setActive] = useState<string>(
-        program.programStages?.[0].id || ""
-    );
+    const [active, setActive] = useState<string>(() => {
+        if (program.programStages && program.programStages.length > 0) {
+            return program.programStages[0].id;
+        }
+        return "";
+    });
+
+    if (program.programStages && program.programStages.length === 0) {
+        return (
+            <Stack
+                w="100%"
+                h="100%"
+                alignItems="center"
+                justifyContent="center"
+            >
+                <Text color="red.500" fontSize="3xl">
+                    Selected program has no stages
+                </Text>
+            </Stack>
+        );
+    }
     return (
         <Stack
             spacing="30px"

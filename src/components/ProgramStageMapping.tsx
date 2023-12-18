@@ -1,4 +1,3 @@
-import { usePagination } from "@ajna/pagination";
 import { SearchIcon } from "@chakra-ui/icons";
 import {
     Box,
@@ -9,15 +8,10 @@ import {
     InputLeftElement,
     Spacer,
     Stack,
-    Table,
-    Tbody,
-    Td,
     Text,
-    Tfoot,
-    Th,
-    Thead,
-    Tr,
 } from "@chakra-ui/react";
+import { Table } from "antd";
+import { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
 import { IProgramStageDataElement, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
@@ -32,7 +26,6 @@ import {
 } from "../pages/program";
 import DestinationIcon from "./DestinationIcon";
 import OptionSetMapping from "./OptionSetMapping";
-import Paginated from "./Paginated";
 import SourceIcon from "./SourceIcon";
 
 export default function ProgramStageMapping({
@@ -78,6 +71,7 @@ export default function ProgramStageMapping({
 
     const value = programStageMapping[psId]?.["info"]?.eventDateColumn || "";
     const stage = programStageMapping[psId]?.["info"]?.stage || "";
+    const stageMapping = programStageMapping[psId];
 
     const eventIdColumn =
         programStageMapping[psId]?.["info"]?.eventIdColumn || "";
@@ -87,29 +81,234 @@ export default function ProgramStageMapping({
         programStageDataElements
     );
 
-    const outerLimit = 4;
-    const innerLimit = 4;
-
-    // pagination hook
-    const {
-        pages,
-        pagesCount,
-        currentPage,
-        setCurrentPage,
-
-        pageSize,
-        setPageSize,
-    } = usePagination({
-        total: programStageDataElements.length,
-        limits: {
-            outer: outerLimit,
-            inner: innerLimit,
+    const columns: ColumnsType<Partial<IProgramStageDataElement>> = [
+        {
+            title: (
+                <Stack direction="row" alignItems="center">
+                    <DestinationIcon mapping={programMapping} />
+                    <Text> Destination Data Element</Text>
+                    <Text>{destination}</Text>
+                </Stack>
+            ),
+            render: (text, { dataElement }) => {
+                return dataElement?.name;
+            },
+            key: "dataElement.name",
         },
-        initialState: {
-            pageSize: 5,
-            currentPage: 1,
+        {
+            title: "Compulsory",
+            key: "manual",
+            width: "100px",
+            align: "center",
+            render: (text, { dataElement, compulsory, allowFutureDate }) => {
+                if (dataElement) {
+                    const { id, name, optionSetValue, optionSet } = dataElement;
+                    return (
+                        <Checkbox
+                            isChecked={isChecked}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                stageMappingApi.update({
+                                    attribute: id,
+                                    key: "manual",
+                                    stage: psId,
+                                    value: e.target.checked,
+                                })
+                            }
+                        />
+                    );
+                }
+                return null;
+            },
         },
-    });
+        {
+            title: "Custom",
+            align: "center",
+            key: "custom",
+            render: (text, { dataElement, compulsory, allowFutureDate }) => {
+                if (dataElement) {
+                    const { id, name, optionSetValue, optionSet } = dataElement;
+                    return (
+                        <Checkbox
+                            isChecked={isChecked}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                stageMappingApi.update({
+                                    attribute: id,
+                                    key: "manual",
+                                    stage: psId,
+                                    value: e.target.checked,
+                                })
+                            }
+                        />
+                    );
+                }
+                return null;
+            },
+        },
+
+        {
+            title: (
+                <Stack direction="row" alignItems="center">
+                    <SourceIcon mapping={programMapping} />
+                    <Text> Source Data Element</Text>
+                    <Text>{source}</Text>
+                </Stack>
+            ),
+            key: "source",
+            render: (text, { dataElement, compulsory, allowFutureDate }) => {
+                if (dataElement) {
+                    const { id, name, optionSetValue, optionSet } = dataElement;
+                    const isChecked =
+                        programStageMapping[psId]?.[id]?.manual || false;
+
+                    if (isChecked) {
+                        return (
+                            <Input
+                                value={value}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                    updateStage(
+                                        [
+                                            {
+                                                attribute: `${id}.value`,
+                                                value: e.target.value,
+                                            },
+                                            {
+                                                attribute: `info.compulsory`,
+                                                value: compulsory,
+                                            },
+                                            {
+                                                attribute: `info.repeatable`,
+                                                value: repeatable,
+                                            },
+                                        ],
+                                        psId
+                                    )
+                                }
+                            />
+                        );
+                    } else {
+                        return (
+                            <Select<Option, false, GroupBase<Option>>
+                                value={metadata.sourceColumns.find(
+                                    (val) =>
+                                        val.value === stageMapping?.[id]?.value
+                                )}
+                                options={metadata.sourceColumns.filter(
+                                    ({ value }) => {
+                                        if (stage) {
+                                            return value?.indexOf(stage) !== -1;
+                                        }
+                                        return true;
+                                    }
+                                )}
+                                isClearable
+                                onChange={(e) =>
+                                    updateStage(
+                                        [
+                                            {
+                                                attribute: `info.compulsory`,
+                                                value: compulsory,
+                                            },
+                                            {
+                                                attribute: `${id}.value`,
+                                                value: e?.value || "",
+                                            },
+                                            {
+                                                attribute: `info.repeatable`,
+                                                value: repeatable,
+                                            },
+                                        ],
+                                        psId
+                                    )
+                                }
+                            />
+                        );
+                    }
+                }
+                return null;
+            },
+        },
+
+        {
+            title: "Unique",
+            align: "center",
+            key: "unique",
+            render: (text, { dataElement }) => {
+                if (dataElement) {
+                    const { id, name, optionSetValue, optionSet } = dataElement;
+
+                    const isUnique =
+                        programStageMapping[psId]?.[id]?.unique || false;
+
+                    const value = programStageMapping[psId]?.[id]?.value || "";
+                    return (
+                        <Checkbox
+                            isChecked={isUnique}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                stageMappingApi.update({
+                                    attribute: id,
+                                    key: "unique",
+                                    stage: psId,
+                                    value: e.target.checked,
+                                })
+                            }
+                        />
+                    );
+                }
+            },
+        },
+        {
+            title: "Options",
+            key: "options",
+            align: "center",
+            width: "100px",
+            render: (text, { dataElement }) => {
+                if (dataElement) {
+                    const { id, name, optionSetValue, optionSet } = dataElement;
+
+                    const isUnique =
+                        programStageMapping[psId]?.[id]?.unique || false;
+
+                    const value = programStageMapping[psId]?.[id]?.value || "";
+                    if (optionSetValue) {
+                        return (
+                            <OptionSetMapping
+                                value={value}
+                                destinationOptions={optionSet.options.map(
+                                    ({ code, name }) => ({
+                                        label: name,
+                                        value: code,
+                                    })
+                                )}
+                            />
+                        );
+                    }
+                }
+                return null;
+            },
+        },
+
+        {
+            title: "Mapped",
+            align: "center",
+            width: "100px",
+            render: (text, { dataElement }) => {
+                if (dataElement) {
+                    const { id } = dataElement;
+                    if (rest[id]?.value) {
+                        return (
+                            <Icon
+                                as={FiCheck}
+                                color="green.400"
+                                fontSize="2xl"
+                            />
+                        );
+                    }
+                }
+                return null;
+            },
+            key: "mapped",
+        },
+    ];
 
     const filterUnits = (checked: boolean) => {
         const mapped = Object.keys(rest);
@@ -119,7 +318,6 @@ export default function ProgramStageMapping({
                     ({ dataElement: { id } }) => mapped.indexOf(id) !== -1
                 )
             );
-            setCurrentPage(1);
         } else {
             setCurrentElements(programStageDataElements);
         }
@@ -134,21 +332,15 @@ export default function ProgramStageMapping({
         );
     };
 
-    const handlePageChange = (nextPage: number): void => {
-        setCurrentPage(nextPage);
-    };
-
-    const handlePageSizeChange = (event: ChangeEvent<HTMLSelectElement>) => {
-        const pageSize = Number(event.target.value);
-        setPageSize(pageSize);
-    };
-
     const updateStageAttributes = () => {
         for (const element of programStageDataElements) {
-            if (rest[element.dataElement.id] === undefined) {
-                const search = metadata.sourceColumns.find(
-                    ({ value }) => value === element.dataElement.name
-                );
+            if (rest[`${element.dataElement.id}`] === undefined) {
+                const search = metadata.sourceColumns.find(({ value }) => {
+                    return (
+                        value ===
+                        `last.${psId}.values.${element.dataElement.id}`
+                    );
+                });
                 if (search) {
                     stageMappingApi.update({
                         stage: psId,
@@ -219,12 +411,34 @@ export default function ProgramStageMapping({
                     Mark Event Date As Unique
                 </Checkbox>
             </Stack>
-            <Stack direction="row" spacing="20px">
+            <Stack direction="row" spacing="20px" alignItems="center">
+                {programMapping.dataSource === "dhis2-program" && (
+                    <Stack flex={1} direction="row" alignItems="center">
+                        <Text>Specific Stage</Text>
+                        <Box flex={1}>
+                            <Select<Option, false, GroupBase<Option>>
+                                value={metadata.destinationStages.find(
+                                    (val) => val.value === stage
+                                )}
+                                options={metadata.destinationStages}
+                                isClearable
+                                onChange={(e) => {
+                                    stageMappingApi.update({
+                                        stage: psId,
+                                        attribute: "info",
+                                        key: "stage",
+                                        value: e?.value || "",
+                                    });
+                                }}
+                            />
+                        </Box>
+                    </Stack>
+                )}
                 <Stack
                     spacing="20px"
                     direction="row"
                     alignItems="center"
-                    w="50%"
+                    flex={1}
                 >
                     <Text>Event Date Column</Text>
                     <Stack spacing="0" flex={1}>
@@ -282,7 +496,7 @@ export default function ProgramStageMapping({
                     spacing="20px"
                     direction="row"
                     alignItems="center"
-                    w="50%"
+                    flex={1}
                 >
                     <Text>Event Id Column</Text>
                     <Stack spacing="0" flex={1}>
@@ -335,29 +549,6 @@ export default function ProgramStageMapping({
                         </Box>
                     </Stack>
                 </Stack>
-
-                {programMapping.dataSource === "dhis2-program" && (
-                    <Stack spacing="20px" flex={1}>
-                        <Text>Specific Stage</Text>
-                        <Box w="100%">
-                            <Select<Option, false, GroupBase<Option>>
-                                value={metadata.destinationStages.find(
-                                    (val) => val.value === stage
-                                )}
-                                options={metadata.destinationStages}
-                                isClearable
-                                onChange={(e) => {
-                                    stageMappingApi.update({
-                                        stage: psId,
-                                        attribute: "info",
-                                        key: "stage",
-                                        value: e?.value || "",
-                                    });
-                                }}
-                            />
-                        </Box>
-                    </Stack>
-                )}
             </Stack>
 
             <Stack direction="row">
@@ -385,232 +576,24 @@ export default function ProgramStageMapping({
                 </Box>
             </Stack>
 
-            <Table size="sm">
-                <Thead>
-                    <Tr>
-                        <Th textTransform="none">
-                            <Stack direction="row" alignItems="center">
-                                <DestinationIcon />
-                                <Text> Destination Data Element</Text>
-                                <Text>{destination}</Text>
-                            </Stack>
-                        </Th>
-                        <Th textAlign="center" textTransform="none">
-                            Compulsory
-                        </Th>
-                        <Th textAlign="center" textTransform="none">
-                            Custom
-                        </Th>
-                        <Th textTransform="none">
-                            <Stack direction="row" alignItems="center">
-                                <SourceIcon />
-                                <Text> Source Data Element</Text>
-                                <Text>{source}</Text>
-                            </Stack>
-                        </Th>
-                        <Th w="150px" textAlign="center" textTransform="none">
-                            Is Unique
-                        </Th>
-                        <Th w="100px" textTransform="none">
-                            Options
-                        </Th>
-                        <Th w="75px" textTransform="none">
-                            Mapped?
-                        </Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {currentElements
-                        .slice(
-                            currentPage * pageSize - pageSize,
-                            pageSize * currentPage
-                        )
-                        .map(
-                            ({
-                                dataElement: {
-                                    id,
-                                    name,
-                                    optionSetValue,
-                                    optionSet,
-                                },
-                                compulsory,
-                                allowFutureDate,
-                            }) => {
-                                const isChecked =
-                                    programStageMapping[psId]?.[id]?.manual ||
-                                    false;
-                                const isUnique =
-                                    programStageMapping[psId]?.[id]?.unique ||
-                                    false;
-
-                                const value =
-                                    programStageMapping[psId]?.[id]?.value ||
-                                    "";
-                                return (
-                                    <Tr key={id}>
-                                        <Td w="400px">{name}</Td>
-                                        <Td w="100px" textAlign="center">
-                                            <Checkbox
-                                                isChecked={compulsory}
-                                                isReadOnly
-                                            />
-                                        </Td>
-                                        <Td textAlign="center" w="200px">
-                                            <Checkbox
-                                                isChecked={isChecked}
-                                                onChange={(
-                                                    e: ChangeEvent<HTMLInputElement>
-                                                ) =>
-                                                    stageMappingApi.update({
-                                                        attribute: id,
-                                                        key: "manual",
-                                                        stage: psId,
-                                                        value: e.target.checked,
-                                                    })
-                                                }
-                                            />
-                                        </Td>
-                                        <Td>
-                                            {isChecked ? (
-                                                <Input
-                                                    value={value}
-                                                    onChange={(
-                                                        e: ChangeEvent<HTMLInputElement>
-                                                    ) =>
-                                                        updateStage(
-                                                            [
-                                                                {
-                                                                    attribute: `${id}.value`,
-                                                                    value: e
-                                                                        .target
-                                                                        .value,
-                                                                },
-                                                                {
-                                                                    attribute: `info.compulsory`,
-                                                                    value: compulsory,
-                                                                },
-                                                                {
-                                                                    attribute: `info.repeatable`,
-                                                                    value: repeatable,
-                                                                },
-                                                            ],
-                                                            psId
-                                                        )
-                                                    }
-                                                />
-                                            ) : (
-                                                <Select<
-                                                    Option,
-                                                    false,
-                                                    GroupBase<Option>
-                                                >
-                                                    value={metadata.sourceColumns.find(
-                                                        (val) =>
-                                                            val.value === value
-                                                    )}
-                                                    options={metadata.sourceColumns.filter(
-                                                        ({ value }) => {
-                                                            if (stage) {
-                                                                return (
-                                                                    value.indexOf(
-                                                                        stage
-                                                                    ) !== -1
-                                                                );
-                                                            }
-                                                            return true;
-                                                        }
-                                                    )}
-                                                    isClearable
-                                                    onChange={(e) =>
-                                                        updateStage(
-                                                            [
-                                                                {
-                                                                    attribute: `info.compulsory`,
-                                                                    value: compulsory,
-                                                                },
-                                                                {
-                                                                    attribute: `${id}.value`,
-                                                                    value:
-                                                                        e?.value ||
-                                                                        "",
-                                                                },
-                                                                {
-                                                                    attribute: `info.repeatable`,
-                                                                    value: repeatable,
-                                                                },
-                                                            ],
-                                                            psId
-                                                        )
-                                                    }
-                                                />
-                                            )}
-                                        </Td>
-                                        <Td textAlign="center">
-                                            <Checkbox
-                                                isChecked={isUnique}
-                                                onChange={(
-                                                    e: ChangeEvent<HTMLInputElement>
-                                                ) =>
-                                                    stageMappingApi.update({
-                                                        attribute: id,
-                                                        key: "unique",
-                                                        stage: psId,
-                                                        value: e.target.checked,
-                                                    })
-                                                }
-                                            />
-                                        </Td>
-                                        <Td>
-                                            {optionSetValue && (
-                                                <OptionSetMapping
-                                                    value={value}
-                                                    destinationOptions={optionSet.options.map(
-                                                        ({ code, name }) => ({
-                                                            label: name,
-                                                            value: code,
-                                                        })
-                                                    )}
-                                                />
-                                            )}
-                                        </Td>
-                                        <Td>
-                                            {rest[id]?.value && (
-                                                <Icon
-                                                    as={FiCheck}
-                                                    color="green.400"
-                                                    fontSize="2xl"
-                                                />
-                                            )}
-                                        </Td>
-                                    </Tr>
-                                );
-                            }
-                        )}
-                </Tbody>
-
-                <Tfoot>
-                    <Tr>
-                        <Td colSpan={6} textAlign="right">
-                            Mapped{" "}
-                            {
-                                Object.values(rest).filter(
-                                    ({ value }) => !!value
-                                ).length
-                            }{" "}
-                            of {currentElements.length}
-                        </Td>
-                    </Tr>
-                </Tfoot>
-            </Table>
-
-            <Paginated
-                pages={pages}
-                pagesCount={pagesCount}
-                currentPage={currentPage}
-                handlePageSizeChange={handlePageSizeChange}
-                handlePageChange={handlePageChange}
-                pageSize={pageSize}
+            <Table
+                columns={columns}
+                dataSource={currentElements}
+                rowKey={({ dataElement }) => dataElement?.id ?? ""}
+                pagination={{ pageSize: 5, hideOnSinglePage: true }}
+                size="middle"
+                footer={() => (
+                    <Text textAlign="right">
+                        Mapped{" "}
+                        {
+                            Object.values(rest).filter(({ value }) => !!value)
+                                .length
+                        }{" "}
+                        of {currentElements.length}
+                    </Text>
+                )}
             />
+            <pre>{JSON.stringify(programStageMapping, null, 2)}</pre>
         </Stack>
     );
 }

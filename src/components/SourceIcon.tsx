@@ -1,12 +1,13 @@
-import { useStore } from "effector-react";
-import { $programMapping } from "../pages/program/Store";
+import { IMapping } from "data-import-wizard-utils";
 import { available } from "./DestinationIcon";
 
-export default function SourceIcon() {
-    const programMapping = useStore($programMapping);
-
-    if (!programMapping.isSource && programMapping.dataSource) {
-        return available[programMapping.dataSource];
+export default function SourceIcon({
+    mapping,
+}: {
+    mapping: Partial<IMapping>;
+}) {
+    if (!mapping.isSource && mapping.dataSource) {
+        return available[mapping.dataSource];
     }
 
     return available["dhis2-program"];

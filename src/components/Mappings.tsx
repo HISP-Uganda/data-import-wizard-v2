@@ -1,20 +1,9 @@
-import { usePagination } from "@ajna/pagination";
-import {
-    Image,
-    Stack,
-    Table,
-    Tbody,
-    Td,
-    Text,
-    Th,
-    Thead,
-    Tr,
-    useDisclosure,
-} from "@chakra-ui/react";
+import { Image, Stack, useDisclosure } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-location";
+import Table, { ColumnsType } from "antd/es/table";
 import { IMapping } from "data-import-wizard-utils";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LocationGenerics } from "../Interfaces";
 import { programMappingApi } from "../pages/program";
 import { useNamespace } from "../Queries";
@@ -28,30 +17,91 @@ export default function Mappings() {
     const navigate = useNavigate<LocationGenerics>();
     const { onClose, onOpen, isOpen } = useDisclosure();
     const [message, setMessage] = useState<string>("");
-    const { isLoading, isSuccess, isError, error, data } =
+    let { isLoading, isSuccess, isError, error, data } =
         useNamespace<IMapping>("iw-mapping");
 
-    const outerLimit = 4;
-    const innerLimit = 4;
-    const {
-        pages,
-        pagesCount,
-        currentPage,
-        setCurrentPage,
-        pageSize,
-        setPageSize,
-    } = usePagination({
-        total: data?.length || 0,
-        limits: {
-            outer: outerLimit,
-            inner: innerLimit,
-        },
-        initialState: {
-            pageSize: 10,
-            currentPage: 1,
-        },
-    });
+    const [currentData, setCurrentData] = useState<
+        Array<Partial<IMapping>> | undefined
+    >(data);
 
+    const afterDelete = async (id: string) => {
+        setCurrentData((prev) => {
+            if (prev) {
+                return prev.filter(({ id: mappingId }) => mappingId !== id);
+            }
+            return prev;
+        });
+    };
+
+    const afterClone = async (mapping: Partial<IMapping>) => {
+        setCurrentData((prev) => {
+            if (prev !== undefined) {
+                return prev.concat(mapping);
+            }
+            return prev;
+        });
+    };
+
+    useEffect(() => {
+        setCurrentData(() => data);
+        return () => {};
+    }, [data?.length]);
+
+    const columns: ColumnsType<Partial<IMapping>> = [
+        {
+            title: "Name",
+            dataIndex: "name",
+            key: "name",
+        },
+        {
+            title: "Type",
+            dataIndex: "type",
+            key: "type",
+        },
+        {
+            title: "Source",
+            dataIndex: "source",
+            key: "source",
+        },
+        {
+            title: "Destination",
+            dataIndex: "destination",
+            key: "destination",
+        },
+        {
+            title: "Description",
+            dataIndex: "description",
+            key: "description",
+        },
+        {
+            title: "Created",
+            dataIndex: "created",
+            key: "created",
+        },
+        {
+            title: "Updated",
+            dataIndex: "lastUpdated",
+            key: "lastUpdated",
+        },
+        {
+            title: "Action",
+            key: "action",
+            render: (value, record, index) => (
+                <DropdownMenu
+                    id={record.id ?? ""}
+                    data={data ?? []}
+                    onClose={onClose}
+                    onOpen={onOpen}
+                    message={message}
+                    isOpen={isOpen}
+                    setMessage={setMessage}
+                    afterDelete={afterDelete}
+                    afterClone={afterClone}
+                    name={record.name ?? ""}
+                />
+            ),
+        },
+    ];
     const actions = [
         {
             label: "Users",
@@ -60,8 +110,8 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                    type: "users",
                 });
-                programMappingApi.update({ attribute: "type", value: "users" });
                 navigate({ to: "./users" });
             },
         },
@@ -74,10 +124,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "metadata",
+                    type: "metadata",
                 });
                 navigate({ to: "./metadata" });
             },
@@ -91,10 +138,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "organisations",
+                    type: "organisation-units",
                 });
                 navigate({ to: "./organisations" });
             },
@@ -108,10 +152,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "aggregate",
+                    type: "aggregate",
                 });
                 navigate({ to: "./aggregate" });
             },
@@ -130,10 +171,7 @@ export default function Mappings() {
                 actionApi.create();
                 programMappingApi.updateMany({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-                });
-                programMappingApi.update({
-                    attribute: "type",
-                    value: "individual",
+                    type: "individual",
                 });
                 navigate({ to: "./individual" });
             },
@@ -143,75 +181,14 @@ export default function Mappings() {
     if (isLoading) return <Loader message="Loading saved mappings..." />;
     if (isSuccess) {
         return (
-            <Stack
-                alignContent="center"
-                alignItems="center"
-                justifyItems="center"
-                h="100%"
-                width="100%"
-                p="10px"
-            >
-                {data.length === 0 ? (
-                    <Text>No Data</Text>
-                ) : (
-                    <Table size="sm">
-                        <Thead>
-                            <Tr>
-                                <Th>Name</Th>
-                                <Th>Type</Th>
-                                <Th>Source</Th>
-                                <Th>Destination</Th>
-                                <Th>Description</Th>
-                                <Th w="200px">Created</Th>
-                                <Th w="200px">Updated At</Th>
-                                <Th w="48px">Action</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            {data
-                                .slice(
-                                    currentPage * pageSize - pageSize,
-                                    pageSize * currentPage
-                                )
-                                .map(
-                                    ({
-                                        id,
-                                        lastUpdated,
-                                        created,
-                                        name,
-                                        description,
-                                        source,
-                                        destination,
-                                        type,
-                                        ...rest
-                                    }) => (
-                                        <Tr key={id} _hover={{ bg: "gray.50" }}>
-                                            <Td>{name}</Td>
-                                            <Td>{type}</Td>
-                                            <Td>{source}</Td>
-                                            <Td>{destination}</Td>
-                                            <Td>{description}</Td>
-                                            <Td>{created}</Td>
-                                            <Td>{lastUpdated}</Td>
-                                            <Td>
-                                                <DropdownMenu
-                                                    id={id}
-                                                    data={data}
-                                                    onClose={onClose}
-                                                    onOpen={onOpen}
-                                                    message={message}
-                                                    isOpen={isOpen}
-                                                    setMessage={setMessage}
-                                                />
-                                            </Td>
-                                        </Tr>
-                                    )
-                                )}
-                        </Tbody>
-                    </Table>
-                )}
+            <Stack h="100%" width="100%" p="10px">
+                <Table
+                    columns={columns}
+                    dataSource={currentData}
+                    rowKey="id"
+                    loading={isLoading}
+                />
                 <FAB actions={actions} />
-
                 <Progress
                     onClose={onClose}
                     isOpen={isOpen}
