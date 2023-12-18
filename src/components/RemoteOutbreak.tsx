@@ -98,14 +98,6 @@ export default function RemoteOutbreaks() {
             ...programMapping.authentication,
             params: { auth: { param: "access_token", value: token } },
         });
-        const organisations = await fetchRemote<IGoDataOrgUnit[]>(
-            {
-                ...programMapping.authentication,
-                params: { auth: { param: "access_token", value: token } },
-            },
-            "api/locations"
-        );
-
         const tokens = await fetchRemote<{
             languageId: string;
             lastUpdateDate: string;

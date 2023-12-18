@@ -63,7 +63,7 @@ import {
     tokensApi,
 } from "../pages/program";
 import { loadPreviousMapping, loadProgram } from "../Queries";
-import { $version, actionApi } from "../Store";
+import { $version, actionApi, hasErrorApi } from "../Store";
 import { saveProgramMapping } from "../utils/utils";
 
 export default function DropdownMenu({
@@ -407,32 +407,43 @@ export default function DropdownMenu({
 
             if (mapping.dataSource === "go-data") {
                 setMessage(() => "Getting Go.Data token");
-                const token = await getGoDataToken(mapping);
-                setMessage(() => "Loading previous data");
-                const {
-                    options,
-                    organisations,
-                    outbreak,
-                    tokens,
-                    goDataOptions,
-                    hierarchy,
-                } = await loadPreviousGoData(token, mapping);
-                goDataApi.set(outbreak);
-                tokensApi.set(tokens);
-                goDataOptionsApi.set(goDataOptions);
-                currentSourceOptionsApi.set(options);
-                remoteOrganisationsApi.set(
-                    hierarchy.flat().map(({ id, name, parentInfo }) => ({
-                        id,
-                        name: `${[
-                            ...parentInfo.map(({ name }) => name),
-                            name,
-                        ].join("/")}`,
-                    }))
-                );
+                try {
+                    const token = await getGoDataToken(mapping);
+                    setMessage(() => "Loading previous data");
+                    const {
+                        options,
+                        outbreak,
+                        tokens,
+                        goDataOptions,
+                        hierarchy,
+                    } = await loadPreviousGoData(token, mapping);
+                    goDataApi.set(outbreak);
+                    tokensApi.set(tokens);
+                    goDataOptionsApi.set(goDataOptions);
+                    currentSourceOptionsApi.set(options);
+                    remoteOrganisationsApi.set(
+                        hierarchy.flat().map(({ id, name, parentInfo }) => ({
+                            id,
+                            name: `${[
+                                ...parentInfo.map(({ name }) => name),
+                                name,
+                            ].join("/")}`,
+                        }))
+                    );
+                    onClose();
+                    navigate({ to: "./individual" });
+                } catch (error: any) {
+                    toast({
+                        title: "Something went wrong",
+                        description: error?.message ?? "",
+                        status: "error",
+                        duration: 9000,
+                        isClosable: true,
+                    });
+                    hasErrorApi.set(true);
+                    onClose();
+                }
             }
-            onClose();
-            navigate({ to: "./individual" });
         } else if (mapping.type === "aggregate") {
             const { attributeMapping, organisationUnitMapping, dataSet } =
                 await getPreviousAggregateMapping(mapping);
