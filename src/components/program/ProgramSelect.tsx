@@ -77,7 +77,6 @@ const ProgramSelect = () => {
                             columns={columns}
                             dataSource={data.programs}
                             rowKey="id"
-                            pagination={{ pageSize: 25 }}
                             rowSelection={{
                                 type: "radio",
                                 selectedRowKeys: programMapping.program?.program

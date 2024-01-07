@@ -19,9 +19,11 @@ export default function Search({
     label,
     label2,
     placeholder,
+    source,
 }: {
     mapping: Mapping;
     options: Option[];
+    source: Option[];
     action: React.Dispatch<React.SetStateAction<Option[]>>;
     setSearchString: React.Dispatch<React.SetStateAction<string>>;
     searchString: string;
@@ -32,13 +34,21 @@ export default function Search({
     const [includeMapped, setIncludeMapped] = useState<boolean>(false);
     const [includeUnmapped, setIncludeUnmapped] = useState<boolean>(false);
     const filterUnits = () => {
-        const mapped = Object.keys(mapping);
+        const mapped = Object.entries(mapping).flatMap(([id, value]) => {
+            if (value.value && source.find((o) => o.value === value.value))
+                return id;
+            return [];
+        });
         action(() =>
             options.filter(({ value }) => mapped.indexOf(value ?? "") !== -1)
         );
     };
     const filterUnmapped = () => {
-        const mapped = Object.keys(mapping);
+        const mapped = Object.entries(mapping).flatMap(([id, value]) => {
+            if (value.value && source.find((o) => o.value === value.value))
+                return id;
+            return [];
+        });
         action(() =>
             options.filter(({ value }) => mapped.indexOf(value ?? "") === -1)
         );

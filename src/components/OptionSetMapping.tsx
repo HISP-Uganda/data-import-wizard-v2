@@ -15,7 +15,7 @@ import {
 import { Table } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
-import { Option } from "data-import-wizard-utils";
+import { Option, RealMapping } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent } from "react";
@@ -138,7 +138,6 @@ export default function OptionSetMapping({
                 currentSourceOptionsApi.set(filteredOptions);
             }
         } else if (programMapping.dataSource === "go-data") {
-            // console.log("Are here");
             currentSourceOptionsApi.set(
                 goDataOptions.map(({ id }) => {
                     return { label: allTokens[id] || id, value: id };
@@ -154,7 +153,13 @@ export default function OptionSetMapping({
             <Button
                 onClick={() => {
                     openOptionSetDialog(
-                        String(getOr("", `${value}.value`, attributeMapping)),
+                        String(
+                            getOr(
+                                "",
+                                "value",
+                                getOr({}, value, attributeMapping)
+                            )
+                        ),
                         destinationOptions
                     );
                 }}

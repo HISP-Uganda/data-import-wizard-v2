@@ -20,6 +20,7 @@ const options = {
     target: "https://ugandaeidsr.org",
     // target: "http://localhost:8080",
     // target: "https://academy.demos.dhis2.org/test1",
+    // target: "https://play.dhis2.org/40.2.0",
     onProxyReq,
     onProxyRes,
     changeOrigin: true,

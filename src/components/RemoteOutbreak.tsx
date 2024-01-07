@@ -94,10 +94,13 @@ export default function RemoteOutbreaks() {
             });
         }
 
-        const hierarchy = await fetchGoDataHierarchy({
-            ...programMapping.authentication,
-            params: { auth: { param: "access_token", value: token } },
-        });
+        const hierarchy = await fetchGoDataHierarchy(
+            {
+                ...programMapping.authentication,
+                params: { auth: { param: "access_token", value: token } },
+            },
+            outbreak.locationIds
+        );
         const tokens = await fetchRemote<{
             languageId: string;
             lastUpdateDate: string;
@@ -150,7 +153,6 @@ export default function RemoteOutbreaks() {
                     columns={columns}
                     dataSource={data}
                     rowKey="id"
-                    pagination={{ pageSize: 25 }}
                     rowSelection={{
                         type: "radio",
                         selectedRowKeys: programMapping.program?.remoteProgram

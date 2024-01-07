@@ -593,7 +593,6 @@ export default function ProgramStageMapping({
                     </Text>
                 )}
             />
-            <pre>{JSON.stringify(programStageMapping, null, 2)}</pre>
         </Stack>
     );
 }

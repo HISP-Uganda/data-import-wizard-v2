@@ -159,9 +159,10 @@ export default function Attribution() {
                 searchString={searchString}
                 setSearchString={setSearchString}
                 action={setCurrentAttributes}
-                setCurrentPage={setCurrentPage}
+                source={aggregateMetadata.sourceCategoryOptionCombos}
                 placeholder="Search attributes"
                 label="Show Mapped Attributes Only"
+                label2="Show Unmapped Attributes Only"
             />
             <Table size="sm">
                 <Thead>

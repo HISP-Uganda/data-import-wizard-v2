@@ -1,4 +1,3 @@
-import { Mapping } from "classnames";
 import {
     IProgramStage,
     DataValue,
@@ -7,12 +6,30 @@ import {
     Enrollment,
     TrackedEntityInstance,
     Attribute,
+    Mapping,
+    Option,
 } from "data-import-wizard-utils";
 import { format, parseISO } from "date-fns/fp";
 import { Dictionary } from "lodash";
 import { fromPairs, get, getOr, groupBy, isEmpty, toPairs } from "lodash/fp";
 import { z } from "zod";
 import { generateUid } from "../../utils/uid";
+
+export const findMapped = (mapping: Mapping, source: Option[]) => {
+    return Object.entries(mapping).filter(([_, val]) => {
+        return (
+            val.value && source.find((current) => current.value === val.value)
+        );
+    }).length;
+};
+export const isMapped = (value: any, mapping: Mapping, source: Option[]) => {
+    if (value === undefined) return false;
+    return (
+        mapping[value] &&
+        mapping[value].value &&
+        source.find((val) => val.value === mapping[value].value)
+    );
+};
 
 // const parseAndFormatDate = (date: string) => {
 //     const parsedDate = Date.parse(date);

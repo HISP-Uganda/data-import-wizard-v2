@@ -27,6 +27,7 @@ import {
     attributeMappingApi,
     programMappingApi,
 } from "../../pages/program";
+import { isMapped } from "../../pages/program/utils";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
 import Progress from "../Progress";
@@ -127,7 +128,7 @@ const Display = ({ data }: { data: Option[] }) => {
                 </Stack>
             ),
             key: "source",
-            render: (text, { value, valueType, unique }) => {
+            render: (_, { value, valueType, unique }) => {
                 if (
                     attributeMapping[value ?? ""]?.manual ||
                     attributeMapping[value ?? ""]?.specific
@@ -177,7 +178,7 @@ const Display = ({ data }: { data: Option[] }) => {
             title: "Options",
             key: "value",
             width: "200px",
-            render: (text, { value, optionSetValue, availableOptions }) => {
+            render: (_, { value, optionSetValue, availableOptions }) => {
                 if (optionSetValue) {
                     return (
                         <OptionSetMapping
@@ -192,8 +193,8 @@ const Display = ({ data }: { data: Option[] }) => {
         {
             title: "Mapped",
             width: "100px",
-            render: (text, { value }) => {
-                if (attributeMapping[value ?? ""]?.value) {
+            render: (_, { value }) => {
+                if (isMapped(value, attributeMapping, metadata.sourceColumns)) {
                     return (
                         <Icon as={FiCheck} color="green.400" fontSize="2xl" />
                     );

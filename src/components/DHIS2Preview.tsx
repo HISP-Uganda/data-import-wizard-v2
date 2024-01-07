@@ -22,6 +22,8 @@ import Superscript from "./Superscript";
 
 import { ColumnsType } from "antd/es/table";
 import { $allNames, $processed } from "../pages/program/Store";
+import { isArray, isObject } from "lodash";
+import { getOr } from "lodash/fp";
 export default function DHIS2Preview() {
     const processed = useStore($processed);
     const allNames = useStore($allNames);
@@ -33,7 +35,16 @@ export default function DHIS2Preview() {
                 allNames[record["attribute"] ?? ""] || record["attribute"],
             key: "attribute",
         },
-        { title: "Value", dataIndex: "value", key: "value" },
+        {
+            title: "Value",
+            key: "value",
+            render: (_, record) => {
+                let value = getOr("", "value", record);
+                if (isArray(value)) return JSON.stringify(value);
+                if (isObject(value)) return JSON.stringify(value);
+                return value;
+            },
+        },
     ];
 
     const dataValueColumns: TableColumnsType<Partial<DataValue>> = [
@@ -46,9 +57,15 @@ export default function DHIS2Preview() {
         {
             title: "Value",
             key: "value",
-            render: (_, record) => JSON.stringify(record.value),
+            render: (_, record) => {
+                let value = getOr("", "value", record);
+                if (isArray(value)) return JSON.stringify(value);
+                if (isObject(value)) return JSON.stringify(value);
+                return value;
+            },
         },
     ];
+
     const instanceColumns = useMemo<
         ColumnsType<Partial<TrackedEntityInstance>>
     >(
@@ -216,6 +233,16 @@ export default function DHIS2Preview() {
                         columns={instanceColumns}
                         dataSource={processed.trackedEntities}
                         rowKey="trackedEntityInstance"
+                        expandable={{
+                            expandedRowRender: (record) => (
+                                <Table
+                                    columns={columns}
+                                    dataSource={record.attributes}
+                                    pagination={false}
+                                    rowKey="attribute"
+                                />
+                            ),
+                        }}
                     />
                 </TabPanel>
                 <TabPanel>
@@ -264,6 +291,16 @@ export default function DHIS2Preview() {
                         columns={eventColumns}
                         dataSource={processed.eventsUpdates}
                         rowKey="event"
+                        expandable={{
+                            expandedRowRender: (record) => (
+                                <Table
+                                    columns={dataValueColumns}
+                                    dataSource={record.dataValues}
+                                    pagination={false}
+                                    rowKey="dataElement"
+                                />
+                            ),
+                        }}
                     />
                 </TabPanel>
                 <TabPanel>
