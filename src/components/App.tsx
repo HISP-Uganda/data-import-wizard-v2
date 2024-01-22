@@ -8,7 +8,6 @@ import {
     Router,
     stringifySearchWith,
 } from "@tanstack/react-location";
-
 import { LocationGenerics } from "../Interfaces";
 import PDF from "../pages/PDF";
 import { useInitials } from "../Queries";

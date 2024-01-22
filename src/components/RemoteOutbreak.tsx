@@ -94,10 +94,20 @@ export default function RemoteOutbreaks() {
             });
         }
 
-        const hierarchy = await fetchGoDataHierarchy({
-            ...programMapping.authentication,
-            params: { auth: { param: "access_token", value: token } },
-        });
+        const hierarchy = await fetchGoDataHierarchy(
+            {
+                ...programMapping.authentication,
+                params: { auth: { param: "access_token", value: token } },
+            },
+            outbreak.locationIds
+        );
+        const goDataOptions = await fetchRemote<GODataOption[]>(
+            {
+                ...programMapping.authentication,
+                params: { auth: { param: "access_token", value: token } },
+            },
+            "api/reference-data"
+        );
         const tokens = await fetchRemote<{
             languageId: string;
             lastUpdateDate: string;
@@ -115,20 +125,15 @@ export default function RemoteOutbreaks() {
         );
 
         tokensApi.set(allTokens);
+        goDataOptionsApi.set(
+            goDataOptions.filter(({ deleted }) => deleted === false)
+        );
         if (!programMapping.isSource) {
-            const goDataOptions = await fetchRemote<GODataOption[]>(
-                {
-                    ...programMapping.authentication,
-                    params: { auth: { param: "access_token", value: token } },
-                },
-                "api/reference-data"
-            );
             currentSourceOptionsApi.set(
                 goDataOptions.map(({ id }) => {
                     return { label: allTokens[id] || id, value: id };
                 })
             );
-            goDataOptionsApi.set(goDataOptions);
         }
         goDataApi.set(outbreak);
         remoteOrganisationsApi.set(
@@ -150,7 +155,6 @@ export default function RemoteOutbreaks() {
                     columns={columns}
                     dataSource={data}
                     rowKey="id"
-                    pagination={{ pageSize: 25 }}
                     rowSelection={{
                         type: "radio",
                         selectedRowKeys: programMapping.program?.remoteProgram

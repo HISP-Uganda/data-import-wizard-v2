@@ -17,9 +17,10 @@ const onProxyRes = (proxyRes) => {
 };
 // proxy middleware options
 const options = {
-    target: "https://ugandaeidsr.org",
+    //target: "https://ugandaeidsr.org",
     // target: "http://localhost:8080",
     // target: "https://academy.demos.dhis2.org/test1",
+    target: "https://hmis-tests.health.go.ug",
     onProxyReq,
     onProxyRes,
     changeOrigin: true,

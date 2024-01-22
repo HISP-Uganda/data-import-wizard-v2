@@ -183,7 +183,7 @@ export default function DropdownMenu({
 
         let program = {};
 
-        if (mapping.program?.program) {
+        if (mapping.program && mapping.program.program) {
             program = await loadProgram<IProgram>({
                 engine,
                 resource: "programs",

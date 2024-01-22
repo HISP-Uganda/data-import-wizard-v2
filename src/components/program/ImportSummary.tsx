@@ -510,6 +510,7 @@ export default function ImportSummary() {
                                 deleted,
                                 ignored,
                                 importSummaries,
+                                total,
                             },
                             conflicts,
                         }: any) => {
@@ -533,6 +534,7 @@ export default function ImportSummary() {
                                         deleted,
                                         ignored,
                                         importSummaries,
+                                        total,
                                     },
                                     conflicts,
                                 }: any) => {
@@ -561,6 +563,83 @@ export default function ImportSummary() {
                         }
                     );
                 } catch (error: any) {
+                    if (error.details?.response?.importSummaries) {
+                        const {
+                            imported: teiImported,
+                            updated: teiUpdated,
+                            ignored: teiIgnored,
+                            deleted: teiDeleted,
+                            total: teiTotal,
+                        } = error.details.response;
+
+                        setInstanceFeedback((prev) => ({
+                            deleted: prev.deleted + teiDeleted,
+                            total: prev.total + teiTotal,
+                            ignored: prev.ignored + teiIgnored,
+                            updated: prev.updated + teiUpdated,
+                            imported: prev.imported + teiImported,
+                        }));
+                        error.details.response.importSummaries.forEach(
+                            ({
+                                enrollments: {
+                                    imported,
+                                    updated,
+                                    deleted,
+                                    ignored,
+                                    importSummaries,
+                                    total,
+                                },
+                                conflicts,
+                            }: any) => {
+                                setEnrollmentFeedback((prev) => ({
+                                    deleted: prev.deleted + deleted,
+                                    total: prev.total + total,
+                                    ignored: prev.ignored + ignored,
+                                    updated: prev.updated + updated,
+                                    imported: prev.imported + imported,
+                                }));
+                                setInstanceConflicts((prev) => [
+                                    ...prev,
+                                    ...conflicts,
+                                ]);
+
+                                importSummaries.forEach(
+                                    ({
+                                        events: {
+                                            imported,
+                                            updated,
+                                            deleted,
+                                            ignored,
+                                            importSummaries,
+                                            total,
+                                        },
+                                        conflicts,
+                                    }: any) => {
+                                        setEventFeedback((prev) => ({
+                                            deleted: prev.deleted + deleted,
+                                            total: prev.total + total,
+                                            ignored: prev.ignored + ignored,
+                                            updated: prev.updated + updated,
+                                            imported: prev.imported + imported,
+                                        }));
+                                        setEnrollmentConflicts((prev) => [
+                                            ...prev,
+                                            ...conflicts,
+                                        ]);
+
+                                        importSummaries.forEach(
+                                            ({ conflicts }: any) => {
+                                                setEventConflicts((prev) => [
+                                                    ...prev,
+                                                    ...conflicts,
+                                                ]);
+                                            }
+                                        );
+                                    }
+                                );
+                            }
+                        );
+                    }
                     toast({
                         title: "Failed to insert",
                         description: error?.message,

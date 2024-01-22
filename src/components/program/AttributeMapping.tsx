@@ -19,11 +19,11 @@ import {
     $attributeMapping,
     $metadata,
     $names,
-    $optionMapping,
     $programMapping,
     attributeMappingApi,
     programMappingApi,
 } from "../../pages/program";
+import { findMapped, isMapped } from "../../pages/program/utils";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
 import Search from "../Search";
@@ -32,7 +32,6 @@ import SourceIcon from "../SourceIcon";
 export default function AttributeMapping() {
     const attributeMapping = useStore($attributeMapping);
     const programMapping = useStore($programMapping);
-    const optionMapping = useStore($optionMapping);
     const toast = useToast();
     const metadata = useStore($metadata);
     const { source, destination } = useStore($names);
@@ -214,7 +213,9 @@ export default function AttributeMapping() {
             title: "Mapped",
             width: "100px",
             render: (text, { value }) => {
-                if (attributeMapping[value ?? ""]?.value) {
+                if (
+                    isMapped(value, attributeMapping, metadata.sourceAttributes)
+                ) {
                     return (
                         <Icon as={FiCheck} color="green.400" fontSize="2xl" />
                     );
@@ -367,6 +368,7 @@ export default function AttributeMapping() {
 
             <Search
                 options={metadata.destinationAttributes}
+                source={metadata.sourceAttributes}
                 mapping={attributeMapping}
                 searchString={searchString}
                 setSearchString={setSearchString}
@@ -384,12 +386,15 @@ export default function AttributeMapping() {
                 size="middle"
                 footer={() => (
                     <Text textAlign="right">
-                        Mapped {Object.keys(attributeMapping || {}).length} of{" "}
-                        {metadata.destinationAttributes?.length || 0}
+                        Mapped{" "}
+                        {findMapped(
+                            attributeMapping,
+                            metadata.sourceAttributes
+                        )}{" "}
+                        of {metadata.destinationAttributes?.length || 0}
                     </Text>
                 )}
             />
-            <pre>{JSON.stringify(programMapping, null, 2)}</pre>
         </Stack>
     );
 }

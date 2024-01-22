@@ -30,6 +30,7 @@ import SourceIcon from "./SourceIcon";
 import { getDHIS2Resource } from "../Queries";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { aggMetadataApi } from "../pages/aggregate";
+import { findMapped, isMapped } from "../pages/program/utils";
 export default function OrganisationUnitMapping({
     destinationOrgUnits,
     sourceOrgUnits,
@@ -178,7 +179,7 @@ export default function OrganisationUnitMapping({
             title: "Mapped",
             width: "100px",
             render: (text, { value }) => {
-                if (organisationUnitMapping[value ?? ""]?.value) {
+                if (isMapped(value, organisationUnitMapping, sourceOrgUnits)) {
                     return (
                         <Icon as={FiCheck} color="green.400" fontSize="2xl" />
                     );
@@ -302,6 +303,7 @@ export default function OrganisationUnitMapping({
             <Search
                 options={destinationOrgUnits}
                 action={setCurrentOrganisations}
+                source={sourceOrgUnits}
                 searchString={ouSearch}
                 setSearchString={setOuSearch}
                 mapping={organisationUnitMapping}
@@ -318,12 +320,11 @@ export default function OrganisationUnitMapping({
                 footer={() => (
                     <Text textAlign="right">
                         Mapped{" "}
-                        {Object.keys(organisationUnitMapping || {}).length} of{" "}
+                        {findMapped(organisationUnitMapping, sourceOrgUnits)} of{" "}
                         {destinationOrgUnits.length}
                     </Text>
                 )}
             />
-            <pre>{JSON.stringify(organisationUnitMapping, null, 2)}</pre>
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}
