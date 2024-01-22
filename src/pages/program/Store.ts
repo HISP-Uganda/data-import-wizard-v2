@@ -130,9 +130,17 @@ export const $programTypes = $program.map((state) => makeValidation(state));
 export const $goData = domain.createStore<Partial<IGoData>>({});
 
 export const $tokens = domain.createStore<Dictionary<string>>({});
-
 export const $activeSteps = domain.createStore<Step[]>([]);
+export const $token = domain.createStore<string>("");
 
+export const $currentOptions = domain.createStore<Option[]>([]);
+
+export const $optionMapping = domain.createStore<Record<string, string>>({});
+export const $currentSourceOptions = domain.createStore<Option[]>([]);
+
+export const $errors = domain.createStore<any[]>([]);
+export const $conflicts = domain.createStore<any[]>([]);
+export const $goDataOptions = domain.createStore<GODataOption[]>([]);
 export const $metadata = combine(
     $programMapping,
     $program,
@@ -143,6 +151,7 @@ export const $metadata = combine(
     $remoteOrganisations,
     $goData,
     $tokens,
+    $goDataOptions,
     (
         programMapping,
         program,
@@ -152,7 +161,8 @@ export const $metadata = combine(
         attributeMapping,
         remoteOrganisations,
         goData,
-        tokens
+        tokens,
+        referenceData
     ) => {
         return makeMetadata(program, programMapping, {
             data,
@@ -162,6 +172,7 @@ export const $metadata = combine(
             remoteOrganisations,
             goData,
             tokens,
+            referenceData,
         });
     }
 );
@@ -230,27 +241,6 @@ export const $flattenedProgramKeys = $programMapping.map((state) => {
     }
     return [];
 });
-
-export const $token = domain.createStore<string>("");
-
-export const $currentOptions = domain.createStore<Option[]>([]);
-
-export const $optionMapping = domain.createStore<Record<string, string>>({});
-
-export const $goDataOptions = domain.createStore<GODataOption[]>([]);
-
-export const goDataOptionsApi = createApi($goDataOptions, {
-    set: (_, options: GODataOption[]) => options,
-});
-
-export const $currentSourceOptions = domain.createStore<Option[]>([]);
-
-export const currentSourceOptionsApi = createApi($currentSourceOptions, {
-    set: (_, options: Option[]) => options,
-});
-
-export const $errors = domain.createStore<any[]>([]);
-export const $conflicts = domain.createStore<any[]>([]);
 
 export const $names = combine(
     $programMapping,

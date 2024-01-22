@@ -16,7 +16,7 @@ import {
     TrackedEntityInstance,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { chunk } from "lodash";
+import { chunk, maxBy } from "lodash";
 import { useEffect, useState } from "react";
 import {
     $attributeMapping,
@@ -157,7 +157,7 @@ export default function Preview() {
                 if (response) {
                     const token = response.id;
                     setMessage(() => "Fetching data from go data");
-                    const goDataData = await fetchRemote<any[]>(
+                    let goDataData = await fetchRemote<any[]>(
                         {
                             ...rest,
                             params: {
@@ -166,6 +166,53 @@ export default function Preview() {
                         },
                         `api/outbreaks/${goData.id}/cases`
                     );
+
+                    const labResults = await fetchRemote<any[]>(
+                        {
+                            ...rest,
+                            params: {
+                                auth: { param: "access_token", value: token },
+                            },
+                        },
+                        `api/outbreaks/${goData.id}/lab-results/aggregate`
+                    );
+                    goDataData = goDataData.map((a) => {
+                        const allLabResults = labResults.filter(
+                            (b) => b.personId === a.id
+                        );
+                        if (allLabResults.length > 0) {
+                            const maxResult = maxBy(allLabResults, "updatedAt");
+                            const {
+                                dateOfResult,
+                                dateSampleDelivered,
+                                dateSampleTaken,
+                                dateTesting,
+                                labName,
+                                result,
+                                sampleIdentifier,
+                                sampleType,
+                                status,
+                                testType,
+                                testedFor,
+                            } = maxResult;
+                            return {
+                                ...a,
+                                dateOfResult,
+                                dateSampleDelivered,
+                                dateSampleTaken,
+                                dateTesting,
+                                labName,
+                                result,
+                                sampleIdentifier,
+                                sampleType,
+                                status,
+                                testType,
+                                testedFor,
+                            };
+                        }
+
+                        return a;
+                    });
                     const chunkedData = chunk(goDataData, 25);
                     const chunkLength = chunkedData.length;
                     let i = 0;

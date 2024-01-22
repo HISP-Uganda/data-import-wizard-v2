@@ -1,6 +1,7 @@
 import {
     Enrollment,
     Event,
+    GODataOption,
     GoResponse,
     IGoData,
     IMapping,
@@ -23,10 +24,12 @@ import {
     $attributeMapping,
     $conflicts,
     $currentOptions,
+    $currentSourceOptions,
     $data,
     $dhis2Program,
     $errors,
     $goData,
+    $goDataOptions,
     $optionMapping,
     $organisationUnitMapping,
     $otherProcessed,
@@ -323,4 +326,11 @@ export const remoteOrganisationsApi = createApi($remoteOrganisations, {
 
 export const activeStepsApi = createApi($activeSteps, {
     set: (_, steps: Step[]) => steps,
+});
+
+export const goDataOptionsApi = createApi($goDataOptions, {
+    set: (_, options: GODataOption[]) => options,
+});
+export const currentSourceOptionsApi = createApi($currentSourceOptions, {
+    set: (_, options: Option[]) => options,
 });
