@@ -8,7 +8,12 @@ import {
     useToast,
 } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { IMapping, Option, pullRemoteData } from "data-import-wizard-utils";
+import {
+    IMapping,
+    Option,
+    pullRemoteData,
+    IProgramMapping,
+} from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useEffect } from "react";
@@ -24,6 +29,79 @@ import {
     programMappingApi,
 } from "../../pages/program";
 import Progress from "../Progress";
+
+const CheckSelect2 = ({
+    field,
+    label,
+    otherField,
+}: {
+    field: keyof IProgramMapping;
+    otherField: keyof IProgramMapping;
+    label: string;
+}) => {
+    const programMapping = useStore($programMapping);
+    const metadata = useStore($metadata);
+
+    const isManual =
+        programMapping.dataSource !== "dhis2-program" &&
+        programMapping.isSource;
+
+    return (
+        <Stack spacing="40px">
+            <Stack direction="row">
+                <Text w="200px">{label}</Text>
+                <Stack flex={1}>
+                    {!isManual && (
+                        <Checkbox
+                            isChecked={!!programMapping.program?.[otherField]}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                programMappingApi.update({
+                                    attribute: "program",
+                                    key: otherField,
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Custom {label}
+                        </Checkbox>
+                    )}
+                    <Box>
+                        {!programMapping.program?.[otherField] && !isManual ? (
+                            <Select<Option, false, GroupBase<Option>>
+                                options={metadata.sourceColumns}
+                                isClearable
+                                value={metadata.sourceColumns.find((value) => {
+                                    return (
+                                        value.value ===
+                                        getOr("", field, programMapping)
+                                    );
+                                })}
+                                onChange={(e) =>
+                                    programMappingApi.update({
+                                        attribute: "program",
+                                        key: field,
+                                        value: e?.value || "",
+                                    })
+                                }
+                            />
+                        ) : (
+                            <Input
+                                value={String(getOr("", field, programMapping))}
+                                onChange={(e) =>
+                                    programMappingApi.update({
+                                        attribute: "program",
+                                        key: field,
+                                        value: e.target.value,
+                                    })
+                                }
+                            />
+                        )}
+                    </Box>
+                </Stack>
+            </Stack>
+        </Stack>
+    );
+};
 
 const CheckSelect = ({
     field,
@@ -194,20 +272,20 @@ export default function MappingOptions() {
                 </Stack>
             )}
 
-            {/* {!programMapping.isSource && (
+            {!programMapping.isSource && (
                 <>
-                    <CheckSelect
+                    <CheckSelect2
                         otherField="customEnrollmentDateColumn"
-                        field="program"
+                        field="enrollmentDateColumn"
                         label="Enrollment Date Column"
                     />
-                    <CheckSelect
+                    <CheckSelect2
                         otherField="customIncidentDateColumn"
                         field="incidentDateColumn"
                         label="Incident Date Column"
                     />
                 </>
-            )} */}
+            )}
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}
