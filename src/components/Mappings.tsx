@@ -1,11 +1,11 @@
 import { Image, Stack, useDisclosure } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-location";
 import Table, { ColumnsType } from "antd/es/table";
-import { IMapping } from "data-import-wizard-utils";
+import { generateUid, IMapping } from "data-import-wizard-utils";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { LocationGenerics } from "../Interfaces";
-import { programMappingApi } from "../pages/program";
+import { mappingApi } from "../Events";
 import { useNamespace } from "../Queries";
 import { actionApi } from "../Store";
 import DropdownMenu from "./DropdownMenu";
@@ -86,20 +86,22 @@ export default function Mappings() {
         {
             title: "Action",
             key: "action",
-            render: (value, record, index) => (
-                <DropdownMenu
-                    id={record.id ?? ""}
-                    data={data ?? []}
-                    onClose={onClose}
-                    onOpen={onOpen}
-                    message={message}
-                    isOpen={isOpen}
-                    setMessage={setMessage}
-                    afterDelete={afterDelete}
-                    afterClone={afterClone}
-                    name={record.name ?? ""}
-                />
-            ),
+            render: (value, record, index) => {
+                return (
+                    <DropdownMenu
+                        id={record.id ?? ""}
+                        data={data ?? []}
+                        onClose={onClose}
+                        onOpen={onOpen}
+                        message={message}
+                        isOpen={isOpen}
+                        setMessage={setMessage}
+                        afterDelete={afterDelete}
+                        afterClone={afterClone}
+                        name={record.name ?? ""}
+                    />
+                );
+            },
         },
     ];
     const actions = [
@@ -108,9 +110,10 @@ export default function Mappings() {
             icon: <Image src="./group.png" alt="users" w="36px" h="36px" />,
             onClick: () => {
                 actionApi.create();
-                programMappingApi.updateMany({
+                mappingApi.reset({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                     type: "users",
+                    id: generateUid(),
                 });
                 navigate({ to: "./users" });
             },
@@ -122,9 +125,10 @@ export default function Mappings() {
             ),
             onClick: () => {
                 actionApi.create();
-                programMappingApi.updateMany({
+                mappingApi.reset({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                     type: "metadata",
+                    id: generateUid(),
                 });
                 navigate({ to: "./metadata" });
             },
@@ -136,9 +140,10 @@ export default function Mappings() {
             ),
             onClick: () => {
                 actionApi.create();
-                programMappingApi.updateMany({
+                mappingApi.reset({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                     type: "organisation-units",
+                    id: generateUid(),
                 });
                 navigate({ to: "./organisations" });
             },
@@ -150,9 +155,10 @@ export default function Mappings() {
             ),
             onClick: () => {
                 actionApi.create();
-                programMappingApi.updateMany({
+                mappingApi.reset({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                     type: "aggregate",
+                    id: generateUid(),
                 });
                 navigate({ to: "./aggregate" });
             },
@@ -169,9 +175,10 @@ export default function Mappings() {
             ),
             onClick: () => {
                 actionApi.create();
-                programMappingApi.updateMany({
+                mappingApi.reset({
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                     type: "individual",
+                    id: generateUid(),
                 });
                 navigate({ to: "./individual" });
             },

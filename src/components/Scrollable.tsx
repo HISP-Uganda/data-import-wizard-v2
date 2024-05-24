@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react";
-import { Box, useDimensions } from "@chakra-ui/react";
 import type { TypographyProps } from "@chakra-ui/react";
+import { Box, useDimensions } from "@chakra-ui/react";
+import React, { useRef } from "react";
 
 export default function Scrollable({
     children,

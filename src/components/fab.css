@@ -8,6 +8,7 @@
     right: 2em;
     bottom: 2em;
     max-height: 52px;
+    z-index: 1000;
 }
 .fab-container.open {
     max-height: max-content;
@@ -22,6 +23,7 @@
     padding: 12px;
     cursor: pointer;
     position: relative;
+    background-color: white;
 }
 .fab-container .fab-button {
     background-color: #4388cc;

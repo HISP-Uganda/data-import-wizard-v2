@@ -18,13 +18,8 @@ import { useStore } from "effector-react";
 import { FiCheck } from "react-icons/fi";
 
 import { ChangeEvent, useEffect, useState } from "react";
-import {
-    $aggMetadata,
-    $aggregateMapping,
-    $attributionMapping,
-    attributionMappingApi,
-} from "../../pages/aggregate";
-import { $names } from "../../pages/program";
+import { $mapping, $attributionMapping, $names, $metadata } from "../../Store";
+import { attributionMappingApi } from "../../Events";
 import DestinationIcon from "../DestinationIcon";
 import Paginated from "../Paginated";
 import Search from "../Search";
@@ -33,13 +28,13 @@ import SourceIcon from "../SourceIcon";
 export default function Attribution() {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const attributionMapping = useStore($attributionMapping);
-    const aggregateMetadata = useStore($aggMetadata);
+    const metadata = useStore($metadata);
     const { source, destination } = useStore($names);
     const [currentAttributes, setCurrentAttributes] = useState(
-        aggregateMetadata.destinationCategoryOptionCombos
+        metadata.destinationCategoryOptionCombos
     );
 
-    const aggregateMapping = useStore($aggregateMapping);
+    const mapping = useStore($mapping);
 
     const [searchString, setSearchString] = useState<string>("");
 
@@ -72,12 +67,11 @@ export default function Attribution() {
         for (const {
             value: destinationValue,
             label: destinationLabel,
-        } of aggregateMetadata.destinationCategoryOptionCombos) {
+        } of metadata.destinationCategoryOptionCombos) {
             if (attributionMapping[destinationValue ?? ""] === undefined) {
-                const search =
-                    aggregateMetadata.sourceCategoryOptionCombos.find(
-                        ({ value }) => value === destinationValue
-                    );
+                const search = metadata.sourceCategoryOptionCombos.find(
+                    ({ value }) => value === destinationValue
+                );
                 if (search) {
                     attributionMappingApi.updateMany({
                         attribute: `${destinationValue}`,
@@ -86,10 +80,9 @@ export default function Attribution() {
                         },
                     });
                 } else {
-                    const search2 =
-                        aggregateMetadata.sourceCategoryOptionCombos.find(
-                            ({ label }) => label === destinationLabel
-                        );
+                    const search2 = metadata.sourceCategoryOptionCombos.find(
+                        ({ label }) => label === destinationLabel
+                    );
                     if (search2) {
                         attributionMappingApi.updateMany({
                             attribute: `${destinationValue}`,
@@ -113,36 +106,36 @@ export default function Attribution() {
         setPageSize(pageSize);
     };
 
-    const setCustom = (attribute: string, manual: boolean) => {
-        const isSpecific = attributionMapping[attribute]?.specific;
+    const setCustom = (attribute: string, isCustom: boolean) => {
+        const isSpecific = attributionMapping[attribute]?.isSpecific;
         attributionMappingApi.update({
             attribute,
-            key: "manual",
-            value: manual,
+            key: "isCustom",
+            value: isCustom,
         });
 
         if (isSpecific) {
             attributionMappingApi.update({
                 attribute,
-                key: "specific",
+                key: "isSpecific",
                 value: !isSpecific,
             });
         }
     };
 
-    const setSpecific = (attribute: string, specific: boolean) => {
+    const setSpecific = (attribute: string, isSpecific: boolean) => {
         attributionMappingApi.update({
             attribute,
-            key: "specific",
-            value: specific,
+            key: "isSpecific",
+            value: isSpecific,
         });
-        const isManual = attributionMapping[attribute]?.manual;
+        const isCustom = attributionMapping[attribute]?.isCustom;
 
-        if (isManual) {
+        if (isCustom) {
             attributionMappingApi.update({
                 attribute,
-                key: "manual",
-                value: !isManual,
+                key: "isCustom",
+                value: !isCustom,
             });
         }
     };
@@ -154,12 +147,12 @@ export default function Attribution() {
             overflow="auto"
         >
             <Search
-                options={aggregateMetadata.destinationCategoryOptionCombos}
+                options={metadata.destinationCategoryOptionCombos}
                 mapping={attributionMapping}
                 searchString={searchString}
                 setSearchString={setSearchString}
                 action={setCurrentAttributes}
-                source={aggregateMetadata.sourceCategoryOptionCombos}
+                source={metadata.sourceCategoryOptionCombos}
                 placeholder="Search attributes"
                 label="Show Mapped Attributes Only"
                 label2="Show Unmapped Attributes Only"
@@ -169,7 +162,7 @@ export default function Attribution() {
                     <Tr>
                         <Th textTransform="none" w="50%">
                             <Stack direction="row" alignItems="center">
-                                <DestinationIcon mapping={aggregateMapping} />
+                                <DestinationIcon mapping={mapping} />
                                 <Text> Destination Category Option Combo</Text>
                                 <Text>{destination}</Text>
                             </Stack>
@@ -177,7 +170,7 @@ export default function Attribution() {
 
                         <Th textTransform="none">
                             <Stack direction="row" alignItems="center">
-                                <SourceIcon mapping={aggregateMapping} />
+                                <SourceIcon mapping={mapping} />
                                 <Text>Source Category Option Combo</Text>
                                 <Text>{source}</Text>
                             </Stack>
@@ -202,18 +195,15 @@ export default function Attribution() {
                                 <Td>{label}</Td>
                                 <Td>
                                     <Select<Option, false, GroupBase<Option>>
-                                        value={aggregateMetadata.sourceCategoryOptionCombos?.find(
+                                        value={metadata.sourceCategoryOptionCombos?.find(
                                             (val) =>
                                                 val.value ===
                                                 attributionMapping[value ?? ""]
                                                     ?.value
                                         )}
-                                        options={aggregateMetadata.sourceCategoryOptionCombos?.map(
-                                            ({ value, label }) => ({
-                                                label,
-                                                value,
-                                            })
-                                        )}
+                                        options={
+                                            metadata.sourceCategoryOptionCombos
+                                        }
                                         isClearable
                                         onChange={(e) =>
                                             attributionMappingApi.updateMany(
@@ -252,11 +242,7 @@ export default function Attribution() {
                                     ({ value }) => !!value
                                 ).length
                             }{" "}
-                            of{" "}
-                            {
-                                aggregateMetadata
-                                    .destinationCategoryOptionCombos.length
-                            }
+                            of {metadata.destinationCategoryOptionCombos.length}
                         </Td>
                     </Tr>
                 </Tfoot>

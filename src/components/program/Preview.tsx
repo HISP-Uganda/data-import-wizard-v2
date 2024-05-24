@@ -1,5 +1,6 @@
 import { Stack, useDisclosure } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
+import { AxiosInstance } from "axios";
 import {
     convertFromDHIS2,
     convertToDHIS2,
@@ -25,23 +26,27 @@ import {
     $metadata,
     $optionMapping,
     $organisationUnitMapping,
-    $processedGoDataData,
     $program,
-    $programMapping,
+    $mapping,
     $programStageMapping,
     $programStageUniqueElements,
     $programUniqAttributes,
+    $remoteAPI,
     $tokens,
+} from "../../Store";
+
+import {
     otherProcessedApi,
     prevGoDataApi,
     processedGoDataDataApi,
     processor,
-} from "../../pages/program";
+} from "../../Events";
 import { $version } from "../../Store";
-import DHIS2Preview from "../DHIS2Preview";
+import DHIS2Preview from "../previews/TrackerDataPreview";
 import GoDataPreview from "../GoDataPreview";
-import OtherSystemPreview from "../OtherSystemPreview";
+import OtherSystemPreview from "../previews/OtherSystemPreview";
 import Progress from "../Progress";
+import { processInstances } from "../../utils/utils";
 
 export default function Preview() {
     const version = useStore($version);
@@ -50,7 +55,7 @@ export default function Preview() {
     const tokens = useStore($tokens);
     const engine = useDataEngine();
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const programMapping = useStore($programMapping);
+    const mapping = useStore($mapping);
     const programStageMapping = useStore($programStageMapping);
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const attributeMapping = useStore($attributeMapping);
@@ -61,54 +66,47 @@ export default function Preview() {
     const data = useStore($data);
     const [message, setMessage] = useState<string>("");
 
+    const remoteAPI = useStore($remoteAPI);
+
     const process = async () => {
         processor.reset();
         processedGoDataDataApi.reset();
         onOpen();
         setMessage(() => "Fetching previous data");
-        if (programMapping.isSource) {
+        if (mapping.isSource) {
             let instances: {
                 trackedEntityInstances: Array<Partial<TrackedEntityInstance>>;
             } = {
                 trackedEntityInstances: [],
             };
             if (
-                programMapping.dhis2Options?.programStage &&
-                programMapping.dhis2Options.programStage.length > 0
+                mapping.dhis2SourceOptions?.programStage &&
+                mapping.dhis2SourceOptions.programStage.length > 0
             ) {
                 const events = await fetchEvents(
                     { engine },
-                    programMapping.dhis2Options.programStage,
+                    mapping.dhis2SourceOptions.programStage,
                     50,
-                    programMapping.program?.program || ""
+                    mapping.program?.program || ""
                 );
                 instances = { trackedEntityInstances: events };
             } else {
-                instances = await fetchTrackedEntityInstances(
-                    { engine },
-                    programMapping,
-                    {},
-                    [],
-                    false
-                );
+                instances = await fetchTrackedEntityInstances({
+                    api: { engine },
+                    program: mapping.program?.program,
+                    additionalParams: {},
+                    uniqueAttributeValues: [],
+                    withAttributes: false,
+                    trackedEntityInstances: [],
+                });
             }
 
-            const flattened = flattenTrackedEntityInstances(instances);
+            const flattened = flattenTrackedEntityInstances(instances, "ALL");
 
-            if (programMapping.dataSource === "go-data") {
-                const {
-                    params,
-                    basicAuth,
-                    hasNextLink,
-                    headers,
-                    password,
-                    username,
-                    ...rest
-                } = programMapping.authentication || {};
-
+            if (mapping.dataSource === "go-data") {
                 const { metadata, prev } = await fetchGoDataData(
                     goData,
-                    programMapping.authentication || {}
+                    mapping.authentication || {}
                 );
                 const responseData = convertToGoData(
                     flattened,
@@ -123,8 +121,8 @@ export default function Preview() {
                 prevGoDataApi.set(prev);
             } else {
                 const data = await convertFromDHIS2(
-                    flattenTrackedEntityInstances(instances),
-                    programMapping,
+                    flattenTrackedEntityInstances(instances, "ALL"),
+                    mapping,
                     organisationUnitMapping,
                     attributeMapping,
                     false,
@@ -133,7 +131,56 @@ export default function Preview() {
                 otherProcessedApi.addNewInserts(data);
             }
         } else {
-            if (programMapping.dataSource === "go-data") {
+            if (mapping.dataSource === "dhis2-program") {
+                let api: Partial<{ engine: any; axios: AxiosInstance }> = {};
+                if (mapping.isCurrentInstance) {
+                    api = { engine };
+                } else if (remoteAPI) {
+                    api = { axios: remoteAPI };
+                }
+                setMessage(() => "Fetching program data");
+                await fetchTrackedEntityInstances(
+                    {
+                        api,
+                        program: mapping.program?.remoteProgram,
+                        additionalParams: {},
+                        uniqueAttributeValues: [],
+                        withAttributes: false,
+                        trackedEntityInstances: [],
+                    },
+                    async (trackedEntityInstances) => {
+                        processInstances(
+                            {
+                                engine,
+                                trackedEntityInstances,
+                                mapping,
+                                version,
+                                attributeMapping,
+                                program,
+                                programStageMapping,
+                                optionMapping,
+                                organisationUnitMapping,
+                                programStageUniqueElements,
+                                programUniqAttributes,
+                                setMessage,
+                            },
+                            async (data) => {
+                                processor.addInstances(
+                                    data.trackedEntityInstances
+                                );
+                                processor.addEnrollments(data.enrollments);
+                                processor.addEvents(data.events);
+                                processor.addInstanceUpdated(
+                                    data.trackedEntityInstanceUpdates
+                                );
+                                processor.addEventUpdates(data.eventUpdates);
+                                processor.addErrors(data.errors);
+                                processor.addConflicts(data.conflicts);
+                            }
+                        );
+                    }
+                );
+            } else if (mapping.dataSource === "go-data") {
                 const {
                     params,
                     basicAuth,
@@ -142,7 +189,7 @@ export default function Preview() {
                     password,
                     username,
                     ...rest
-                } = programMapping.authentication || {};
+                } = mapping.authentication || {};
                 setMessage(() => "Getting auth token");
                 const response =
                     await postRemote<GODataTokenGenerationResponse>(
@@ -221,18 +268,26 @@ export default function Preview() {
                             () => `Processing batch ${++i} of ${chunkLength}`
                         );
                         await fetchTrackedEntityInstances(
-                            { engine },
-                            programMapping,
-                            {},
-                            findUniqAttributes(current, attributeMapping),
-                            true,
+                            {
+                                api: { engine },
+                                program: mapping.program?.program,
+                                additionalParams: {},
+                                uniqueAttributeValues: findUniqAttributes(
+                                    current,
+                                    attributeMapping
+                                ),
+                                withAttributes: true,
+                                trackedEntityInstances: [],
+                            },
                             async (trackedEntityInstances) => {
-                                const previous = processPreviousInstances(
+                                const previous = processPreviousInstances({
                                     trackedEntityInstances,
                                     programUniqAttributes,
                                     programStageUniqueElements,
-                                    programMapping.program?.program || ""
-                                );
+                                    currentProgram: mapping.program?.program,
+                                    eventIdIdentifiesEvent: false,
+                                    trackedEntityIdIdentifiesInstance: false,
+                                });
                                 const {
                                     enrollments,
                                     events,
@@ -244,7 +299,7 @@ export default function Preview() {
                                 } = await convertToDHIS2({
                                     previousData: previous,
                                     data: current,
-                                    mapping: programMapping,
+                                    mapping: mapping,
                                     organisationUnitMapping,
                                     attributeMapping,
                                     programStageMapping,
@@ -266,19 +321,27 @@ export default function Preview() {
                     }
                 }
             } else {
-                await fetchTrackedEntityInstances(
-                    { engine },
-                    programMapping,
-                    {},
-                    metadata.uniqueAttributeValues,
-                    true,
+                fetchTrackedEntityInstances(
+                    {
+                        api: { engine },
+                        program: mapping.program?.program,
+                        additionalParams: {},
+                        uniqueAttributeValues: metadata.uniqueAttributeValues,
+                        withAttributes: true,
+                        trackedEntityInstances:
+                            metadata.trackedEntityInstanceIds,
+                    },
                     async (trackedEntityInstances) => {
-                        const previous = processPreviousInstances(
+                        const previous = processPreviousInstances({
                             trackedEntityInstances,
                             programUniqAttributes,
                             programStageUniqueElements,
-                            programMapping.program?.program || ""
-                        );
+                            currentProgram: mapping.program?.program,
+                            eventIdIdentifiesEvent:
+                                metadata.trackedEntityInstanceIds.length > 0,
+                            trackedEntityIdIdentifiesInstance:
+                                metadata.trackedEntityInstanceIds.length > 0,
+                        });
                         const {
                             enrollments,
                             events,
@@ -290,7 +353,7 @@ export default function Preview() {
                         } = await convertToDHIS2({
                             previousData: previous,
                             data,
-                            mapping: programMapping,
+                            mapping: mapping,
                             organisationUnitMapping,
                             attributeMapping,
                             programStageMapping,
@@ -325,8 +388,8 @@ export default function Preview() {
             maxH="calc(100vh - 350px)"
             overflow="auto"
         >
-            {programMapping.isSource ? (
-                programMapping.dataSource === "go-data" ? (
+            {mapping.isSource ? (
+                mapping.dataSource === "go-data" ? (
                     <GoDataPreview />
                 ) : (
                     <OtherSystemPreview />

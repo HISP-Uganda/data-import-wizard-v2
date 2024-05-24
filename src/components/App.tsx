@@ -9,11 +9,11 @@ import {
     stringifySearchWith,
 } from "@tanstack/react-location";
 import { LocationGenerics } from "../Interfaces";
-import PDF from "../pages/PDF";
 import { useInitials } from "../Queries";
 import { stepper } from "../Store";
 import { decodeFromBinary, encodeToBinary } from "../utils/utils";
 import Aggregate from "./Aggregate";
+import DeleteData from "./DeleteData";
 import Home from "./Home";
 import Loader from "./Loader";
 import Mappings from "./Mappings";
@@ -52,7 +52,7 @@ const routes: Route<LocationGenerics>[] = [
                 },
             },
             {
-                path: "/individual",
+                path: "/mapping",
                 element: <Program />,
                 loader: async () => {
                     stepper.reset();
@@ -67,30 +67,6 @@ const routes: Route<LocationGenerics>[] = [
                     return {};
                 },
             },
-            // {
-            //     path: "/organisations",
-            //     element: <Aggregate />,
-            //     loader: async () => {
-            //         stepper.reset();
-            //         return {};
-            //     },
-            // },
-            // {
-            //     path: "/metadata",
-            //     element: <Aggregate />,
-            //     loader: async () => {
-            //         stepper.reset();
-            //         return {};
-            //     },
-            // },
-            // {
-            //     path: "/users",
-            //     element: <Aggregate />,
-            //     loader: async () => {
-            //         stepper.reset();
-            //         return {};
-            //     },
-            // },
         ],
     },
 
@@ -103,12 +79,13 @@ const routes: Route<LocationGenerics>[] = [
             },
         ],
     },
+
     {
-        path: "/docs",
+        path: "/delete",
         children: [
             {
                 path: "/",
-                element: <PDF />,
+                element: <DeleteData />,
             },
         ],
     },

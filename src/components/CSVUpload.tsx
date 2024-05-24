@@ -3,7 +3,7 @@ import { fromPairs } from "lodash";
 import React, { CSSProperties } from "react";
 
 import { useCSVReader } from "react-papaparse";
-import { dataApi } from "../pages/program/Events";
+import { dataApi } from "../Events";
 
 const styles = {
     csvReader: {

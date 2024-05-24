@@ -19,15 +19,9 @@ import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { ChangeEvent, useEffect } from "react";
 import { FiCheck } from "react-icons/fi";
-import {
-    $attributeMapping,
-    $metadata,
-    $names,
-    $programMapping,
-    attributeMappingApi,
-    programMappingApi,
-} from "../../pages/program";
-import { isMapped } from "../../pages/program/utils";
+import { $attributeMapping, $metadata, $names, $mapping } from "../../Store";
+import { attributeMappingApi, mappingApi } from "../../Events";
+import { isMapped } from "../../utils/utils";
 import DestinationIcon from "../DestinationIcon";
 import OptionSetMapping from "../OptionSetMapping";
 import Progress from "../Progress";
@@ -37,7 +31,7 @@ const Display = ({ data }: { data: Option[] }) => {
     const metadata = useStore($metadata);
     const attributeMapping = useStore($attributeMapping);
     const { source, destination } = useStore($names);
-    const programMapping = useStore($programMapping);
+    const programMapping = useStore($mapping);
 
     const columns: ColumnsType<Partial<Option>> = [
         {
@@ -98,7 +92,7 @@ const Display = ({ data }: { data: Option[] }) => {
             align: "center",
             render: (text, { value }) => (
                 <Checkbox
-                    isChecked={attributeMapping[value ?? ""]?.manual}
+                    isChecked={attributeMapping[value ?? ""]?.isCustom}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setCustom(value ?? "", e.target.checked)
                     }
@@ -112,7 +106,7 @@ const Display = ({ data }: { data: Option[] }) => {
             align: "center",
             render: (text, { value }) => (
                 <Checkbox
-                    isChecked={attributeMapping[value ?? ""]?.specific}
+                    isChecked={attributeMapping[value ?? ""]?.isSpecific}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setSpecific(value ?? "", e.target.checked)
                     }
@@ -130,8 +124,8 @@ const Display = ({ data }: { data: Option[] }) => {
             key: "source",
             render: (_, { value, valueType, unique }) => {
                 if (
-                    attributeMapping[value ?? ""]?.manual ||
-                    attributeMapping[value ?? ""]?.specific
+                    attributeMapping[value ?? ""]?.isCustom ||
+                    attributeMapping[value ?? ""]?.isSpecific
                 ) {
                     return (
                         <Input
@@ -184,6 +178,7 @@ const Display = ({ data }: { data: Option[] }) => {
                         <OptionSetMapping
                             value={value ?? ""}
                             destinationOptions={availableOptions || []}
+                            mapping={attributeMapping}
                         />
                     );
                 }
@@ -205,36 +200,36 @@ const Display = ({ data }: { data: Option[] }) => {
         },
     ];
 
-    const setCustom = (attribute: string, manual: boolean) => {
-        const isSpecific = attributeMapping[attribute]?.specific;
+    const setCustom = (attribute: string, isCustom: boolean) => {
+        const isSpecific = attributeMapping[attribute]?.isSpecific;
         attributeMappingApi.update({
             attribute,
-            key: "manual",
-            value: manual,
+            key: "isCustom",
+            value: isCustom,
         });
 
         if (isSpecific) {
             attributeMappingApi.update({
                 attribute,
-                key: "specific",
+                key: "isSpecific",
                 value: !isSpecific,
             });
         }
     };
 
-    const setSpecific = (attribute: string, specific: boolean) => {
+    const setSpecific = (attribute: string, isSpecific: boolean) => {
         attributeMappingApi.update({
             attribute,
-            key: "specific",
-            value: specific,
+            key: "isSpecific",
+            value: isSpecific,
         });
-        const isManual = attributeMapping[attribute]?.manual;
+        const isCustom = attributeMapping[attribute]?.isCustom;
 
-        if (isManual) {
+        if (isCustom) {
             attributeMappingApi.update({
                 attribute,
-                key: "manual",
-                value: !isManual,
+                key: "isCustom",
+                value: !isCustom,
             });
         }
     };
@@ -266,7 +261,7 @@ export function OtherSystemMapping() {
     const { isOpen, onOpen, onClose } = useDisclosure();
 
     const metadata = useStore($metadata);
-    const programMapping = useStore($programMapping);
+    const programMapping = useStore($mapping);
     const attributeMapping = useStore($attributeMapping);
     const entityOptions: Option[] = [
         { label: "Case", value: "CASE" },
@@ -279,9 +274,9 @@ export function OtherSystemMapping() {
             programMapping.dataSource === "go-data" &&
             !programMapping.program?.responseKey
         ) {
-            programMappingApi.update({
+            mappingApi.update({
                 attribute: "program",
-                key: "responseKey",
+                path: "responseKey",
                 value: "CASE",
             });
         }
@@ -356,9 +351,9 @@ export function OtherSystemMapping() {
                             isClearable
                             placeholder="Select"
                             onChange={(e) =>
-                                programMappingApi.update({
+                                mappingApi.update({
                                     attribute: "program",
-                                    key: "responseKey",
+                                    path: "responseKey",
                                     value: e?.value,
                                 })
                             }

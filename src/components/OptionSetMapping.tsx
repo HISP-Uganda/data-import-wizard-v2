@@ -9,38 +9,42 @@ import {
     ModalHeader,
     ModalOverlay,
     Stack,
-    useDisclosure,
     Text,
+    useDisclosure,
 } from "@chakra-ui/react";
 import { Table } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
-import { Option, RealMapping } from "data-import-wizard-utils";
+import { Mapping, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent } from "react";
 import {
-    $attributeMapping,
     $currentOptions,
     $currentSourceOptions,
     $data,
     $goDataOptions,
     $metadata,
     $optionMapping,
-    $programMapping,
+    $mapping,
     $tokens,
+} from "../Store";
+
+import {
     currentOptionsApi,
     currentSourceOptionsApi,
     optionMappingApi,
-} from "../pages/program";
+} from "../Events";
 import DestinationIcon from "./DestinationIcon";
 import SourceIcon from "./SourceIcon";
 
 export default function OptionSetMapping({
     destinationOptions,
     value,
+    mapping,
 }: {
     destinationOptions: Option[];
+    mapping: Mapping;
     value: string;
 }) {
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -48,8 +52,7 @@ export default function OptionSetMapping({
     const currentOptions = useStore($currentOptions);
     const optionMapping = useStore($optionMapping);
     const data = useStore($data);
-    const programMapping = useStore($programMapping);
-    const attributeMapping = useStore($attributeMapping);
+    const currentMapping = useStore($mapping);
     const metadata = useStore($metadata);
     const allTokens = useStore($tokens);
     const goDataOptions = useStore($goDataOptions);
@@ -57,18 +60,18 @@ export default function OptionSetMapping({
         {
             title: (
                 <Stack direction="row" alignItems="center">
-                    <DestinationIcon mapping={programMapping} />
+                    <DestinationIcon mapping={mapping} />
                     <Text>Destination Option</Text>
                 </Stack>
             ),
             width: "50%",
             render: (_, { label, code, value }) => `${label} (${value})`,
-            key: "label",
+            key: "destination",
         },
         {
             title: (
                 <Stack direction="row" alignItems="center">
-                    <SourceIcon mapping={programMapping} />
+                    <SourceIcon mapping={mapping} />
                     <Text>Source Option</Text>
                 </Stack>
             ),
@@ -76,72 +79,82 @@ export default function OptionSetMapping({
             render: (_, { label, code, value }) => {
                 if (currentSourceOptions.length > 0) {
                     return (
-                        <Select<Option, false, GroupBase<Option>>
-                            value={currentSourceOptions.find(
+                        <Select<Option, true, GroupBase<Option>>
+                            value={currentSourceOptions.filter(
                                 (val) =>
-                                    val.value ===
                                     getOr(
                                         "",
                                         value || code || label || "",
                                         optionMapping
                                     )
+                                        .split(",")
+                                        .indexOf(val.value ?? "") !== -1
                             )}
+                            isMulti
                             options={currentSourceOptions}
                             isClearable
                             onChange={(e) =>
                                 optionMappingApi.add({
                                     key: value || "",
-                                    value: e?.value || "",
+                                    value: e
+                                        .map((x) => x.value ?? "")
+                                        .join(","),
                                 })
                             }
                         />
                     );
                 } else {
-                    <Input
-                        value={optionMapping[code || ""]}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            optionMappingApi.add({
-                                key: code || "",
-                                value: e.target.value,
-                            })
-                        }
-                    />;
+                    return (
+                        <Input
+                            value={optionMapping[code || ""]}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                optionMappingApi.add({
+                                    key: code || "",
+                                    value: e.target.value,
+                                })
+                            }
+                        />
+                    );
                 }
             },
-            key: "label",
+            key: "source",
         },
     ];
 
     const openOptionSetDialog = (id: string, destinationOptions?: Option[]) => {
         if (
             ["xlsx-line-list", "json", "csv-line-list"].indexOf(
-                programMapping.dataSource || ""
+                currentMapping.dataSource ?? ""
             ) !== -1
         ) {
-            const sourceOptions = data.flatMap((d) => {
-                const value: string = getOr("", id, d);
-                if (value) {
-                    const opt: Option = {
-                        value,
-                        label: value,
-                    };
-                    return opt;
-                }
-                return [];
-            });
-            currentSourceOptionsApi.set(sourceOptions);
+            currentSourceOptionsApi.set(
+                data.flatMap((d) => {
+                    const value: string = getOr("", id, d);
+                    if (value) {
+                        const opt: Option = {
+                            value,
+                            label: value,
+                        };
+                        return opt;
+                    }
+                    return [];
+                })
+            );
         } else if (id) {
-            const filteredOptions =
+            currentSourceOptionsApi.set(
                 metadata.sourceColumns.find(({ value }) => value === id)
-                    ?.availableOptions ?? [];
-            if (filteredOptions.length > 0) {
-                currentSourceOptionsApi.set(filteredOptions);
-            }
-        } else if (programMapping.dataSource === "go-data") {
+                    ?.availableOptions ?? []
+            );
+        } else if (currentMapping.dataSource === "go-data") {
             currentSourceOptionsApi.set(
                 goDataOptions.map(({ id }) => {
                     return { label: allTokens[id] || id, value: id };
                 })
+            );
+        } else if (currentMapping.dataSource === "dhis2-program") {
+            currentSourceOptionsApi.set(
+                metadata.sourceColumns.find((curr) => value === curr.value)
+                    ?.availableOptions ?? []
             );
         }
         currentOptionsApi.set(destinationOptions || []);
@@ -153,13 +166,7 @@ export default function OptionSetMapping({
             <Button
                 onClick={() => {
                     openOptionSetDialog(
-                        String(
-                            getOr(
-                                "",
-                                "value",
-                                getOr({}, value, attributeMapping)
-                            )
-                        ),
+                        String(getOr("", "value", getOr({}, value, mapping))),
                         destinationOptions
                     );
                 }}

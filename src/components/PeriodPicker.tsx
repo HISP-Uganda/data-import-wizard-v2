@@ -12,29 +12,25 @@ import {
     TabPanels,
     Tabs,
     Text,
-    useDisclosure,
 } from "@chakra-ui/react";
-import {
-    generateFixedPeriods,
-    getNowInCalendar,
-} from "@dhis2/multi-calendar-dates";
+import { generateFixedPeriods } from "@dhis2/multi-calendar-dates";
 import { DatePicker } from "antd";
 import { GroupBase, Select } from "chakra-react-select";
-import dayjs from "dayjs";
-import type { Dayjs } from "dayjs";
-import { useEffect, useState } from "react";
-import { BiArrowToLeft, BiArrowToRight } from "react-icons/bi";
 import {
+    createOptions2,
     FixedPeriod,
+    fixedPeriods,
     FixedPeriodType,
     Option,
     Period,
     PickerProps,
-    RelativePeriodType,
-    createOptions2,
-    fixedPeriods,
     relativePeriods,
+    RelativePeriodType,
 } from "data-import-wizard-utils";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
+import { BiArrowToLeft, BiArrowToRight } from "react-icons/bi";
 import {} from "../utils/utils";
 const { RangePicker } = DatePicker;
 
@@ -88,7 +84,12 @@ const fixedPeriodTypeOptions = createOptions2(
     fixedPeriods
 );
 
-const PeriodPicker = ({ selectedPeriods, onChange }: PickerProps) => {
+const PeriodPicker = ({
+    selectedPeriods,
+    onChange,
+    disabled = [],
+    active = 0,
+}: PickerProps) => {
     const onRangeChange = (
         dates: null | (Dayjs | null)[],
         dateStrings: string[]
@@ -112,7 +113,7 @@ const PeriodPicker = ({ selectedPeriods, onChange }: PickerProps) => {
     const [availableFixedPeriods, setAvailableFixedPeriods] = useState<
         Array<FixedPeriod>
     >([]);
-    const [tabIndex, setTabIndex] = useState<number>(0);
+    const [tabIndex, setTabIndex] = useState<number>(active);
     const [year, setYear] = useState<number>(dayjs().year());
 
     useEffect(() => {
@@ -129,18 +130,24 @@ const PeriodPicker = ({ selectedPeriods, onChange }: PickerProps) => {
     }, [fixedPeriodType, year, selectedPeriods]);
 
     return (
-        <Stack direction="row" p="2px" w="800px">
+        <Stack direction="row" p="2px" w="100%">
             <Stack
                 flex={1}
                 borderColor="gray.200"
                 borderStyle="solid"
                 borderWidth="1px"
             >
-                <Tabs onChange={(index) => setTabIndex(index)}>
+                <Tabs onChange={(index) => setTabIndex(index)} index={tabIndex}>
                     <TabList>
-                        <Tab fontSize="xs">Relative Periods</Tab>
-                        <Tab fontSize="xs">Fixed Periods</Tab>
-                        {/* <Tab fontSize="xs">Date Range</Tab> */}
+                        <Tab isDisabled={disabled.indexOf(0) !== -1}>
+                            Relative Periods
+                        </Tab>
+                        <Tab isDisabled={disabled.indexOf(1) !== -1}>
+                            Fixed Periods
+                        </Tab>
+                        <Tab isDisabled={disabled.indexOf(2) !== -1}>
+                            Date Range
+                        </Tab>
                     </TabList>
                     <TabPanels>
                         <TabPanel>
@@ -261,7 +268,7 @@ const PeriodPicker = ({ selectedPeriods, onChange }: PickerProps) => {
                                 </Stack>
                             </Stack>
                         </TabPanel>
-                        {/* <TabPanel zIndex={1000}>
+                        <TabPanel>
                             <Stack>
                                 <Text>Select Date Range</Text>
                                 <RangePicker
@@ -269,7 +276,7 @@ const PeriodPicker = ({ selectedPeriods, onChange }: PickerProps) => {
                                     onChange={onRangeChange}
                                 />
                             </Stack>
-                        </TabPanel> */}
+                        </TabPanel>
                     </TabPanels>
                 </Tabs>
             </Stack>
@@ -323,7 +330,7 @@ const PeriodPicker = ({ selectedPeriods, onChange }: PickerProps) => {
             >
                 <Tabs>
                     <TabList>
-                        <Tab fontSize="xs">Selected Periods</Tab>
+                        <Tab>Selected Periods</Tab>
                     </TabList>
                     <TabPanels>
                         <TabPanel>

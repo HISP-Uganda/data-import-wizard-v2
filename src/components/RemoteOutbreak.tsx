@@ -1,35 +1,31 @@
-import { Stack, useDisclosure, Text } from "@chakra-ui/react";
-import { ColumnsType } from "antd/es/table";
+import { Stack, Text, useDisclosure } from "@chakra-ui/react";
 import { Table } from "antd";
+import { ColumnsType } from "antd/es/table";
 import {
     fetchGoDataHierarchy,
     fetchRemote,
-    getLowestLevelParents,
     GODataOption,
     GODataTokenGenerationResponse,
     IGoData,
-    IGoDataOrgUnit,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { fromPairs, isEmpty } from "lodash";
+import { useEffect } from "react";
 import {
-    $programMapping,
-    $token,
     currentSourceOptionsApi,
     goDataApi,
     goDataOptionsApi,
-    programMappingApi,
+    mappingApi,
     remoteOrganisationsApi,
     tokensApi,
-} from "../pages/program";
+} from "../Events";
 import { useRemoteGet } from "../Queries";
-import { stepper, $hasError, hasErrorApi } from "../Store";
+import { $mapping, $token, hasErrorApi, stepper } from "../Store";
 import Loader from "./Loader";
 import Progress from "./Progress";
-import { useEffect } from "react";
 
 export default function RemoteOutbreaks() {
-    const programMapping = useStore($programMapping);
+    const programMapping = useStore($mapping);
     const token = useStore($token);
     const { isOpen, onOpen, onClose } = useDisclosure();
 
@@ -71,7 +67,7 @@ export default function RemoteOutbreaks() {
             : { source: outbreak.name };
         onOpen();
         if (!programMapping.isSource) {
-            programMappingApi.updateMany({
+            mappingApi.updateMany({
                 orgUnitColumn: "addresses[0].locationId",
                 customOrgUnitColumn: true,
                 program: {
@@ -85,7 +81,7 @@ export default function RemoteOutbreaks() {
                 },
             });
         } else {
-            programMappingApi.updateMany({
+            mappingApi.updateMany({
                 program: {
                     ...programMapping.program,
                     remoteProgram: outbreak.id,

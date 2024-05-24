@@ -7,41 +7,35 @@ import {
     Text,
     useDisclosure,
 } from "@chakra-ui/react";
+import { useDataEngine } from "@dhis2/app-runtime";
+import Table, { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
-import { IMapping, Option } from "data-import-wizard-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useEffect, useRef, useState } from "react";
 import { FiCheck } from "react-icons/fi";
-import { Event } from "effector";
-import Table, { ColumnsType } from "antd/es/table";
 import {
+    mappingApi,
+    metadataApi,
+    ouMappingApi,
+    remoteOrganisationsApi,
+} from "../Events";
+import { getDHIS2Resource } from "../Queries";
+import {
+    $mapping,
+    $metadata,
     $names,
     $organisationUnitMapping,
     $remoteOrganisationApi,
-    ouMappingApi,
-    remoteOrganisationsApi,
-} from "../pages/program";
+} from "../Store";
+import { findMapped, isMapped } from "../utils/utils";
 import { APICredentialsModal } from "./APICredentialsModal";
 import DestinationIcon from "./DestinationIcon";
 import Progress from "./Progress";
 import Search from "./Search";
 import SourceIcon from "./SourceIcon";
-import { getDHIS2Resource } from "../Queries";
-import { useDataEngine } from "@dhis2/app-runtime";
-import { aggMetadataApi } from "../pages/aggregate";
-import { findMapped, isMapped } from "../pages/program/utils";
-export default function OrganisationUnitMapping({
-    destinationOrgUnits,
-    sourceOrgUnits,
-    mapping,
-    update,
-}: {
-    destinationOrgUnits: Option[];
-    sourceOrgUnits: Option[];
-    mapping: Partial<IMapping>;
-    update: Event<{ attribute: keyof IMapping; value: any; key?: string }>;
-}) {
+export default function OrganisationUnitMapping() {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const engine = useDataEngine();
     const {
@@ -54,12 +48,15 @@ export default function OrganisationUnitMapping({
     const remoteOrganisationApi = useStore($remoteOrganisationApi);
     const [fetching, setFetching] = useState<boolean>(false);
     const [message, setMessage] = useState<string>("");
+    const mapping = useStore($mapping);
+    const metadata = useStore($metadata);
     const [querying, setQuerying] = useState<string | undefined>(
         mapping.orgUnitColumn
     );
     const inputRef = useRef<HTMLInputElement>(null);
-    const [currentOrganisations, setCurrentOrganisations] =
-        useState(destinationOrgUnits);
+    const [currentOrganisations, setCurrentOrganisations] = useState(
+        metadata.destinationOrgUnits
+    );
 
     const [ouSearch, setOuSearch] = useState<string>("");
 
@@ -83,20 +80,11 @@ export default function OrganisationUnitMapping({
             render: (text, { value }) => (
                 <Checkbox
                     isDisabled={mapping.orgUnitsUploaded}
-                    isChecked={
-                        getOr(
-                            {
-                                value: "",
-                                manual: false,
-                            },
-                            value ?? "",
-                            organisationUnitMapping
-                        ).manual
-                    }
+                    isChecked={organisationUnitMapping[value ?? ""]?.isCustom}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         ouMappingApi.update({
                             attribute: `${value}`,
-                            key: "manual",
+                            key: "isCustom",
                             value: e.target.checked,
                         })
                     }
@@ -118,11 +106,11 @@ export default function OrganisationUnitMapping({
                     getOr(
                         {
                             value: "",
-                            manual: false,
+                            isCustom: false,
                         },
                         value ?? "",
                         organisationUnitMapping
-                    ).manual
+                    ).isCustom
                 ) {
                     return (
                         <Input
@@ -130,7 +118,7 @@ export default function OrganisationUnitMapping({
                                 getOr(
                                     {
                                         value: "",
-                                        manual: false,
+                                        isCustom: false,
                                     },
                                     value ?? "",
                                     organisationUnitMapping
@@ -148,7 +136,7 @@ export default function OrganisationUnitMapping({
                 }
                 return (
                     <Select<Option, false, GroupBase<Option>>
-                        value={sourceOrgUnits.find(
+                        value={metadata.sourceOrgUnits.find(
                             (val) =>
                                 val.value ===
                                 getOr(
@@ -160,7 +148,7 @@ export default function OrganisationUnitMapping({
                                     organisationUnitMapping
                                 ).value
                         )}
-                        options={sourceOrgUnits}
+                        options={metadata.sourceOrgUnits}
                         isClearable
                         size="md"
                         onChange={(e) =>
@@ -179,7 +167,13 @@ export default function OrganisationUnitMapping({
             title: "Mapped",
             width: "100px",
             render: (text, { value }) => {
-                if (isMapped(value, organisationUnitMapping, sourceOrgUnits)) {
+                if (
+                    isMapped(
+                        value,
+                        organisationUnitMapping,
+                        metadata.sourceOrgUnits
+                    )
+                ) {
                     return (
                         <Icon as={FiCheck} color="green.400" fontSize="2xl" />
                     );
@@ -194,7 +188,9 @@ export default function OrganisationUnitMapping({
         onOpen();
         if (mapping.aggregate?.indicatorGenerationLevel) {
             setMessage(() => "Fetching organisations by level");
-            const units = await getDHIS2Resource<Option>({
+            const { organisationUnits: units } = await getDHIS2Resource<{
+                organisationUnits: Array<Option>;
+            }>({
                 isCurrentDHIS2: mapping.isCurrentInstance,
                 engine,
                 resource: "organisationUnits.json",
@@ -204,9 +200,8 @@ export default function OrganisationUnitMapping({
                     paging: "false",
                 },
                 auth: mapping.authentication,
-                resourceKey: "organisationUnits",
             });
-            aggMetadataApi.set({ key: "sourceOrgUnits", value: units });
+            metadataApi.set({ key: "sourceOrgUnits", value: units });
             setQuerying(() => "querying");
         }
         onClose();
@@ -224,9 +219,9 @@ export default function OrganisationUnitMapping({
             value: destinationValue,
             label,
             code,
-        } of destinationOrgUnits) {
+        } of metadata.destinationOrgUnits) {
             if (!organisationUnitMapping[destinationValue ?? ""]) {
-                const search = sourceOrgUnits.find(
+                const search = metadata.sourceOrgUnits.find(
                     ({ value, label }) => destinationValue === value
                 );
                 if (search) {
@@ -272,7 +267,7 @@ export default function OrganisationUnitMapping({
                     </Button>
                     <Button
                         onClick={() => {
-                            update({
+                            mappingApi.update({
                                 attribute: "orgUnitSource",
                                 value: "api",
                             });
@@ -284,7 +279,7 @@ export default function OrganisationUnitMapping({
                     <APICredentialsModal
                         isOpen={isOpenModal}
                         onClose={onCloseModal}
-                        updateMapping={update}
+                        updateMapping={mappingApi.update}
                         onOK={onOK}
                         mapping={mapping}
                         accessor="orgUnitApiAuthentication"
@@ -301,9 +296,9 @@ export default function OrganisationUnitMapping({
                 </Stack>
             )}
             <Search
-                options={destinationOrgUnits}
+                options={metadata.destinationOrgUnits}
                 action={setCurrentOrganisations}
-                source={sourceOrgUnits}
+                source={metadata.sourceOrgUnits}
                 searchString={ouSearch}
                 setSearchString={setOuSearch}
                 mapping={organisationUnitMapping}
@@ -320,8 +315,11 @@ export default function OrganisationUnitMapping({
                 footer={() => (
                     <Text textAlign="right">
                         Mapped{" "}
-                        {findMapped(organisationUnitMapping, sourceOrgUnits)} of{" "}
-                        {destinationOrgUnits.length}
+                        {findMapped(
+                            organisationUnitMapping,
+                            metadata.sourceOrgUnits
+                        )}{" "}
+                        of {metadata.destinationOrgUnits?.length ?? 0}
                     </Text>
                 )}
             />
@@ -331,6 +329,7 @@ export default function OrganisationUnitMapping({
                 message={message}
                 onOpen={onOpen}
             />
+            <pre>{JSON.stringify(metadata, null, 2)}</pre>
         </Stack>
     );
 }

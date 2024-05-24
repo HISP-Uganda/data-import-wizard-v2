@@ -1,7 +1,7 @@
 import { Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { useStore } from "effector-react";
 import { useState } from "react";
-import { $program } from "../../pages/program";
+import { $program } from "../../Store";
 import ProgramStageMapping from "../ProgramStageMapping";
 
 export default function EventMapping() {
@@ -54,7 +54,12 @@ export default function EventMapping() {
                 ))}
             </Flex>
             {program.programStages?.map(
-                ({ id: psId, programStageDataElements, repeatable }) => {
+                ({
+                    id: psId,
+                    programStageDataElements,
+                    repeatable,
+                    featureType,
+                }) => {
                     return (
                         psId === active && (
                             <ProgramStageMapping
@@ -64,6 +69,7 @@ export default function EventMapping() {
                                 programStageDataElements={
                                     programStageDataElements
                                 }
+                                featureType={featureType}
                             />
                         )
                     );

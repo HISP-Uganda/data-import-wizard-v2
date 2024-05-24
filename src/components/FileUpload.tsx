@@ -1,26 +1,25 @@
 import { Stack } from "@chakra-ui/react";
-import { IMapping } from "data-import-wizard-utils";
+import { IMapping, Extraction, MappingEvent } from "data-import-wizard-utils";
 import { Event } from "effector";
+import { useStore } from "effector-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { read, utils } from "xlsx";
-import { Extraction } from "../pages/aggregate/Interfaces";
-import { dataApi } from "../pages/program";
-import { workbookApi } from "../Store";
+import { dataApi, mappingApi } from "../Events";
+import { $mapping, workbookApi } from "../Store";
 import { generateData } from "../utils/utils";
 
-export default function FileUpload<U extends IMapping>({
+export default function FileUpload({
     type,
     callback,
-    mapping,
     extraction,
 }: {
     type: string;
     extraction: Extraction;
-    mapping: Partial<U>;
-    callback?: Event<{ attribute: keyof U; value: any; key?: string }>;
+    callback?: Event<MappingEvent>;
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [hasFile, setHasFile] = useState<boolean>(false);
+    const mapping = useStore($mapping);
 
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -37,21 +36,19 @@ export default function FileUpload<U extends IMapping>({
                         raw: true,
                     });
                     workbookApi.set(workbook);
-                    if (callback) {
-                        callback({
-                            attribute: "sheet",
-                            value: workbook.SheetNames[0],
-                        });
+                    mappingApi.update({
+                        attribute: "sheet",
+                        value: workbook.SheetNames[0],
+                    });
 
-                        const actual = generateData<U>(
-                            mapping,
-                            workbook,
-                            workbook.SheetNames[0],
-                            extraction
-                        );
+                    const actual = generateData(
+                        mapping,
+                        workbook,
+                        workbook.SheetNames[0],
+                        extraction
+                    );
 
-                        dataApi.changeData(actual);
-                    }
+                    dataApi.changeData(actual);
                 }
             };
             type === "json"

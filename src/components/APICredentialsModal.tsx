@@ -48,11 +48,7 @@ export function APICredentialsModal({
                 <ModalCloseButton />
                 <ModalBody>
                     <Stack spacing="20px">
-                        <APICredentials
-                            updateMapping={updateMapping}
-                            mapping={mapping}
-                            accessor={accessor}
-                        />
+                        <APICredentials accessor={accessor} />
                         {labelField && (
                             <Stack>
                                 <Text>Label Field</Text>
@@ -62,7 +58,7 @@ export function APICredentialsModal({
                                         e: ChangeEvent<HTMLInputElement>
                                     ) =>
                                         updateMapping({
-                                            attribute: labelField,
+                                            attribute: `${labelField}`,
                                             value: e.target.value,
                                         })
                                     }

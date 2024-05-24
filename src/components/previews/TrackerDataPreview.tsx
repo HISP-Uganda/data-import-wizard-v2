@@ -18,16 +18,15 @@ import {
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { useMemo } from "react";
-import Superscript from "./Superscript";
+import Superscript from "../Superscript";
 
 import { ColumnsType } from "antd/es/table";
-import { $allNames, $processed } from "../pages/program/Store";
+import { $allNames, $processed } from "../../Store";
 import { isArray, isObject } from "lodash";
 import { getOr } from "lodash/fp";
-export default function DHIS2Preview() {
+export default function TrackerDataPreview() {
     const processed = useStore($processed);
     const allNames = useStore($allNames);
-
     const columns: TableColumnsType<Partial<Attribute>> = [
         {
             title: "Attribute",
@@ -111,6 +110,13 @@ export default function DHIS2Preview() {
                 dataIndex: "incidentDate",
                 title: "Incident Date",
             },
+            {
+                key: "geometry",
+                title: "Geometry",
+                render: (text, record) => {
+                    return JSON.stringify(text.geometry);
+                },
+            },
         ],
         []
     );
@@ -171,13 +177,14 @@ export default function DHIS2Preview() {
         [Object.keys(processed.errors?.[0] ?? {})]
     );
 
+    console.log(processed);
     return (
         <Tabs>
             <TabList>
                 <Tab>
                     <Text fontSize="18px">New Entities</Text>
                     <Superscript
-                        value={processed.trackedEntities?.length || 0}
+                        value={processed.trackedEntityInstances?.length || 0}
                         bg="blue.500"
                     />
                 </Tab>
@@ -198,14 +205,16 @@ export default function DHIS2Preview() {
                 <Tab>
                     <Text>Entity Updates</Text>
                     <Superscript
-                        value={processed.trackedEntityUpdates?.length || 0}
+                        value={
+                            processed.trackedEntityInstanceUpdates?.length || 0
+                        }
                         bg="blue.500"
                     />
                 </Tab>
                 <Tab>
                     <Text>Events Updates</Text>
                     <Superscript
-                        value={processed.eventsUpdates?.length || 0}
+                        value={processed.eventUpdates?.length || 0}
                         bg="blue.500"
                     />
                 </Tab>
@@ -231,7 +240,7 @@ export default function DHIS2Preview() {
                 <TabPanel>
                     <Table
                         columns={instanceColumns}
-                        dataSource={processed.trackedEntities}
+                        dataSource={processed.trackedEntityInstances}
                         rowKey="trackedEntityInstance"
                         expandable={{
                             expandedRowRender: (record) => (
@@ -272,7 +281,7 @@ export default function DHIS2Preview() {
                 <TabPanel>
                     <Table
                         columns={instanceColumns}
-                        dataSource={processed.trackedEntityUpdates}
+                        dataSource={processed.trackedEntityInstanceUpdates}
                         rowKey="trackedEntityInstance"
                         expandable={{
                             expandedRowRender: (record) => (
@@ -289,7 +298,7 @@ export default function DHIS2Preview() {
                 <TabPanel>
                     <Table
                         columns={eventColumns}
-                        dataSource={processed.eventsUpdates}
+                        dataSource={processed.eventUpdates}
                         rowKey="event"
                         expandable={{
                             expandedRowRender: (record) => (
