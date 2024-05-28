@@ -1,10 +1,10 @@
-import React, { useState } from "react";
-import { Box, Stack, useDisclosure, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
+import { IProgram } from "data-import-wizard-utils";
 import { isEmpty } from "lodash";
+import { useState } from "react";
 import { usePrograms } from "../../Queries";
 import Loader from "../Loader";
-import { IProgram } from "data-import-wizard-utils";
 import PivotQuery from "./PivotQuery";
 
 export default function Pivot() {

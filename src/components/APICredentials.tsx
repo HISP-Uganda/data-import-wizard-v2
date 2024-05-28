@@ -4,51 +4,41 @@ import {
     Checkbox,
     IconButton,
     Input,
-    Spacer,
     Stack,
+    Tab,
     Table,
+    TabList,
+    TabPanel,
+    TabPanels,
+    Tabs,
     Tbody,
     Td,
     Text,
+    Tfoot,
     Th,
     Thead,
     Tr,
     useDisclosure,
-    useToast,
-    Tabs,
-    TabList,
-    TabPanels,
-    Tab,
-    TabPanel,
-    Tfoot,
 } from "@chakra-ui/react";
-import { IMapping, IProgramMapping, Option } from "data-import-wizard-utils";
-import { Event } from "effector";
+import { Authentication, IMapping, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { isArray } from "lodash";
 import { getOr } from "lodash/fp";
 import { ChangeEvent, useRef, useState } from "react";
-import { $metadataAuthApi, programMappingApi } from "../pages/program";
-import { generateUid } from "../utils/uid";
-import { APICredentialsModal } from "./APICredentialsModal";
+import { mappingApi } from "../Events";
+import { $mapping, $metadataAuthApi } from "../Store";
 
-const AddableValues = <U extends IMapping>({
-    label,
-    attribute,
-    updateMapping,
-    mapping,
+const AddableValues = ({
     accessor,
+    attribute,
 }: {
-    label: string;
+    accessor: keyof IMapping;
     attribute: "headers" | "params";
-    updateMapping: Event<{
-        attribute: keyof U;
-        value: any;
-        key?: string;
-    }>;
-    mapping: Partial<U>;
-    accessor: keyof U;
 }) => {
+    const mapping = useStore($mapping);
+    const authentication: Partial<Authentication> =
+        (mapping[accessor] as Partial<Authentication>) ?? {};
+    const vals = authentication[attribute] ?? {};
     return (
         <Table size="sm">
             <Thead>
@@ -62,13 +52,7 @@ const AddableValues = <U extends IMapping>({
                 </Tr>
             </Thead>
             <Tbody>
-                {Object.entries<
-                    Partial<{
-                        param: string;
-                        value: string;
-                        forUpdates: boolean;
-                    }>
-                >(getOr({}, `${String(accessor)}.${attribute}`, mapping)).map(
+                {Object.entries(vals).map(
                     ([parameter, { param, value, forUpdates }]) => (
                         <Tr key={parameter}>
                             <Td>
@@ -77,10 +61,11 @@ const AddableValues = <U extends IMapping>({
                                     onChange={(
                                         e: ChangeEvent<HTMLInputElement>
                                     ) =>
-                                        updateMapping({
+                                        mappingApi.update({
                                             attribute: accessor,
                                             value: e.target.value,
-                                            key: `${attribute}.${parameter}.param`,
+                                            path: attribute,
+                                            subPath: "param",
                                         })
                                     }
                                 />
@@ -91,16 +76,29 @@ const AddableValues = <U extends IMapping>({
                                     onChange={(
                                         e: ChangeEvent<HTMLInputElement>
                                     ) =>
-                                        updateMapping({
+                                        mappingApi.update({
                                             attribute: accessor,
                                             value: e.target.value,
-                                            key: `${attribute}.${parameter}.value`,
+                                            path: attribute,
+                                            subPath: "value",
                                         })
                                     }
                                 />
                             </Td>
                             <Td textAlign="center">
-                                <Checkbox isChecked={forUpdates} />
+                                <Checkbox
+                                    isChecked={forUpdates}
+                                    onChange={(
+                                        e: ChangeEvent<HTMLInputElement>
+                                    ) =>
+                                        mappingApi.update({
+                                            attribute: accessor,
+                                            value: e.target.value,
+                                            path: attribute,
+                                            subPath: "forUpdates",
+                                        })
+                                    }
+                                />
                             </Td>
                             <Td textAlign="right">
                                 <IconButton
@@ -116,10 +114,10 @@ const AddableValues = <U extends IMapping>({
                                             `${String(accessor)}.${attribute}`,
                                             mapping
                                         );
-                                        updateMapping({
+                                        mappingApi.update({
                                             attribute: accessor,
                                             value: rest,
-                                            key: attribute,
+                                            path: attribute,
                                         });
                                     }}
                                 />
@@ -139,14 +137,14 @@ const AddableValues = <U extends IMapping>({
                             variant="ghost"
                             _hover={{ bg: "none" }}
                             onClick={() =>
-                                updateMapping({
+                                mappingApi.update({
                                     attribute: accessor,
                                     value: {
                                         param: "",
                                         value: "",
                                         forUpdates: false,
                                     },
-                                    key: `${attribute}.${generateUid()}`,
+                                    path: attribute,
                                 })
                             }
                         />
@@ -157,23 +155,14 @@ const AddableValues = <U extends IMapping>({
     );
 };
 
-export default function APICredentials<U extends IMapping>({
-    updateMapping,
-    mapping,
-    accessor,
+export default function APICredentials({
     displayDHIS2Options = false,
+    accessor,
 }: {
-    updateMapping: Event<{
-        attribute: keyof U;
-        value: any;
-        key?: string;
-    }>;
-    mapping: Partial<U>;
-    accessor: keyof U;
     displayDHIS2Options?: boolean;
+    accessor: keyof IMapping;
 }) {
-    const toast = useToast();
-
+    const mapping = useStore($mapping);
     const {
         isOpen: isOpenModal,
         onOpen: onOpenModal,
@@ -192,10 +181,11 @@ export default function APICredentials<U extends IMapping>({
                 if (result) {
                     const metadata: Option = JSON.parse(String(result));
                     if (isArray(metadata)) {
-                        programMappingApi.update({
+                        mappingApi.update({
                             attribute: "program",
                             value: metadata,
-                            key: "metadataOptions.metadata",
+                            path: "metadataOptions",
+                            subPath: "metadata",
                         });
                     }
                 }
@@ -239,48 +229,40 @@ export default function APICredentials<U extends IMapping>({
                 <Text>URL</Text>
                 <Input
                     required
-                    value={getOr("", `${String(accessor)}.url`, mapping)}
+                    value={mapping.authentication?.url ?? ""}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        updateMapping({
-                            attribute: accessor,
+                        mappingApi.update({
+                            attribute: "authentication",
                             value: e.target.value,
-                            key: "url",
+                            path: "url",
                         })
                     }
                 />
             </Stack>
 
             <Checkbox
-                isChecked={getOr(
-                    false,
-                    `${String(accessor)}.basicAuth`,
-                    mapping
-                )}
+                isChecked={mapping.authentication?.basicAuth}
                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                    updateMapping({
-                        attribute: accessor,
+                    mappingApi.update({
+                        attribute: "authentication",
                         value: e.target.checked,
-                        key: "basicAuth",
+                        path: "basicAuth",
                     })
                 }
             >
                 Basic Authentication
             </Checkbox>
-            {getOr(false, `${String(accessor)}.basicAuth`, mapping) && (
+            {mapping.authentication?.basicAuth && (
                 <Stack direction="row" spacing="20px">
                     <Stack w="50%">
                         <Text>Username</Text>
                         <Input
-                            value={getOr(
-                                "",
-                                `${String(accessor)}.username`,
-                                mapping
-                            )}
+                            value={mapping.authentication?.username ?? ""}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                updateMapping({
-                                    attribute: accessor,
+                                mappingApi.update({
+                                    attribute: "authentication",
                                     value: e.target.value,
-                                    key: "username",
+                                    path: "username",
                                 })
                             }
                         />
@@ -289,16 +271,12 @@ export default function APICredentials<U extends IMapping>({
                         <Text>Password</Text>
                         <Input
                             type="password"
-                            value={getOr(
-                                "",
-                                `${String(accessor)}.password`,
-                                mapping
-                            )}
+                            value={mapping.authentication?.password ?? ""}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                updateMapping({
-                                    attribute: accessor,
+                                mappingApi.update({
+                                    attribute: "authentication",
                                     value: e.target.value,
-                                    key: "password",
+                                    path: "password",
                                 })
                             }
                         />
@@ -314,19 +292,10 @@ export default function APICredentials<U extends IMapping>({
 
                 <TabPanels>
                     <TabPanel>
-                        <AddableValues<U>
-                            label="Parameters"
-                            updateMapping={updateMapping}
-                            mapping={mapping}
-                            attribute="params"
-                            accessor={accessor}
-                        />
+                        <AddableValues attribute="params" accessor={accessor} />
                     </TabPanel>
                     <TabPanel>
-                        <AddableValues<U>
-                            label="Headers"
-                            updateMapping={updateMapping}
-                            mapping={mapping}
+                        <AddableValues
                             attribute="headers"
                             accessor={accessor}
                         />
@@ -343,7 +312,7 @@ export default function APICredentials<U extends IMapping>({
                         <Checkbox
                             isChecked={getOr(false, "prefetch", mapping)}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                updateMapping({
+                                mappingApi.update({
                                     attribute: "prefetch",
                                     value: e.target.checked,
                                 })

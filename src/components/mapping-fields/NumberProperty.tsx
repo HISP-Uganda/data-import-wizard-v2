@@ -5,35 +5,32 @@ import {
     NumberInputField,
     NumberInputStepper,
     Stack,
-    Text,
     StackProps,
+    Text,
 } from "@chakra-ui/react";
+import { IMapping, KeyOptions, MappingEvent } from "data-import-wizard-utils";
 import { Event } from "effector";
-import { IMapping } from "data-import-wizard-utils";
-import React from "react";
+import { useStore } from "effector-react";
+import { mappingApi } from "../../Events";
+import { $mapping } from "../../Store";
 
-export default function NumberProperty<U extends IMapping>({
-    mapping,
+export default function NumberProperty({
     attribute,
     title,
     min = 0,
     max = 100,
     step = 1,
-    api,
+    path,
+    subPath,
     ...rest
 }: {
     max?: number;
     step?: number;
     min?: number;
-    mapping: Partial<U>;
-    api: Event<{
-        attribute: keyof U;
-        value: any;
-        key?: string;
-    }>;
-    attribute: keyof U;
     callback?: () => void;
-} & StackProps) {
+} & Omit<MappingEvent, "value"> &
+    StackProps) {
+    const mapping = useStore($mapping);
     return (
         <Stack {...rest}>
             <Text>{title}</Text>
@@ -44,9 +41,11 @@ export default function NumberProperty<U extends IMapping>({
                 step={step}
                 size="sm"
                 onChange={(value1: string, value2: number) =>
-                    api({
-                        attribute: attribute,
+                    mappingApi.update({
+                        attribute,
                         value: value2,
+                        path,
+                        subPath,
                     })
                 }
                 flex={1}

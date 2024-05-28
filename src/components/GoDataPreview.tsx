@@ -12,10 +12,7 @@ import { useStore } from "effector-react";
 import { isArray, isObject, uniq } from "lodash";
 import { getOr } from "lodash/fp";
 import { useEffect, useState } from "react";
-import {
-    $mandatoryAttribute,
-    $processedGoDataData,
-} from "../pages/program/Store";
+import { $mandatoryAttribute, $processedGoDataData } from "../Store";
 import Superscript from "./Superscript";
 
 export default function GoDataPreview() {

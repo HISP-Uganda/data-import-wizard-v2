@@ -14,9 +14,9 @@ import {
     $errors,
     $mandatoryAttribute,
     $otherProcessed,
-} from "../pages/program/Store";
-import Superscript from "./Superscript";
-import TableDisplay from "./TableDisplay";
+} from "../../Store";
+import Superscript from "../Superscript";
+import TableDisplay from "../TableDisplay";
 
 export default function OtherSystemPreview() {
     const { newInserts, updates } = useStore($otherProcessed);

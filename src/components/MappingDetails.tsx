@@ -1,122 +1,40 @@
 import { Box, Checkbox, Input, Stack, Text, Textarea } from "@chakra-ui/react";
-import { GroupBase, Select } from "chakra-react-select";
-import { DataSource, IMapping, Option } from "data-import-wizard-utils";
-import { Event } from "effector";
+import { GroupBase, Select, SingleValue } from "chakra-react-select";
+import { Option } from "data-import-wizard-utils";
+import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
-import APICredentials from "./APICredentials";
-import CSVUpload from "./CSVUpload";
-import ExcelUpload from "./fields/ExcelUpload";
-import FileUpload from "./FileUpload";
+import { mappingApi } from "../Events";
+import { $mapping } from "../Store";
+import { InitialMapping } from "./InitialMapping";
 
 export default function MappingDetails({
     importTypes,
-    mapping,
-    updater,
 }: {
     importTypes: Option[];
-    mapping: Partial<IMapping>;
-    updater: Event<{ attribute: keyof IMapping; value: any; key?: string }>;
 }) {
-    const getData = (
-        dataSource: DataSource | undefined,
-        extraction?: "cell" | "column" | "json"
-    ) => {
-        const options = {
-            api: (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-            "xlsx-line-list": mapping.isSource ? null : (
-                <ExcelUpload
-                    mapping={mapping}
-                    extraction={extraction ? extraction : "json"}
-                    updater={updater}
-                />
-            ),
-            "csv-line-list": mapping.isSource ? null : (
-                <ExcelUpload
-                    mapping={mapping}
-                    extraction="json"
-                    updater={updater}
-                />
-            ),
-            "xlsx-tabular-data": mapping.isSource ? null : (
-                <ExcelUpload
-                    mapping={mapping}
-                    extraction={extraction ? extraction : "json"}
-                    updater={updater}
-                />
-            ),
-            "xlsx-form": mapping.isSource ? null : (
-                <ExcelUpload
-                    mapping={mapping}
-                    extraction="cell"
-                    updater={updater}
-                />
-            ),
-            csv: mapping.isSource ? null : <CSVUpload />,
-            json: mapping.isSource ? null : (
-                <FileUpload type="json" mapping={mapping} extraction="json" />
-            ),
-            "dhis2-data-set": (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-            "dhis2-indicators": (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-            "dhis2-program-indicators": (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-            "manual-dhis2-program-indicators": (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-            "dhis2-program": (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-            "go-data": (
-                <APICredentials<IMapping>
-                    updateMapping={updater}
-                    mapping={mapping}
-                    accessor="authentication"
-                    displayDHIS2Options
-                />
-            ),
-        };
-
-        if (dataSource) {
-            return options[dataSource];
+    const mapping = useStore($mapping);
+    const onSelect = (e: SingleValue<Option>) => {
+        mappingApi.update({
+            attribute: "dataSource",
+            value: e?.value,
+        });
+        if (e && e.value === "dhis2-program") {
+        } else if (e && e.value === "go-data") {
+            mappingApi.update({
+                attribute: "authentication",
+                value: true,
+                path: "basicAuth",
+            });
+            if (mapping.isSource) {
+                mappingApi.update({
+                    attribute: "program",
+                    value: "CASE",
+                    path: "responseKey",
+                });
+            }
         }
-        return null;
     };
+
     return (
         <Stack
             spacing="30px"
@@ -127,10 +45,10 @@ export default function MappingDetails({
             <Stack>
                 <Text>Name</Text>
                 <Input
-                    value={mapping.name}
+                    value={mapping.name ?? ""}
                     placeholder="Name of mapping"
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                        updater({
+                        mappingApi.update({
                             attribute: "name",
                             value: e.target.value,
                         })
@@ -141,9 +59,9 @@ export default function MappingDetails({
                 <Text>Description</Text>
                 <Textarea
                     placeholder="Description of mapping"
-                    value={mapping.description}
+                    value={mapping.description ?? ""}
                     onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                        updater({
+                        mappingApi.update({
                             attribute: "description",
                             value: e.target.value,
                         })
@@ -153,7 +71,7 @@ export default function MappingDetails({
             <Checkbox
                 isChecked={mapping.isSource}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                    updater({
+                    mappingApi.update({
                         attribute: "isSource",
                         value: e.target.checked,
                     });
@@ -171,27 +89,7 @@ export default function MappingDetails({
                             value={importTypes.find(
                                 (pt) => pt.value === mapping.dataSource
                             )}
-                            onChange={(e) => {
-                                updater({
-                                    attribute: "dataSource",
-                                    value: e?.value,
-                                });
-
-                                if (e && e.value === "go-data") {
-                                    updater({
-                                        attribute: "authentication",
-                                        value: true,
-                                        key: "basicAuth",
-                                    });
-                                    if (mapping.isSource) {
-                                        updater({
-                                            attribute: "program",
-                                            value: "CASE",
-                                            key: "responseKey",
-                                        });
-                                    }
-                                }
-                            }}
+                            onChange={(e) => onSelect(e)}
                             options={importTypes}
                             isClearable
                         />
@@ -203,7 +101,7 @@ export default function MappingDetails({
                             <Checkbox
                                 isChecked={mapping.useColumnLetters}
                                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                    updater({
+                                    mappingApi.update({
                                         attribute: "useColumnLetters",
                                         value: e.target.checked,
                                     })
@@ -224,7 +122,7 @@ export default function MappingDetails({
                         <Checkbox
                             isChecked={mapping.isCurrentInstance}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                updater({
+                                mappingApi.update({
                                     attribute: "isCurrentInstance",
                                     value: e.target.checked,
                                 })
@@ -235,7 +133,24 @@ export default function MappingDetails({
                     )}
             </Stack>
 
-            {getData(
+            <InitialMapping
+                isSource={mapping.isSource}
+                dataSource={
+                    mapping.isCurrentInstance &&
+                    [
+                        "dhis2-data-set",
+                        "dhis2-indicators",
+                        "dhis2-program-indicators",
+                        "manual-dhis2-program-indicators",
+                        "dhis2-program",
+                    ].indexOf(mapping.dataSource ?? "") !== -1
+                        ? undefined
+                        : mapping.dataSource
+                }
+                extraction={mapping.useColumnLetters ? "column" : undefined}
+            />
+
+            {/* {getData(
                 mapping.isCurrentInstance &&
                     [
                         "dhis2-data-set",
@@ -247,7 +162,8 @@ export default function MappingDetails({
                     ? undefined
                     : mapping.dataSource,
                 mapping.useColumnLetters ? "column" : undefined
-            )}
+            )} */}
+            <pre>{JSON.stringify(mapping, null, 2)}</pre>
         </Stack>
     );
 }

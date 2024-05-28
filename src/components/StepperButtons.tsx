@@ -2,6 +2,7 @@ import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import { useNavigate } from "@tanstack/react-location";
 import { Step } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
+import { mappingApi } from "../Events";
 import { LocationGenerics } from "../Interfaces";
 import { $steps, stepper } from "../Store";
 export default function StepperButtons({
@@ -14,8 +15,8 @@ export default function StepperButtons({
     steps: Step[];
     disabled: boolean;
     onNext: () => void;
-    onSave: () => void;
-    onFinish: () => void;
+    onSave: () => Promise<void>;
+    onFinish: () => Promise<void>;
 }) {
     const activeStep = useStore($steps);
     const navigate = useNavigate<LocationGenerics>();
@@ -26,13 +27,14 @@ export default function StepperButtons({
                 <Box textAlign="right">
                     <Button
                         colorScheme="blue"
-                        onClick={() => {
-                            stepper.reset();
-                            onFinish();
+                        onClick={async () => {
+                            // onFinish();
+                            await onSave();
+                            mappingApi.reset({});
                             navigate({ to: "/mappings" });
                         }}
                     >
-                        <Text>Go to Mappings</Text>
+                        <Text>{step.lastLabel}</Text>
                     </Button>
                 </Box>
             ) : (
@@ -53,7 +55,10 @@ export default function StepperButtons({
                     <Stack direction="row" spacing="30px">
                         <Button
                             colorScheme="red"
-                            onClick={() => navigate({ to: "/mappings" })}
+                            onClick={() => {
+                                mappingApi.reset({});
+                                navigate({ to: "/mappings" });
+                            }}
                         >
                             Cancel
                         </Button>

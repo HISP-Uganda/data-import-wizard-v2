@@ -1,185 +1,147 @@
 import { Checkbox, Stack } from "@chakra-ui/react";
-import { IMapping } from "data-import-wizard-utils";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useStore } from "effector-react";
 import { ChangeEvent, useEffect } from "react";
 import { db } from "../../db";
 
-import {
-    $aggMetadata,
-    $aggregateMapping,
-    $configList,
-    $dataSet,
-    aggregateMappingApi,
-} from "../../pages/aggregate";
-import NumberProperty from "../fields/NumberProperty";
-import SelectField from "../fields/SelectProperty";
+import { mappingApi } from "../../Events";
+import { $configList, $dataSet, $mapping, $metadata } from "../../Store";
+import NumberProperty from "../mapping-fields/NumberProperty";
+import SelectField from "../mapping-fields/SelectProperty";
 
 export default function Configuration() {
-    const aggregateMapping = useStore($aggregateMapping);
-    const aggregateMetadata = useStore($aggMetadata);
+    const mapping = useStore($mapping);
+    const metadata = useStore($metadata);
     const configList = useStore($configList);
-    const dataSet = useStore($dataSet);
 
     const levels = useLiveQuery(() => db.levels.toArray());
 
-    const setHasAttribution = () => {
-        const categories = dataSet.categoryCombo?.categories.filter(
-            ({ name }) => name !== "default"
-        );
-        if (categories && categories.length > 0) {
-            aggregateMappingApi.update({
-                attribute: "aggregate",
-                value: true,
-                key: "hasAttribution",
-            });
-        } else {
-            aggregateMappingApi.update({
-                attribute: "aggregate",
-                value: false,
-                key: "hasAttribution",
-            });
-        }
-    };
-
-    useEffect(() => {
-        setHasAttribution();
-        return () => {};
-    }, []);
+    // useEffect(() => {
+    //     setHasAttribution();
+    //     return () => {};
+    // }, []);
 
     const allFields: Array<{ id: string; element: React.ReactNode }> = [
         {
             id: "header-row",
             element: (
-                <NumberProperty<IMapping>
+                <NumberProperty
                     title="Header row"
-                    api={aggregateMappingApi.update}
                     attribute="headerRow"
-                    mapping={aggregateMapping}
+                    key="header-row"
                 />
             ),
         },
         {
             id: "data-start-row",
             element: (
-                <NumberProperty<IMapping>
+                <NumberProperty
                     title="Data start row"
-                    api={aggregateMappingApi.update}
                     attribute="dataStartRow"
-                    mapping={aggregateMapping}
+                    key="data-start-row"
                 />
             ),
         },
         {
             id: "ou-column",
             element: (
-                <SelectField<IMapping>
+                <SelectField
                     title="Organisation column"
-                    api={aggregateMappingApi.update}
                     attribute="orgUnitColumn"
-                    mapping={aggregateMapping}
-                    options={aggregateMetadata.sourceColumns}
+                    options={metadata.sourceColumns}
                     multiple={false}
+                    key="ou-column"
                 />
             ),
         },
         {
             id: "data-element-column",
             element: (
-                <SelectField<IMapping>
+                <SelectField
                     title="Data Element column"
-                    api={aggregateMappingApi.update}
                     attribute="aggregate"
-                    mapping={aggregateMapping}
-                    options={aggregateMetadata.sourceColumns}
+                    options={metadata.sourceColumns}
                     multiple={false}
-                    otherKeys="dataElementColumn"
+                    path="dataElementColumn"
+                    key="data-element-column"
                 />
             ),
         },
         {
             id: "pe-column",
             element: (
-                <SelectField<IMapping>
+                <SelectField
                     title="Period column"
-                    api={aggregateMappingApi.update}
                     attribute="aggregate"
-                    otherKeys="periodColumn"
-                    mapping={aggregateMapping}
-                    options={aggregateMetadata.sourceColumns}
+                    path="periodColumn"
+                    options={metadata.sourceColumns}
                     multiple={false}
+                    key="pe-column"
                 />
             ),
         },
         {
             id: "coc-column",
             element: (
-                <SelectField<IMapping>
+                <SelectField
                     title="Category option combo column"
-                    api={aggregateMappingApi.update}
                     attribute="aggregate"
-                    otherKeys="categoryOptionComboColumn"
-                    mapping={aggregateMapping}
-                    options={aggregateMetadata.sourceColumns}
+                    path="categoryOptionComboColumn"
+                    options={metadata.sourceColumns}
                     multiple={false}
+                    key="coc-column"
                 />
             ),
         },
         {
             id: "aoc-column",
             element: (
-                <SelectField<IMapping>
+                <SelectField
                     title="Attribute option combo column"
-                    api={aggregateMappingApi.update}
                     attribute="aggregate"
-                    mapping={aggregateMapping}
-                    options={aggregateMetadata.sourceColumns}
+                    options={metadata.sourceColumns}
                     multiple={false}
-                    otherKeys="attributeOptionComboColumn"
+                    path="attributeOptionComboColumn"
+                    key="aoc-column"
                 />
             ),
         },
         {
             id: "value-column",
             element: (
-                <SelectField<IMapping>
+                <SelectField
                     title="Value column"
-                    api={aggregateMappingApi.update}
                     attribute="aggregate"
-                    mapping={aggregateMapping}
-                    options={aggregateMetadata.sourceColumns}
+                    options={metadata.sourceColumns}
                     multiple={false}
-                    otherKeys="valueColumn"
+                    path="valueColumn"
+                    key="value-column"
                 />
             ),
         },
         {
             id: "attribution",
             element: (
-                <Stack spacing="30px">
+                <Stack spacing="30px" key="attribution">
                     <Checkbox
-                        isChecked={
-                            aggregateMapping.aggregate?.attributionMerged
-                        }
+                        isChecked={mapping.aggregate?.attributionMerged}
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            aggregateMappingApi.update({
+                            mappingApi.update({
                                 attribute: "aggregate",
                                 value: e.target.checked,
-                                key: "attributionMerged",
+                                path: "attributionMerged",
                             })
                         }
                     >
                         Data Set Attribution merged
                     </Checkbox>
-                    {aggregateMapping.aggregate?.attributionMerged ? (
-                        <SelectField<IMapping>
+                    {mapping.aggregate?.attributionMerged ? (
+                        <SelectField
                             title="Attribute option combo column"
-                            api={aggregateMappingApi.update}
                             attribute="aggregate"
-                            mapping={aggregateMapping}
-                            options={aggregateMetadata.sourceColumns}
+                            options={metadata.sourceColumns}
                             multiple={false}
-                            otherKeys="attributeOptionComboColumn"
+                            path="attributeOptionComboColumn"
                         />
                     ) : (
                         <Stack
@@ -187,19 +149,17 @@ export default function Configuration() {
                             spacing="20px"
                             alignItems="center"
                         >
-                            {aggregateMetadata.destinationCategories.map(
+                            {metadata.destinationCategories.map(
                                 ({ label, value }) => (
-                                    <SelectField<IMapping>
+                                    <SelectField
                                         title={`${label} Column`}
-                                        api={aggregateMappingApi.update}
                                         attribute="aggregate"
-                                        mapping={aggregateMapping}
-                                        options={
-                                            aggregateMetadata.sourceColumns
-                                        }
+                                        options={metadata.sourceColumns}
                                         multiple={false}
-                                        otherKeys={`categoryColumns.${value}`}
+                                        path="categoryColumns"
+                                        subPath={value}
                                         flex={1}
+                                        key={value}
                                     />
                                 )
                             )}
@@ -211,13 +171,11 @@ export default function Configuration() {
         {
             id: "indicator-generation-level",
             element: (
-                <Stack>
-                    <SelectField<IMapping>
+                <Stack key="indicator-generation-level">
+                    <SelectField
                         title="Indicator generation level"
-                        api={aggregateMappingApi.update}
                         attribute="aggregate"
-                        otherKeys="indicatorGenerationLevel"
-                        mapping={aggregateMapping}
+                        path="indicatorGenerationLevel"
                         options={levels ?? []}
                         multiple={false}
                     />

@@ -19,19 +19,22 @@ import {
     $attributeMapping,
     $metadata,
     $names,
-    $programMapping,
-    attributeMappingApi,
-    programMappingApi,
-} from "../../pages/program";
-import { findMapped, isMapped } from "../../pages/program/utils";
+    $program,
+    $mapping,
+} from "../../Store";
+import { attributeMappingApi, mappingApi } from "../../Events";
+import { findMapped, isMapped } from "../../utils/utils";
+import CustomColumn from "../CustomColumn";
 import DestinationIcon from "../DestinationIcon";
+import MultipleSelect from "../MultipleSelect";
 import OptionSetMapping from "../OptionSetMapping";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
 
 export default function AttributeMapping() {
     const attributeMapping = useStore($attributeMapping);
-    const programMapping = useStore($programMapping);
+    const programMapping = useStore($mapping);
+    const program = useStore($program);
     const toast = useToast();
     const metadata = useStore($metadata);
     const { source, destination } = useStore($names);
@@ -104,7 +107,7 @@ export default function AttributeMapping() {
             align: "center",
             render: (text, { value }) => (
                 <Checkbox
-                    isChecked={attributeMapping[value ?? ""]?.manual}
+                    isChecked={attributeMapping[value ?? ""]?.isCustom}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setCustom(value ?? "", e.target.checked)
                     }
@@ -118,7 +121,7 @@ export default function AttributeMapping() {
             align: "center",
             render: (text, { value }) => (
                 <Checkbox
-                    isChecked={attributeMapping[value ?? ""]?.specific}
+                    isChecked={attributeMapping[value ?? ""]?.isSpecific}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setSpecific(value ?? "", e.target.checked)
                     }
@@ -135,10 +138,30 @@ export default function AttributeMapping() {
             ),
             key: "source",
             render: (text, { value, valueType, unique }) => {
-                if (
-                    attributeMapping[value ?? ""]?.manual ||
-                    attributeMapping[value ?? ""]?.specific
-                ) {
+                if (attributeMapping[value ?? ""]?.isCustom) {
+                    return (
+                        <CustomColumn
+                            mapping={attributeMapping}
+                            onTypeUpdate={(e) =>
+                                attributeMappingApi.update({
+                                    attribute: `${value}`,
+                                    key: "customType",
+                                    value: e?.value,
+                                })
+                            }
+                            onValueChange={(val) =>
+                                attributeMappingApi.update({
+                                    attribute: `${value}`,
+                                    key: "value",
+                                    value: val,
+                                })
+                            }
+                            value={value ?? ""}
+                        />
+                    );
+                }
+
+                if (attributeMapping[value ?? ""]?.isSpecific) {
                     return (
                         <Input
                             value={attributeMapping[value ?? ""]?.value}
@@ -154,27 +177,25 @@ export default function AttributeMapping() {
                 }
                 return (
                     <Select<Option, false, GroupBase<Option>>
-                        value={metadata.sourceAttributes?.find(
+                        value={metadata.sourceColumns?.find(
                             (val) =>
                                 val.value ===
                                 attributeMapping[value ?? ""]?.value
                         )}
-                        options={metadata.sourceAttributes}
+                        options={metadata.sourceColumns}
                         isClearable
                         size="md"
                         onChange={(e) => {
-                            attributeMappingApi.updateMany(
-                                attributeMappingApi.updateMany({
-                                    attribute: value ?? "",
-                                    update: {
-                                        value: e?.value || "",
-                                        unique:
-                                            attributeMapping[value ?? ""]
-                                                ?.unique || unique,
-                                        valueType,
-                                    },
-                                })
-                            );
+                            attributeMappingApi.updateMany({
+                                attribute: value ?? "",
+                                update: {
+                                    value: e?.value || "",
+                                    unique:
+                                        attributeMapping[value ?? ""]?.unique ||
+                                        unique,
+                                    valueType,
+                                },
+                            });
                             if (
                                 e &&
                                 e.value &&
@@ -203,6 +224,7 @@ export default function AttributeMapping() {
                         <OptionSetMapping
                             value={value ?? ""}
                             destinationOptions={availableOptions || []}
+                            mapping={attributeMapping}
                         />
                     );
                 }
@@ -213,9 +235,7 @@ export default function AttributeMapping() {
             title: "Mapped",
             width: "100px",
             render: (text, { value }) => {
-                if (
-                    isMapped(value, attributeMapping, metadata.sourceAttributes)
-                ) {
+                if (isMapped(value, attributeMapping, metadata.sourceColumns)) {
                     return (
                         <Icon as={FiCheck} color="green.400" fontSize="2xl" />
                     );
@@ -225,6 +245,211 @@ export default function AttributeMapping() {
             key: "mapped",
         },
     ];
+
+    const determineFeatureType = () => {
+        if (program.trackedEntityType?.featureType === "POINT") {
+            return (
+                <Stack>
+                    <Checkbox
+                        isChecked={programMapping.program?.geometryMerged}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            mappingApi.update({
+                                attribute: "program",
+                                path: "geometryMerged",
+                                value: e.target.checked,
+                            })
+                        }
+                    >
+                        Latitudes and Longitudes combined
+                    </Checkbox>
+
+                    {programMapping.program?.geometryMerged ? (
+                        <Stack
+                            alignItems="center"
+                            flex={1}
+                            direction="row"
+                            spacing="20px"
+                        >
+                            <Text>Latitudes and Longitudes Column</Text>
+                            <Box flex={1}>
+                                <Select<Option, false, GroupBase<Option>>
+                                    value={metadata.sourceColumns.find(
+                                        (val) =>
+                                            val.value ===
+                                            programMapping.program
+                                                ?.geometryColumn
+                                    )}
+                                    options={metadata.sourceColumns}
+                                    isClearable
+                                    placeholder="Select tracked entity column"
+                                    onChange={(e) =>
+                                        mappingApi.update({
+                                            attribute: "program",
+                                            path: "geometryColumn",
+                                            value: e?.value || "",
+                                        })
+                                    }
+                                />
+                            </Box>
+                        </Stack>
+                    ) : (
+                        <Stack
+                            direction="row"
+                            alignItems="center"
+                            spacing="20px"
+                            flex={1}
+                        >
+                            <Stack direction="row" alignItems="center" flex={1}>
+                                <Text>Latitude Column</Text>
+                                <Box flex={1}>
+                                    <Select<Option, false, GroupBase<Option>>
+                                        value={metadata.sourceColumns.find(
+                                            (val) =>
+                                                val.value ===
+                                                programMapping.program
+                                                    ?.latitudeColumn
+                                        )}
+                                        options={metadata.sourceColumns}
+                                        isClearable
+                                        placeholder="Select latitude column"
+                                        onChange={(e) =>
+                                            mappingApi.update({
+                                                attribute: "program",
+                                                path: "latitudeColumn",
+                                                value: e?.value || "",
+                                            })
+                                        }
+                                    />
+                                </Box>
+                            </Stack>
+                            <Stack direction="row" alignItems="center" flex={1}>
+                                <Text>Longitude Column</Text>
+                                <Box flex={1}>
+                                    <Select<Option, false, GroupBase<Option>>
+                                        value={metadata.sourceColumns.find(
+                                            (val) =>
+                                                val.value ===
+                                                programMapping.program
+                                                    ?.longitudeColumn
+                                        )}
+                                        options={metadata.sourceColumns}
+                                        isClearable
+                                        placeholder="Select longitude column"
+                                        onChange={(e) =>
+                                            mappingApi.update({
+                                                attribute: "program",
+                                                path: "longitudeColumn",
+                                                value: e?.value || "",
+                                            })
+                                        }
+                                    />
+                                </Box>
+                            </Stack>
+                        </Stack>
+                    )}
+                </Stack>
+            );
+        }
+
+        if (program.trackedEntityType?.featureType === "POLYGON") {
+            return (
+                <Stack
+                    alignItems="center"
+                    flex={1}
+                    direction="row"
+                    spacing="20px"
+                >
+                    <Text>Latitudes and Longitudes Column</Text>
+                    <Box flex={1}>
+                        <Select<Option, false, GroupBase<Option>>
+                            value={metadata.sourceColumns.find(
+                                (val) =>
+                                    val.value ===
+                                    programMapping.program?.geometryColumn
+                            )}
+                            options={metadata.sourceColumns}
+                            isClearable
+                            placeholder="Select tracked entity column"
+                            onChange={(e) =>
+                                mappingApi.update({
+                                    attribute: "program",
+                                    path: "geometryColumn",
+                                    value: e?.value || "",
+                                })
+                            }
+                        />
+                    </Box>
+                </Stack>
+            );
+        }
+        return null;
+    };
+
+    const determineTrackedEntityOptions = () => {
+        if (programMapping.dataSource === "go-data") {
+            return null;
+        }
+
+        return (
+            <Stack spacing="20px" direction="row" alignItems="center">
+                <Text>Tracked Entity Column</Text>
+                <Stack spacing="0">
+                    <Checkbox
+                        isChecked={
+                            programMapping.program
+                                ?.trackedEntityInstanceColumnIsManual
+                        }
+                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                            mappingApi.update({
+                                attribute: "program",
+                                path: "trackedEntityInstanceColumnIsManual",
+                                value: e.target.checked,
+                            })
+                        }
+                    >
+                        Custom Tracked Entity Column
+                    </Checkbox>
+                    <Box w="500px">
+                        {programMapping.program
+                            ?.trackedEntityInstanceColumnIsManual ? (
+                            <Input
+                                value={
+                                    programMapping.program
+                                        ?.trackedEntityInstanceColumn
+                                }
+                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                    mappingApi.update({
+                                        attribute: "program",
+                                        path: "trackedEntityInstanceColumn",
+                                        value: e.target.value,
+                                    })
+                                }
+                            />
+                        ) : (
+                            <Select<Option, false, GroupBase<Option>>
+                                value={metadata.sourceColumns.find(
+                                    (val) =>
+                                        val.value ===
+                                        programMapping.program
+                                            ?.trackedEntityInstanceColumn
+                                )}
+                                options={metadata.sourceColumns}
+                                isClearable
+                                placeholder="Select tracked entity column"
+                                onChange={(e) =>
+                                    mappingApi.update({
+                                        attribute: "program",
+                                        path: "trackedEntityInstanceColumn",
+                                        value: e?.value || "",
+                                    })
+                                }
+                            />
+                        )}
+                    </Box>
+                </Stack>
+            </Stack>
+        );
+    };
     useEffect(() => {
         for (const {
             value: destinationValue,
@@ -233,8 +458,11 @@ export default function AttributeMapping() {
             mandatory,
         } of metadata.destinationAttributes) {
             if (attributeMapping[destinationValue ?? ""] === undefined) {
-                const search = metadata.sourceAttributes.find(
-                    ({ value }) => value === destinationValue
+                const search = metadata.sourceColumns.find(
+                    ({ value }) =>
+                        value &&
+                        destinationValue &&
+                        value.includes(destinationValue)
                 );
                 if (search) {
                     attributeMappingApi.updateMany({
@@ -246,8 +474,11 @@ export default function AttributeMapping() {
                         },
                     });
                 } else {
-                    const search2 = metadata.sourceAttributes.find(
-                        ({ label }) => label === destinationLabel
+                    const search2 = metadata.sourceColumns.find(
+                        ({ label }) =>
+                            label &&
+                            destinationLabel &&
+                            label.includes(destinationLabel)
                     );
                     if (search2) {
                         attributeMappingApi.updateMany({
@@ -265,34 +496,34 @@ export default function AttributeMapping() {
     }, []);
 
     const setCustom = (attribute: string, manual: boolean) => {
-        const isSpecific = attributeMapping[attribute]?.specific;
+        const isSpecific = attributeMapping[attribute]?.isSpecific;
         attributeMappingApi.update({
             attribute,
-            key: "manual",
+            key: "isCustom",
             value: manual,
         });
 
         if (isSpecific) {
             attributeMappingApi.update({
                 attribute,
-                key: "specific",
+                key: "isSpecific",
                 value: !isSpecific,
             });
         }
     };
 
-    const setSpecific = (attribute: string, specific: boolean) => {
+    const setSpecific = (attribute: string, isSpecific: boolean) => {
         attributeMappingApi.update({
             attribute,
-            key: "specific",
-            value: specific,
+            key: "isSpecific",
+            value: isSpecific,
         });
-        const isManual = attributeMapping[attribute]?.manual;
+        const isManual = attributeMapping[attribute]?.isCustom;
 
         if (isManual) {
             attributeMappingApi.update({
                 attribute,
-                key: "manual",
+                key: "isCustom",
                 value: !isManual,
             });
         }
@@ -303,69 +534,30 @@ export default function AttributeMapping() {
             h="calc(100vh - 350px)"
             maxH="calc(100vh - 350px)"
             overflow="auto"
+            spacing="25px"
         >
-            {programMapping.dataSource !== "go-data" && (
-                <Stack spacing="20px" direction="row" alignItems="center">
-                    <Text>Tracked Entity Column</Text>
-                    <Stack spacing="0">
-                        <Checkbox
-                            isChecked={
-                                programMapping.program
-                                    ?.trackedEntityInstanceColumnIsManual
-                            }
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                programMappingApi.update({
-                                    attribute: "program",
-                                    key: "trackedEntityInstanceColumnIsManual",
-                                    value: e.target.checked,
-                                })
-                            }
-                        >
-                            Custom Tracked Entity Column
-                        </Checkbox>
-                        <Box w="500px">
-                            {programMapping.program
-                                ?.trackedEntityInstanceColumnIsManual ? (
-                                <Input
-                                    value={
-                                        programMapping.program
-                                            ?.trackedEntityInstanceColumn
-                                    }
-                                    onChange={(
-                                        e: ChangeEvent<HTMLInputElement>
-                                    ) =>
-                                        programMappingApi.update({
-                                            attribute: "program",
-                                            key: "trackedEntityInstanceColumn",
-                                            value: e.target.value,
-                                        })
-                                    }
-                                />
-                            ) : (
-                                <Select<Option, false, GroupBase<Option>>
-                                    value={metadata.sourceAttributes.find(
-                                        (val) =>
-                                            val.value ===
-                                            programMapping.program
-                                                ?.trackedEntityInstanceColumn
-                                    )}
-                                    options={metadata.sourceAttributes}
-                                    isClearable
-                                    placeholder="Select tracked entity column"
-                                    onChange={(e) =>
-                                        programMappingApi.update({
-                                            attribute: "program",
-                                            key: "trackedEntityInstanceColumn",
-                                            value: e?.value || "",
-                                        })
-                                    }
-                                />
-                            )}
-                        </Box>
-                    </Stack>
-                </Stack>
-            )}
+            {determineTrackedEntityOptions()}
 
+            <MultipleSelect
+                title={
+                    <Stack>
+                        <Text>Geometry Column </Text>
+                        <Text fontSize="12px">
+                            Latitudes and Longitudes separated? select two
+                            columns beginning with latitude
+                        </Text>
+                    </Stack>
+                }
+                mapping={programMapping}
+                value="program.geometryColumn"
+                onValueChange={(val) =>
+                    mappingApi.update({
+                        attribute: "program",
+                        path: "geometryColumn",
+                        value: val,
+                    })
+                }
+            />
             <Search
                 options={metadata.destinationAttributes}
                 source={metadata.sourceAttributes}
@@ -387,10 +579,7 @@ export default function AttributeMapping() {
                 footer={() => (
                     <Text textAlign="right">
                         Mapped{" "}
-                        {findMapped(
-                            attributeMapping,
-                            metadata.sourceAttributes
-                        )}{" "}
+                        {findMapped(attributeMapping, metadata.sourceColumns)}{" "}
                         of {metadata.destinationAttributes?.length || 0}
                     </Text>
                 )}

@@ -4,14 +4,10 @@ import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 
-import {
-    $flattenedProgramKeys,
-    $programMapping,
-    programMappingApi,
-} from "../pages/program";
+import { $flattenedProgramKeys, $mapping } from "../Store";
 
 export default function MetadataOptions() {
-    const programMapping = useStore($programMapping);
+    const programMapping = useStore($mapping);
     const flattenedProgramKeys = useStore($flattenedProgramKeys);
 
     return (
@@ -38,13 +34,13 @@ export default function MetadataOptions() {
                                                 );
                                             }
                                         )}
-                                        onChange={(e) =>
-                                            programMappingApi.update({
-                                                attribute: "metadataOptions",
-                                                value: e?.value || "",
-                                                key: "labelField",
-                                            })
-                                        }
+                                        // onChange={(e) =>
+                                        //     mappingApi.update({
+                                        //         attribute: "metadataOptions",
+                                        //         value: e?.value || "",
+                                        //         key: "labelField",
+                                        //     })
+                                        // }
                                     />
                                 </Box>
                             </Stack>
@@ -66,13 +62,13 @@ export default function MetadataOptions() {
                                                 );
                                             }
                                         )}
-                                        onChange={(e) =>
-                                            programMappingApi.update({
-                                                attribute: "metadataOptions",
-                                                value: e?.value || "",
-                                                key: "valueField",
-                                            })
-                                        }
+                                        // onChange={(e) =>
+                                        //     mappingApi.update({
+                                        //         attribute: "metadataOptions",
+                                        //         value: e?.value || "",
+                                        //         key: "valueField",
+                                        //     })
+                                        // }
                                     />
                                 </Box>
                             </Stack>
@@ -94,13 +90,13 @@ export default function MetadataOptions() {
                                                 );
                                             }
                                         )}
-                                        onChange={(e) =>
-                                            programMappingApi.update({
-                                                attribute: "metadataOptions",
-                                                value: e?.value || "",
-                                                key: "idField",
-                                            })
-                                        }
+                                        // onChange={(e) =>
+                                        //     mappingApi.update({
+                                        //         attribute: "metadataOptions",
+                                        //         value: e?.value || "",
+                                        //         key: "idField",
+                                        //     })
+                                        // }
                                     />
                                 </Box>
                             </Stack>
@@ -122,13 +118,13 @@ export default function MetadataOptions() {
                                                 );
                                             }
                                         )}
-                                        onChange={(e) =>
-                                            programMappingApi.update({
-                                                attribute: "metadataOptions",
-                                                key: "requiredField",
-                                                value: e?.value || "",
-                                            })
-                                        }
+                                        // onChange={(e) =>
+                                        //     mappingApi.update({
+                                        //         attribute: "metadataOptions",
+                                        //         key: "requiredField",
+                                        //         value: e?.value || "",
+                                        //     })
+                                        // }
                                     />
                                 </Box>
                             </Stack>

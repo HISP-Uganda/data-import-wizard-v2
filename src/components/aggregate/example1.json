@@ -1,0 +1,8 @@
+{
+    "name": "dataValueImport",
+    "id": "bDiBguhT6tJ",
+    "created": "2024-05-13T09:31:47.204",
+    "jobType": "DATAVALUE_IMPORT",
+    "jobStatus": "SCHEDULED",
+    "relativeNotifierEndpoint": "/api/system/tasks/DATAVALUE_IMPORT/bDiBguhT6tJ"
+}

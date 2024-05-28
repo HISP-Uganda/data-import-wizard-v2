@@ -1,31 +1,26 @@
-import React from "react";
-import { Stack, Text, StackProps, Box } from "@chakra-ui/react";
+import { Box, Stack, StackProps, Text } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { IMapping, Option } from "data-import-wizard-utils";
-import { Event } from "effector";
+import { MappingEvent, Option } from "data-import-wizard-utils";
+import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
+import { mappingApi } from "../../Events";
+import { $mapping } from "../../Store";
 
-export default function SelectField<U extends IMapping>({
+export default function SelectField({
     title,
     options,
-    mapping,
     multiple,
     attribute,
-    api,
-    otherKeys,
+    path,
+    subPath,
     ...rest
 }: {
     options: Option[];
     multiple: boolean | undefined;
-    mapping: Partial<U>;
-    api: Event<{
-        attribute: keyof U;
-        value: any;
-        key?: string;
-    }>;
-    attribute: keyof U;
-    otherKeys?: string;
-} & StackProps) {
+} & Omit<MappingEvent, "value"> &
+    StackProps) {
+    const mapping = useStore($mapping);
+    const currentPath = [attribute, path, subPath].filter((a) => !!a).join(".");
     return (
         <Stack {...rest}>
             <Text>{title}</Text>
@@ -40,28 +35,20 @@ export default function SelectField<U extends IMapping>({
                     <Select<Option, true, GroupBase<Option>>
                         isMulti
                         value={options.filter((pt) => {
-                            if (otherKeys) {
-                                return (
-                                    String(
-                                        Object(mapping[attribute])?.[otherKeys]
-                                    )
-                                        .split(",")
-                                        .indexOf(pt.value ?? "") !== -1
-                                );
-                            }
                             return (
-                                String(mapping[attribute])
+                                getOr("", currentPath, mapping)
                                     .split(",")
                                     .indexOf(pt.value ?? "") !== -1
                             );
                         })}
                         onChange={(e) =>
-                            api({
+                            mappingApi.update({
                                 attribute,
                                 value: e
                                     .map((ex) => String(ex.value))
                                     .join(","),
-                                key: otherKeys,
+                                path,
+                                subPath,
                             })
                         }
                         options={options}
@@ -79,22 +66,14 @@ export default function SelectField<U extends IMapping>({
                 >
                     <Select<Option, false, GroupBase<Option>>
                         value={options.find((pt) => {
-                            if (otherKeys) {
-                                return (
-                                    getOr(
-                                        "",
-                                        `${otherKeys}`,
-                                        mapping[attribute]
-                                    ) === pt.value
-                                );
-                            }
-                            return pt.value === getOr("", attribute, mapping);
+                            return pt.value === getOr("", currentPath, mapping);
                         })}
                         onChange={(e) =>
-                            api({
+                            mappingApi.update({
                                 attribute,
                                 value: e?.value,
-                                key: otherKeys,
+                                path,
+                                subPath,
                             })
                         }
                         options={options}

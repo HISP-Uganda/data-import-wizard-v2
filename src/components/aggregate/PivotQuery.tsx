@@ -1,15 +1,14 @@
-import { Stack } from "@chakra-ui/react";
-import { generateUid } from "data-import-wizard-utils";
-import { Tabs } from "antd";
 import type { TabsProps } from "antd";
+import { Tabs } from "antd";
+import { generateUid } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { $aggregateMapping } from "../../pages/aggregate";
+import { $mapping } from "../../Store";
 import { useSQLViewMetadata } from "../../Queries";
 import Loader from "../Loader";
 import Tables from "./Tables";
 
 export default function PivotQuery({ program }: { program: string }) {
-    const mapping = useStore($aggregateMapping);
+    const mapping = useStore($mapping);
     const { isLoading, isError, isSuccess, error, data } = useSQLViewMetadata(
         program,
         mapping.id ?? generateUid()

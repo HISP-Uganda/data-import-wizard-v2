@@ -1,27 +1,35 @@
-import { Box, Stack, useDisclosure } from "@chakra-ui/react";
-import { useDataEngine } from "@dhis2/app-runtime";
+import { Box, Stack } from "@chakra-ui/react";
 import { Table } from "antd";
 import { ColumnsType } from "antd/es/table";
 import { IProgram } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { getOr } from "lodash/fp";
-import {
-    $programMapping,
-    programApi,
-    programMappingApi,
-} from "../../pages/program";
-import { loadProgram, usePrograms } from "../../Queries";
-import { stepper } from "../../Store";
+import { $mapping } from "../../Store";
+import { usePrograms } from "../../Queries";
 import Loader from "../Loader";
 import Progress from "../Progress";
 
-const ProgramSelect = () => {
+const ProgramSelect = ({
+    onProgramSelect,
+    isOpen,
+    onClose,
+    onOpen,
+    message,
+}: {
+    onProgramSelect: (id?: string) => Promise<void>;
+    isOpen: boolean;
+    onOpen: () => void;
+    onClose: () => void;
+    message: string;
+}) => {
     const { isLoading, isError, isSuccess, error, data } = usePrograms(1, 100);
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    const engine = useDataEngine();
-    const programMapping = useStore($programMapping);
+    const mapping = useStore($mapping);
 
     const columns: ColumnsType<Partial<IProgram>> = [
+        {
+            title: "Id",
+            dataIndex: "id",
+            key: "id",
+        },
         {
             title: "Name",
             dataIndex: "name",
@@ -34,33 +42,6 @@ const ProgramSelect = () => {
         },
     ];
 
-    const onProgramSelect = async (id?: string) => {
-        if (id) {
-            onOpen();
-            let data = await loadProgram<IProgram>({
-                engine,
-                id,
-                fields: "id,name,trackedEntityType,programType,organisationUnits[id,code,name,parent[name,parent[name,parent[name,parent[name,parent[name]]]]]],programStages[id,repeatable,name,code,programStageDataElements[id,compulsory,name,dataElement[id,name,code,optionSetValue,optionSet[id,name,options[id,name,code]]]]],programTrackedEntityAttributes[id,mandatory,sortOrder,allowFutureDate,trackedEntityAttribute[id,name,code,unique,generated,pattern,confidential,valueType,optionSetValue,displayFormName,optionSet[id,name,options[id,name,code]]]]",
-                resource: "programs",
-            });
-            const other = programMapping.isSource
-                ? { source: data.name }
-                : { destination: data.name };
-            programMappingApi.update({
-                attribute: "program",
-                value: {
-                    ...programMapping.program,
-                    trackedEntityType: getOr("", "trackedEntityType.id", data),
-                    program: id,
-                    programType: getOr("", "programType", data),
-                    ...other,
-                },
-            });
-            programApi.set(data);
-            onClose();
-            stepper.next();
-        }
-    };
     return (
         <Stack>
             <Box m="auto" w="100%">
@@ -79,8 +60,8 @@ const ProgramSelect = () => {
                             rowKey="id"
                             rowSelection={{
                                 type: "radio",
-                                selectedRowKeys: programMapping.program?.program
-                                    ? [programMapping.program?.program]
+                                selectedRowKeys: mapping.program?.program
+                                    ? [mapping.program?.program]
                                     : [],
 
                                 onSelect: (record) =>
@@ -95,7 +76,7 @@ const ProgramSelect = () => {
             <Progress
                 onClose={onClose}
                 isOpen={isOpen}
-                message="Loading Selected Program"
+                message={message}
                 onOpen={onOpen}
             />
         </Stack>

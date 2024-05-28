@@ -1,11 +1,4 @@
-import {
-    Checkbox,
-    Icon,
-    Input,
-    Stack,
-    Text,
-    useDisclosure,
-} from "@chakra-ui/react";
+import { Checkbox, Icon, Input, Stack, Text } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
 import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
@@ -13,38 +6,33 @@ import { FiCheck } from "react-icons/fi";
 
 import Table, { ColumnsType } from "antd/es/table";
 import { ChangeEvent, useEffect, useState } from "react";
-import { $aggMetadata, $aggregateMapping } from "../../pages/aggregate";
-import {
-    $attributeMapping,
-    $names,
-    attributeMappingApi,
-} from "../../pages/program";
+import { attributeMappingApi } from "../../Events";
+import { $attributeMapping, $mapping, $metadata, $names } from "../../Store";
 import DestinationIcon from "../DestinationIcon";
 import Search from "../Search";
 import SourceIcon from "../SourceIcon";
 
 const DataMapping = () => {
-    const { isOpen, onOpen, onClose } = useDisclosure();
     const attributeMapping = useStore($attributeMapping);
-    const aggregateMapping = useStore($aggregateMapping);
-    const aggregateMetadata = useStore($aggMetadata);
+    const mapping = useStore($mapping);
+    const metadata = useStore($metadata);
     const { source, destination } = useStore($names);
     const [currentAttributes, setCurrentAttributes] = useState(
-        aggregateMetadata.destinationColumns
+        metadata.destinationColumns
     );
     const [searchString, setSearchString] = useState<string>("");
     const setCustom = (attribute: string, manual: boolean) => {
-        const isSpecific = attributeMapping[attribute]?.specific;
+        const isSpecific = attributeMapping[attribute]?.isSpecific;
         attributeMappingApi.update({
             attribute,
-            key: "manual",
+            key: "isCustom",
             value: manual,
         });
 
         if (isSpecific) {
             attributeMappingApi.update({
                 attribute,
-                key: "specific",
+                key: "isSpecific",
                 value: !isSpecific,
             });
         }
@@ -53,15 +41,15 @@ const DataMapping = () => {
     const setSpecific = (attribute: string, specific: boolean) => {
         attributeMappingApi.update({
             attribute,
-            key: "specific",
+            key: "isSpecific",
             value: specific,
         });
-        const isManual = attributeMapping[attribute]?.manual;
+        const isManual = attributeMapping[attribute]?.isCustom;
 
         if (isManual) {
             attributeMappingApi.update({
                 attribute,
-                key: "manual",
+                key: "isCustom",
                 value: !isManual,
             });
         }
@@ -71,7 +59,7 @@ const DataMapping = () => {
         {
             title: (
                 <Stack direction="row" alignItems="center">
-                    <DestinationIcon mapping={aggregateMapping} />
+                    <DestinationIcon mapping={mapping} />
                     <Text> Destination Attribute</Text>
                     <Text>{destination}</Text>
                 </Stack>
@@ -81,12 +69,12 @@ const DataMapping = () => {
         },
         {
             title: "Custom",
-            key: "manual",
+            key: "custom",
             width: "100px",
             align: "center",
             render: (text, { value }) => (
                 <Checkbox
-                    isChecked={attributeMapping[value ?? ""]?.manual}
+                    isChecked={attributeMapping[value ?? ""]?.isCustom}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setCustom(value ?? "", e.target.checked)
                     }
@@ -100,7 +88,7 @@ const DataMapping = () => {
             align: "center",
             render: (text, { value }) => (
                 <Checkbox
-                    isChecked={attributeMapping[value ?? ""]?.specific}
+                    isChecked={attributeMapping[value ?? ""]?.isSpecific}
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>
                         setSpecific(value ?? "", e.target.checked)
                     }
@@ -110,7 +98,7 @@ const DataMapping = () => {
         {
             title: (
                 <Stack direction="row" alignItems="center">
-                    <SourceIcon mapping={aggregateMapping} />
+                    <SourceIcon mapping={mapping} />
                     <Text>Source Attribute</Text>
                     <Text>{source}</Text>
                 </Stack>
@@ -119,8 +107,8 @@ const DataMapping = () => {
             width: "40%",
             render: (text, { value, valueType, unique }) => {
                 if (
-                    attributeMapping[value ?? ""]?.manual ||
-                    attributeMapping[value ?? ""]?.specific
+                    attributeMapping[value ?? ""]?.isCustom ||
+                    attributeMapping[value ?? ""]?.isSpecific
                 ) {
                     return (
                         <Input
@@ -137,12 +125,12 @@ const DataMapping = () => {
                 }
                 return (
                     <Select<Option, false, GroupBase<Option>>
-                        value={aggregateMetadata.sourceColumns?.find(
+                        value={metadata.sourceColumns?.find(
                             (val) =>
                                 val.value ===
                                 attributeMapping[value ?? ""]?.value
                         )}
-                        options={aggregateMetadata.sourceColumns}
+                        options={metadata.sourceColumns}
                         isClearable
                         size="md"
                         onChange={(e) =>
@@ -184,9 +172,9 @@ const DataMapping = () => {
             unique,
             label: destinationLabel,
             mandatory,
-        } of aggregateMetadata.destinationColumns) {
+        } of metadata.destinationColumns) {
             if (attributeMapping[destinationValue ?? ""] === undefined) {
-                const search = aggregateMetadata.sourceColumns.find(
+                const search = metadata.sourceColumns.find(
                     ({ value }) => value === destinationValue
                 );
                 if (search) {
@@ -199,7 +187,7 @@ const DataMapping = () => {
                         },
                     });
                 } else {
-                    const search2 = aggregateMetadata.sourceColumns.find(
+                    const search2 = metadata.sourceColumns.find(
                         ({ label }) => label === destinationLabel
                     );
                     if (search2) {
@@ -223,7 +211,8 @@ const DataMapping = () => {
             overflow="auto"
         >
             <Search
-                options={aggregateMetadata.destinationColumns}
+                options={metadata.destinationColumns}
+                source={[]}
                 mapping={attributeMapping}
                 searchString={searchString}
                 setSearchString={setSearchString}
@@ -242,7 +231,7 @@ const DataMapping = () => {
                 footer={() => (
                     <Text textAlign="right">
                         Mapped {Object.keys(attributeMapping || {}).length} of{" "}
-                        {aggregateMetadata.destinationColumns?.length || 0}
+                        {metadata.destinationColumns?.length || 0}
                     </Text>
                 )}
             />

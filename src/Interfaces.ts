@@ -1,6 +1,7 @@
 import { MakeGenerics } from "@tanstack/react-location";
 import { Event } from "effector";
 import type { DataNode as IDataNode } from "antd/es/tree";
+import { ImportType } from "data-import-wizard-utils";
 
 export interface Threshold {
     id: string;
@@ -38,7 +39,7 @@ export interface DataNode extends IDataNode {
 export type LocationGenerics = MakeGenerics<{
     LoaderData: {};
     Params: {};
-    Search: {};
+    Search: { type: ImportType };
 }>;
 
 export type AttributeProps<T> = {

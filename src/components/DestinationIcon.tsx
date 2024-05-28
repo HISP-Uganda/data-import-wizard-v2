@@ -1,8 +1,6 @@
 import { Image, Stack } from "@chakra-ui/react";
 import { IMapping } from "data-import-wizard-utils";
-import { useStore } from "effector-react";
 import React from "react";
-import { $programMapping } from "../pages/program/Store";
 
 export const available: {
     "xlsx-line-list": React.ReactElement;

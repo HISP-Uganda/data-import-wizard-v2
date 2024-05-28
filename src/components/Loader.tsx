@@ -1,6 +1,4 @@
-import { Stack, Spinner, Text } from "@chakra-ui/react";
-import { message } from "antd";
-import React from "react";
+import { Spinner, Stack, Text } from "@chakra-ui/react";
 
 export default function Loader({ message }: { message?: string }) {
     return (
