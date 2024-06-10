@@ -1,12 +1,16 @@
 import {
-    IGoData,
-    IMapping,
-    IProgram,
+    AggDataValue,
+    AggMetadata,
     Enrollment,
     Event,
     GODataOption,
     GoResponse,
+    IDataSet,
+    IGoData,
+    IMapping,
+    IProgram,
     Mapping,
+    MappingEvent,
     Option,
     RealMapping,
     StageMapping,
@@ -15,47 +19,41 @@ import {
     TrackedEntityInstance,
     Update,
     updateObject,
-    AggDataValue,
-    AggMetadata,
-    IDataSet,
-    KeyOptions,
-    SubKeys,
-    MappingEvent,
 } from "data-import-wizard-utils";
 import { createApi } from "effector";
 import { Dictionary } from "lodash";
 import { set } from "lodash/fp";
 import {
+    $activeSteps,
+    $attributeMapping,
+    $attributionMapping,
     $conflicts,
     $currentOptions,
+    $currentSourceOptions,
+    $data,
+    $dataSet,
+    $dhis2DataSet,
     $dhis2Program,
     $errors,
     $goData,
-    $mapping,
-    $optionMapping,
-    $prevGoData,
-    $token,
-    $tokens,
-    $attributionMapping,
-    $dataSet,
-    $dhis2DataSet,
-    $indicators,
-    $processedData,
-    $programIndicators,
-    $activeSteps,
-    $attributeMapping,
-    $currentSourceOptions,
-    $data,
     $goDataOptions,
+    $indicators,
+    $mapping,
+    $metadata,
+    $optionMapping,
     $organisationUnitMapping,
     $otherProcessed,
+    $prevGoData,
     $processed,
+    $processedData,
     $processedGoDataData,
     $program,
+    $programIndicators,
     $programStageMapping,
     $remoteMapping,
     $remoteOrganisations,
-    $metadata,
+    $token,
+    $tokens,
 } from "./Store";
 import { defaultMapping } from "./utils/utils";
 export const mappingApi = createApi($mapping, {
@@ -170,27 +168,27 @@ export const processor = createApi($processed, {
 
     addInstanceUpdated: (
         state,
-        trackedEntityInstancesUpdates: Array<Partial<TrackedEntityInstance>>
+        trackedEntityInstanceUpdates: Array<Partial<TrackedEntityInstance>>
     ) => {
         if (state.trackedEntityInstanceUpdates) {
             return {
                 ...state,
-                trackedEntityUpdates: [
+                trackedEntityInstanceUpdates: [
                     ...state.trackedEntityInstanceUpdates,
-                    ...trackedEntityInstancesUpdates,
+                    ...trackedEntityInstanceUpdates,
                 ],
             };
         }
-        return { ...state, trackedEntityInstancesUpdates };
+        return { ...state, trackedEntityInstanceUpdates };
     },
-    addEventUpdates: (state, eventsUpdates: Array<Partial<Event>>) => {
+    addEventUpdates: (state, eventUpdates: Array<Partial<Event>>) => {
         if (state.eventUpdates) {
             return {
                 ...state,
-                eventUpdates: [...state.eventUpdates, ...eventsUpdates],
+                eventUpdates: [...state.eventUpdates, ...eventUpdates],
             };
         }
-        return { ...state, eventsUpdates };
+        return { ...state, eventUpdates };
     },
     addErrors: (state, errors: Array<any>) => {
         if (state.errors) {

@@ -98,7 +98,6 @@ export default function Tables({ data }: { data: any[] }) {
     }, [JSON.stringify({ ...properties, rows, columns })]);
 
     const handleRowChange = (value: string | string[]) => {
-        console.log(value);
         if (isArray(value)) {
             setRows(() => value);
         }

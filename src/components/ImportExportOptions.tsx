@@ -1,11 +1,11 @@
-import { Stack } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import { useStore } from "effector-react";
 import { $mapping } from "../Store";
 import DHIS2AsDestinationOptions from "./import-export-options/DHIS2AsDestinationOptions";
 import DHIS2AsSourceOptions from "./import-export-options/DHIS2AsSourceOptions";
 import { InitialMapping } from "./InitialMapping";
 
-export default function MappingOptions({
+export default function ImportExportOptions({
     showFileUpload,
 }: {
     showFileUpload?: boolean;
@@ -20,16 +20,13 @@ export default function MappingOptions({
                 "xlsx-line-list",
                 "xlsx-tabular-data",
                 "xlsx-form",
-            ].indexOf(String(mapping.dataSource)) !== -1 &&
-                showFileUpload && (
-                    <InitialMapping
-                        isSource={mapping.isSource}
-                        dataSource={mapping.dataSource}
-                        extraction={
-                            mapping.useColumnLetters ? "column" : undefined
-                        }
-                    />
-                )}
+            ].indexOf(String(mapping.dataSource)) !== -1 && (
+                <InitialMapping
+                    isSource={mapping.isSource}
+                    dataSource={mapping.dataSource}
+                    extraction={mapping.useColumnLetters ? "column" : undefined}
+                />
+            )}
             {!mapping.isSource && <DHIS2AsDestinationOptions />}
             {(mapping.isSource ||
                 [

@@ -163,7 +163,6 @@ export default function MappingDetails({
                     : mapping.dataSource,
                 mapping.useColumnLetters ? "column" : undefined
             )} */}
-            <pre>{JSON.stringify(mapping, null, 2)}</pre>
         </Stack>
     );
 }

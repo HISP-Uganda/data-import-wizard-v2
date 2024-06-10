@@ -18,11 +18,7 @@ import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
 import { $metadata } from "../Store";
 
-const options = createOptions([
-    "join columns",
-    "extract year",
-    "specify column",
-]);
+const options = createOptions(["join columns", "extract year", "expression"]);
 export default function CustomColumn({
     value,
     mapping,
@@ -72,11 +68,11 @@ export default function CustomColumn({
             >
                 <ModalOverlay />
                 <ModalContent w="100%" h="300px">
-                    <ModalHeader>Modal Title</ModalHeader>
+                    <ModalHeader>Custom Mapping</ModalHeader>
                     <ModalCloseButton />
                     <ModalBody m="0" p="10px">
                         <Stack alignItems="center" w="100%">
-                            <Stack w="100%">
+                            <Stack w="100%" spacing="10px">
                                 <Text>Type</Text>
                                 <Box w="100%">
                                     <Select<Option, false, GroupBase<Option>>
@@ -122,7 +118,7 @@ export default function CustomColumn({
                             )}
 
                             {mapping[value].customType === "extract year" && (
-                                <Stack w="100%">
+                                <Stack w="100%" spacing="10px">
                                     <Text>Type</Text>
                                     <Box w="100%">
                                         <Select<
@@ -144,13 +140,16 @@ export default function CustomColumn({
                                     </Box>
                                 </Stack>
                             )}
-                            {mapping[value].customType === "specify" && (
-                                <Input
-                                    value={mapping[value].value}
-                                    onChange={(
-                                        e: ChangeEvent<HTMLInputElement>
-                                    ) => onValueChange(e.target.value)}
-                                />
+                            {mapping[value].customType === "expression" && (
+                                <Stack w="100%" spacing="10px">
+                                    <Text>Expression</Text>
+                                    <Input
+                                        value={mapping[value].value}
+                                        onChange={(
+                                            e: ChangeEvent<HTMLInputElement>
+                                        ) => onValueChange(e.target.value)}
+                                    />
+                                </Stack>
                             )}
                         </Stack>
                     </ModalBody>

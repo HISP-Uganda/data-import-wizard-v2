@@ -177,7 +177,6 @@ export default function TrackerDataPreview() {
         [Object.keys(processed.errors?.[0] ?? {})]
     );
 
-    console.log(processed);
     return (
         <Tabs>
             <TabList>

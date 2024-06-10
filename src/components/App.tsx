@@ -52,7 +52,7 @@ const routes: Route<LocationGenerics>[] = [
                 },
             },
             {
-                path: "/mapping",
+                path: "/individual",
                 element: <Program />,
                 loader: async () => {
                     stepper.reset();

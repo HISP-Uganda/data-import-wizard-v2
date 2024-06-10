@@ -61,6 +61,7 @@ export default function RemoteProgramSelect() {
                 incidentDateColumn: "enrollment.incidentDate",
                 enrollmentDateColumn: "enrollment.enrollmentDate",
                 remoteProgram: id,
+                trackedEntityInstanceColumn: "trackedEntityInstance",
             },
         });
         dhis2ProgramApi.set(program);

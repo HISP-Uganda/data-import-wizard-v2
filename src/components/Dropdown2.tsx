@@ -55,7 +55,6 @@ export default function App() {
     const onOptionClicked = (value: string | null) => () => {
         setSelectedOption(value);
         setIsOpen(false);
-        console.log(selectedOption);
     };
 
     return (

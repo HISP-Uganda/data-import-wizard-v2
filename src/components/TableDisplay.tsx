@@ -237,13 +237,7 @@ export default function TableDisplay<TData>({
                                             .getContext()
                                             .getValue();
                                         if (isArray(value) || isObject(value)) {
-                                            return (
-                                                <Td>
-                                                    <pre>
-                                                        {JSON.stringify(value)}
-                                                    </pre>
-                                                </Td>
-                                            );
+                                            return <Td></Td>;
                                         }
                                         return (
                                             <Td
