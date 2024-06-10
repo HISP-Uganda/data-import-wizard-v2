@@ -235,7 +235,7 @@ export default function AttributeMapping() {
             title: "Mapped",
             width: "100px",
             render: (text, { value }) => {
-                if (isMapped(value, attributeMapping, metadata.sourceColumns)) {
+                if (isMapped(value, attributeMapping)) {
                     return (
                         <Icon as={FiCheck} color="green.400" fontSize="2xl" />
                     );

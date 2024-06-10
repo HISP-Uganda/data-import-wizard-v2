@@ -1,4 +1,4 @@
-import { Stack, Text, useToast } from "@chakra-ui/react";
+import { Stack, useToast } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import { Option, Step } from "data-import-wizard-utils";
 import dayjs from "dayjs";
@@ -20,16 +20,16 @@ import {
 import { useEffect } from "react";
 import { mappingApi } from "../Events";
 import { $action, $steps, actionApi, stepper } from "../Store";
+import ImportSummary from "./aggregate/AggImportSummary";
 import Attribution from "./aggregate/Attribution";
 import Configuration from "./aggregate/Configuration";
 import DataMapping from "./aggregate/DataMapping";
 import DataSetSelect from "./aggregate/DataSetSelect";
-import ImportSummary from "./aggregate/AggImportSummary";
 import Pivot from "./aggregate/Pivot";
 import RemoteDataSetSelect from "./aggregate/RemoteDataSetSelect";
 import DataPreview from "./DataPreview";
+import ImportExportOptions from "./ImportExportOptions";
 import MappingDetails from "./MappingDetails";
-import MappingOptions from "./MappingOptions";
 import OrganisationUnitMapping from "./OrganisationUnitMapping";
 import StepperButtons from "./StepperButtons";
 import StepsDisplay from "./StepsDisplay";
@@ -121,7 +121,7 @@ const Aggregate = () => {
         },
         {
             label: "Options",
-            content: <MappingOptions />,
+            content: <ImportExportOptions />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 8,

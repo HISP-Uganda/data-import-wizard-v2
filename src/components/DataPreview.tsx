@@ -1,7 +1,7 @@
 import { useStore } from "effector-react";
 import { $mapping } from "../Store";
 import AggregateDataPreview from "./previews/AggregateDataPreview";
-import TrackerDataPreview from "./previews/TrackerDataPreview";
+import TrackerDataPreview from "./previews/Preview";
 import SwitchComponent, { Case } from "./SwitchComponent";
 
 export default function DataPreview() {

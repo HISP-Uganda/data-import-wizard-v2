@@ -63,11 +63,10 @@ export const generateData = (
     const sheetData = workbook.Sheets[sheet];
     if (extraction === "json") {
         if (mapping.headerRow === 1 && mapping.dataStartRow === 2) {
-            const data = utils.sheet_to_json(sheetData, {
+            return utils.sheet_to_json(sheetData, {
                 raw: false,
                 defval: "",
             });
-            return data;
         } else if (mapping.headerRow && mapping.dataStartRow) {
             const data: string[][] = utils.sheet_to_json(sheetData, {
                 header: 1,
@@ -488,54 +487,77 @@ export const processInstances = async (
         },
         "ALL"
     );
+    let instances: Array<Partial<TrackedEntityInstance>> = [];
 
     let uniqueAttributeValues: any[] = [];
     let trackedInstanceIds: string[] = [];
-    if (mapping.program?.trackedEntityInstanceColumn) {
-        trackedInstanceIds = trackedEntityInstances
-            .map(({ trackedEntityInstance }) => trackedEntityInstance ?? "")
-            .filter((a) => a !== "");
-    } else {
-        uniqueAttributeValues = findUniqAttributes(
-            currentData,
-            attributeMapping
-        );
-    }
-    if (currentData.length > 0) {
-        const instances = await fetchTrackedEntityInstances({
-            api: { engine },
-            program: mapping.program?.program,
-            additionalParams: {},
-            uniqueAttributeValues,
-            withAttributes: true,
-            trackedEntityInstances: trackedInstanceIds,
-            fields: "*",
-            pageSize: "50",
-        });
 
-        const previous = processPreviousInstances({
-            trackedEntityInstances: instances.trackedEntityInstances,
-            programUniqAttributes,
-            programStageUniqueElements,
-            currentProgram: mapping.program?.program,
-            eventIdIdentifiesEvent: trackedInstanceIds.length > 0,
-            trackedEntityIdIdentifiesInstance: trackedInstanceIds.length > 0,
-        });
-        setMessage(() => `Converting data to destination DHIS2`);
-        const convertedData = await convertToDHIS2({
-            previousData: previous,
-            data: currentData,
-            mapping: mapping,
-            organisationUnitMapping,
-            attributeMapping,
-            programStageMapping,
-            optionMapping,
-            version,
-            program,
-        });
-        setMessage(() => `Inserting converted data to destination DHIS2`);
-        await callback(convertedData);
+    if (
+        mapping.program?.program === mapping.program?.remoteProgram &&
+        mapping.dataSource === "dhis2-program" &&
+        mapping.isCurrentInstance
+    ) {
+        instances = trackedEntityInstances;
+        trackedInstanceIds = trackedEntityInstances.flatMap(
+            ({ trackedEntityInstance }) => {
+                if (trackedEntityInstance) return trackedEntityInstance;
+                return [];
+            }
+        );
+    } else {
+        if (mapping.program?.trackedEntityInstanceColumn) {
+            trackedInstanceIds = trackedEntityInstances.flatMap(
+                ({ trackedEntityInstance }) => {
+                    if (trackedEntityInstance) return trackedEntityInstance;
+                    return [];
+                }
+            );
+        } else {
+            uniqueAttributeValues = findUniqAttributes(
+                currentData,
+                attributeMapping
+            );
+        }
+        if (currentData.length > 0) {
+            const { trackedEntityInstances } =
+                await fetchTrackedEntityInstances({
+                    api: { engine },
+                    program: mapping.program?.program,
+                    additionalParams: {},
+                    uniqueAttributeValues,
+                    withAttributes: true,
+                    trackedEntityInstances: trackedInstanceIds,
+                    fields: "*",
+                    pageSize: "50",
+                });
+            instances = trackedEntityInstances;
+        }
     }
+
+    const {} = programStageMapping;
+
+    const previous = processPreviousInstances({
+        trackedEntityInstances: instances,
+        programUniqAttributes,
+        programStageUniqueElements,
+        currentProgram: mapping.program?.program,
+        programStageMapping,
+        trackedEntityIdIdentifiesInstance: trackedInstanceIds.length > 0,
+    });
+
+    setMessage(() => `Converting data to destination DHIS2`);
+    const convertedData = await convertToDHIS2({
+        previousData: previous,
+        data: currentData,
+        mapping: mapping,
+        organisationUnitMapping,
+        attributeMapping,
+        programStageMapping,
+        optionMapping,
+        version,
+        program,
+    });
+    await callback(convertedData);
 };
 
 export const authentication: Partial<Authentication> =
@@ -571,13 +593,9 @@ export const findMapped = (mapping: Mapping, source: Option[]) => {
         );
     }).length;
 };
-export const isMapped = (value: any, mapping: Mapping, source: Option[]) => {
+export const isMapped = (value: any, mapping: Mapping) => {
     if (value === undefined) return false;
-    return (
-        mapping[value] &&
-        mapping[value].value &&
-        source.find((val) => val.value === mapping[value].value)
-    );
+    return mapping[value] && mapping[value].value;
 };
 
 export const processAggregateData = async ({
@@ -619,6 +637,18 @@ export const processAggregateData = async ({
     } else if (mapping.dataSource === "dhis2-data-set") {
         for (const orgUnit of mapping.dhis2SourceOptions?.ous ?? []) {
             for (const p of mapping.dhis2SourceOptions?.period ?? []) {
+                let params: Record<string, string> = {
+                    dataSet: mapping.aggregate?.remote ?? "",
+                    orgUnit,
+                    children: "true",
+                };
+                if (p.type === "range" && p.startDate && p.endDate) {
+                    params = {
+                        ...params,
+                        startDate: p.startDate,
+                        endDate: p.endDate,
+                    };
+                }
                 setMessage(
                     () =>
                         `Querying data orgUnit ${orgUnit} and period ${p.value}`
@@ -628,12 +658,7 @@ export const processAggregateData = async ({
                     auth: mapping.authentication,
                     engine,
                     resource: "dataValueSets.json",
-                    params: {
-                        dataSet: mapping.aggregate?.remote ?? "",
-                        orgUnit,
-                        children: "true",
-                        period: p.value ?? "",
-                    },
+                    params,
                 });
 
                 if (data.dataValues) {
@@ -641,7 +666,6 @@ export const processAggregateData = async ({
                         () =>
                             `Converting data for orgUnit ${orgUnit} and period ${p.value}`
                     );
-                    console.log("Are we here");
                     await dataCallback(
                         convertToAggregate({
                             mapping: mapping,
@@ -768,4 +792,14 @@ export const hasAttribution = (dataSet: Partial<IDataSet>) => {
         ({ name }) => name !== "default"
     );
     return categories && categories.length > 0;
+};
+
+export const findUniqueDataSetCompletions = (
+    dataSet: string,
+    values: AggDataValue[]
+) => {
+    return uniq(values.map((x) => `${x.orgUnit},${x.period}`)).map((a) => {
+        const [organisationUnit, period] = a.split(",");
+        return { organisationUnit, period, completed: true, dataSet };
+    });
 };

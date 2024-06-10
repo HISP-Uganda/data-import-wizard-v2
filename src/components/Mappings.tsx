@@ -159,6 +159,9 @@ export default function Mappings() {
                     created: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                     type: "aggregate",
                     id: generateUid(),
+                    headerRow: 1,
+                    dataStartRow: 2,
+                    chunkSize: 5000,
                 });
                 navigate({ to: "./aggregate" });
             },

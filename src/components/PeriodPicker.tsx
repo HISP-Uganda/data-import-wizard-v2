@@ -95,8 +95,18 @@ const PeriodPicker = ({
         dateStrings: string[]
     ) => {
         if (dates) {
-            console.log("From: ", dates[0], ", to: ", dates[1]);
-            console.log("From: ", dateStrings[0], ", to: ", dateStrings[1]);
+            onChange(
+                [
+                    {
+                        label: `From: ${dateStrings[0]} , to: ${dateStrings[1]}`,
+                        value: undefined,
+                        type: "range",
+                        startDate: dateStrings[0],
+                        endDate: dateStrings[1],
+                    },
+                ],
+                false
+            );
         } else {
             console.log("Clear");
         }

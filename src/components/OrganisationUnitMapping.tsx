@@ -249,9 +249,6 @@ export default function OrganisationUnitMapping() {
             return;
         }
         event.target.value = "";
-        console.log(event.target.files);
-        console.log(fileObj);
-        console.log(fileObj.name);
     };
 
     return (
@@ -329,7 +326,6 @@ export default function OrganisationUnitMapping() {
                 message={message}
                 onOpen={onOpen}
             />
-            <pre>{JSON.stringify(metadata, null, 2)}</pre>
         </Stack>
     );
 }

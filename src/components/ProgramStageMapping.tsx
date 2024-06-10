@@ -15,6 +15,7 @@ import { ColumnsType } from "antd/es/table";
 import { GroupBase, Select } from "chakra-react-select";
 import {
     IProgramStageDataElement,
+    Mapping,
     Option,
     RealMapping,
 } from "data-import-wizard-utils";
@@ -27,12 +28,13 @@ import { stageMappingApi } from "../Events";
 import CustomColumn from "./CustomColumn";
 import DestinationIcon from "./DestinationIcon";
 import OptionSetMapping from "./OptionSetMapping";
+import ColumnMapping from "./program/ColumnMapping";
+import FeatureColumn from "./program/FeatureColumn";
 import SourceIcon from "./SourceIcon";
 
 export default function ProgramStageMapping({
     psId,
     programStageDataElements,
-    repeatable,
     featureType,
 }: {
     psId: string;
@@ -58,42 +60,22 @@ export default function ProgramStageMapping({
         }
     };
 
-    const { info, ...rest } = programStageMapping[psId] || {};
-    const createEvents =
-        programStageMapping[psId]?.["info"]?.createEvents || false;
-    const updateEvents =
-        programStageMapping[psId]?.["info"]?.updateEvents || false;
-    const uniqueEventDate =
-        programStageMapping[psId]?.["info"]?.uniqueEventDate || false;
+    const stageMapping: Mapping = programStageMapping[psId] ?? { info: {} };
 
-    const customEventIdColumn =
-        programStageMapping[psId]?.["info"]?.customEventIdColumn || false;
-    const customEventDateColumn =
-        programStageMapping[psId]?.["info"]?.customEventDateColumn || false;
-    const customDueDateColumn =
-        programStageMapping[psId]?.["info"]?.customDueDateColumn || false;
-
-    const completeEvents =
-        programStageMapping[psId]?.["info"]?.completeEvents || false;
-
-    const geometryMerged =
-        programStageMapping[psId]?.["info"]?.geometryMerged || false;
-
-    const eventDateColumn =
-        programStageMapping[psId]?.["info"]?.eventDateColumn || "";
-    const dueDateColumn =
-        programStageMapping[psId]?.["info"]?.dueDateColumn || "";
-    const stage = programStageMapping[psId]?.["info"]?.stage || "";
-    const stageMapping = programStageMapping[psId];
-
-    const eventIdColumn =
-        programStageMapping[psId]?.["info"]?.eventIdColumn || "";
-    const geometryColumn =
-        programStageMapping[psId]?.["info"]?.geometryColumn || "";
-    const latitudeColumn =
-        programStageMapping[psId]?.["info"]?.latitudeColumn || "";
-    const longitudeColumn =
-        programStageMapping[psId]?.["info"]?.longitudeColumn || "";
+    const { info, ...rest } = stageMapping;
+    const {
+        createEvents = false,
+        updateEvents = false,
+        uniqueEventDate = false,
+        createEmptyEvents = false,
+        customEventIdColumn = false,
+        customEventDateColumn = false,
+        customDueDateColumn = false,
+        completeEvents = false,
+        eventDateColumn = "",
+        eventIdColumn = "",
+        stage,
+    } = info;
 
     const [searchString, setSearchString] = useState<string>("");
     const [currentElements, setCurrentElements] = useState(
@@ -109,7 +91,7 @@ export default function ProgramStageMapping({
                     <Text>{destination}</Text>
                 </Stack>
             ),
-            render: (text, { dataElement }) => {
+            render: (_, { dataElement }) => {
                 return dataElement?.name;
             },
             key: "dataElement.name",
@@ -333,11 +315,7 @@ export default function ProgramStageMapping({
             width: "100px",
             render: (text, { dataElement }) => {
                 if (dataElement) {
-                    const { id, name, optionSetValue, optionSet } = dataElement;
-
-                    const isUnique =
-                        programStageMapping[psId]?.[id]?.unique || false;
-
+                    const { id, optionSetValue, optionSet } = dataElement;
                     const value = programStageMapping[psId]?.[id]?.value || "";
                     if (optionSetValue) {
                         return (
@@ -460,196 +438,6 @@ export default function ProgramStageMapping({
         }
     };
 
-    const determineTrackedEntityOptions = () => {
-        return (
-            <Stack spacing="20px" direction="row" alignItems="center" flex={1}>
-                <Text>Event Id Column</Text>
-                <Stack spacing="0" flex={1}>
-                    <Checkbox
-                        isChecked={customEventIdColumn}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            stageMappingApi.update({
-                                attribute: "info",
-                                stage: psId,
-                                key: "customEventIdColumn",
-                                value: e.target.checked,
-                            })
-                        }
-                    >
-                        Custom Event Id Column
-                    </Checkbox>
-                    <Box>
-                        {customEventIdColumn ? (
-                            <Input
-                                value={eventIdColumn}
-                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                    stageMappingApi.update({
-                                        stage: psId,
-                                        attribute: "info",
-                                        key: "eventIdColumn",
-                                        value: e.target.value,
-                                    })
-                                }
-                            />
-                        ) : (
-                            <Select<Option, false, GroupBase<Option>>
-                                value={metadata.sourceColumns.find(
-                                    (val) => val.value === eventIdColumn
-                                )}
-                                options={metadata.sourceColumns}
-                                placeholder="Select event id column"
-                                isClearable
-                                onChange={(e) =>
-                                    stageMappingApi.update({
-                                        stage: psId,
-                                        attribute: "info",
-                                        key: "eventIdColumn",
-                                        value: e?.value || "",
-                                    })
-                                }
-                            />
-                        )}
-                    </Box>
-                </Stack>
-            </Stack>
-        );
-    };
-
-    const determineFeatureType = () => {
-        if (featureType === "POINT") {
-            return (
-                <Stack>
-                    <Checkbox
-                        isChecked={geometryMerged}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            stageMappingApi.update({
-                                attribute: "info",
-                                key: "geometryMerged",
-                                stage: psId,
-                                value: e.target.checked,
-                            })
-                        }
-                    >
-                        Latitudes and Longitudes combined
-                    </Checkbox>
-
-                    {geometryMerged ? (
-                        <Stack
-                            alignItems="center"
-                            flex={1}
-                            direction="row"
-                            spacing="20px"
-                        >
-                            <Text>Latitudes and Longitudes Column</Text>
-                            <Box flex={1}>
-                                <Select<Option, false, GroupBase<Option>>
-                                    value={metadata.sourceColumns.find(
-                                        (val) => val.value === geometryColumn
-                                    )}
-                                    options={metadata.sourceColumns}
-                                    isClearable
-                                    placeholder="Select geometry column"
-                                    onChange={(e) =>
-                                        stageMappingApi.update({
-                                            attribute: "info",
-                                            key: "geometryColumn",
-                                            stage: psId,
-                                            value: e?.value,
-                                        })
-                                    }
-                                />
-                            </Box>
-                        </Stack>
-                    ) : (
-                        <Stack
-                            direction="row"
-                            alignItems="center"
-                            spacing="20px"
-                            flex={1}
-                        >
-                            <Stack direction="row" alignItems="center" flex={1}>
-                                <Text>Latitude Column</Text>
-                                <Box flex={1}>
-                                    <Select<Option, false, GroupBase<Option>>
-                                        value={metadata.sourceColumns.find(
-                                            (val) =>
-                                                val.value === latitudeColumn
-                                        )}
-                                        options={metadata.sourceColumns}
-                                        isClearable
-                                        placeholder="Select latitude column"
-                                        onChange={(e) =>
-                                            stageMappingApi.update({
-                                                attribute: "info",
-                                                key: "latitudeColumn",
-                                                stage: psId,
-                                                value: e?.value,
-                                            })
-                                        }
-                                    />
-                                </Box>
-                            </Stack>
-                            <Stack direction="row" alignItems="center" flex={1}>
-                                <Text>Longitude Column</Text>
-                                <Box flex={1}>
-                                    <Select<Option, false, GroupBase<Option>>
-                                        value={metadata.sourceColumns.find(
-                                            (val) =>
-                                                val.value === longitudeColumn
-                                        )}
-                                        options={metadata.sourceAttributes}
-                                        isClearable
-                                        placeholder="Select longitude column"
-                                        onChange={(e) =>
-                                            stageMappingApi.update({
-                                                attribute: "info",
-                                                key: "longitudeColumn",
-                                                stage: psId,
-                                                value: e?.value,
-                                            })
-                                        }
-                                    />
-                                </Box>
-                            </Stack>
-                        </Stack>
-                    )}
-                </Stack>
-            );
-        }
-
-        if (featureType === "POLYGON") {
-            return (
-                <Stack
-                    alignItems="center"
-                    flex={1}
-                    direction="row"
-                    spacing="20px"
-                >
-                    <Text>Geometry Column</Text>
-                    <Box flex={1}>
-                        <Select<Option, false, GroupBase<Option>>
-                            value={metadata.sourceColumns.find(
-                                (val) => val.value === geometryColumn
-                            )}
-                            options={metadata.sourceColumns}
-                            isClearable
-                            placeholder="Select geometry column"
-                            onChange={(e) =>
-                                stageMappingApi.update({
-                                    attribute: "info",
-                                    key: "geometryColumn",
-                                    stage: psId,
-                                    value: e?.value,
-                                })
-                            }
-                        />
-                    </Box>
-                </Stack>
-            );
-        }
-        return null;
-    };
-
     return (
         <Stack key={psId} spacing="20px">
             <Stack spacing={[1, 5]} direction={["column", "row"]}>
@@ -696,6 +484,20 @@ export default function ProgramStageMapping({
                     }
                 >
                     Mark Event Date As Unique
+                </Checkbox>
+                <Checkbox
+                    colorScheme="green"
+                    isChecked={createEmptyEvents}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                        stageMappingApi.update({
+                            stage: psId,
+                            attribute: "info",
+                            key: "createEmptyEvents",
+                            value: e.target.checked,
+                        })
+                    }
+                >
+                    Create Empty Events
                 </Checkbox>
             </Stack>
             <Stack direction="row" spacing="20px" alignItems="center">
@@ -744,123 +546,33 @@ export default function ProgramStageMapping({
                         </Box>
                     </Stack>
                 )}
-                <Stack
-                    spacing="20px"
-                    direction="row"
-                    alignItems="center"
-                    flex={1}
-                >
-                    <Text>Event Date Column</Text>
-                    <Stack spacing="0" flex={1}>
-                        <Checkbox
-                            isChecked={customEventDateColumn}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                stageMappingApi.update({
-                                    attribute: "info",
-                                    stage: psId,
-                                    key: "customEventDateColumn",
-                                    value: e.target.checked,
-                                })
-                            }
-                        >
-                            Custom Event Date Column
-                        </Checkbox>
-                        <Box>
-                            {customEventDateColumn ? (
-                                <Input
-                                    value={eventDateColumn}
-                                    onChange={(
-                                        e: ChangeEvent<HTMLInputElement>
-                                    ) =>
-                                        stageMappingApi.update({
-                                            stage: psId,
-                                            attribute: "info",
-                                            key: "eventDateColumn",
-                                            value: e.target.value,
-                                        })
-                                    }
-                                />
-                            ) : (
-                                <Select<Option, false, GroupBase<Option>>
-                                    value={metadata.sourceColumns.find(
-                                        (val) => val.value === eventDateColumn
-                                    )}
-                                    options={metadata.sourceColumns}
-                                    placeholder="Select event date column"
-                                    isClearable
-                                    onChange={(e) =>
-                                        stageMappingApi.update({
-                                            stage: psId,
-                                            attribute: "info",
-                                            key: "eventDateColumn",
-                                            value: e?.value,
-                                        })
-                                    }
-                                />
-                            )}
-                        </Box>
-                    </Stack>
-                </Stack>
-                <Stack
-                    spacing="20px"
-                    direction="row"
-                    alignItems="center"
-                    flex={1}
-                >
-                    <Text>Due Date Column</Text>
-                    <Stack spacing="0" flex={1}>
-                        <Checkbox
-                            isChecked={customDueDateColumn}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                stageMappingApi.update({
-                                    attribute: "info",
-                                    stage: psId,
-                                    key: "customDueDateColumn",
-                                    value: e.target.checked,
-                                })
-                            }
-                        >
-                            Custom Due Date Column
-                        </Checkbox>
-                        <Box>
-                            {customDueDateColumn ? (
-                                <Input
-                                    value={dueDateColumn}
-                                    onChange={(
-                                        e: ChangeEvent<HTMLInputElement>
-                                    ) =>
-                                        stageMappingApi.update({
-                                            stage: psId,
-                                            attribute: "info",
-                                            key: "dueDateColumn",
-                                            value: e.target.value,
-                                        })
-                                    }
-                                />
-                            ) : (
-                                <Select<Option, false, GroupBase<Option>>
-                                    value={metadata.sourceColumns.find(
-                                        (val) => val.value === dueDateColumn
-                                    )}
-                                    options={metadata.sourceColumns}
-                                    placeholder="Select due date column"
-                                    isClearable
-                                    onChange={(e) =>
-                                        stageMappingApi.update({
-                                            stage: psId,
-                                            attribute: "info",
-                                            key: "dueDateColumn",
-                                            value: e?.value,
-                                        })
-                                    }
-                                />
-                            )}
-                        </Box>
-                    </Stack>
-                </Stack>
-                {determineTrackedEntityOptions()}
+                <ColumnMapping
+                    title="Event Date Column"
+                    customColumn="customEventDateColumn"
+                    value={eventDateColumn}
+                    isCustom={customEventDateColumn}
+                    psId={psId}
+                    valueColumn="eventDateColumn"
+                />
+                <ColumnMapping
+                    title="Due Date Column"
+                    customColumn="customDueDateColumn"
+                    value={eventDateColumn}
+                    isCustom={customDueDateColumn}
+                    psId={psId}
+                    valueColumn="dueDateColumn"
+                />
+
+                <ColumnMapping
+                    title="Event Id Column"
+                    customColumn="customEventIdColumn"
+                    value={eventIdColumn}
+                    isCustom={customEventIdColumn}
+                    psId={psId}
+                    valueColumn="eventIdColumn"
+                />
             </Stack>
-            {determineFeatureType()}
+            <FeatureColumn featureType={featureType} psId={psId} />
             <Stack direction="row">
                 <Checkbox
                     onChange={(e: ChangeEvent<HTMLInputElement>) =>

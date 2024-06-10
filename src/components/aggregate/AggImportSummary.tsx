@@ -21,7 +21,10 @@ import {
     $organisationUnitMapping,
     $processedData,
 } from "../../Store";
-import { processAggregateData } from "../../utils/utils";
+import {
+    findUniqueDataSetCompletions,
+    processAggregateData,
+} from "../../utils/utils";
 import Progress from "../Progress";
 
 type Addition = {
@@ -57,7 +60,6 @@ export default function AggImportSummary() {
                     resource: `system/taskSummaries/DATAVALUE_IMPORT/${id}`,
                 },
             });
-
             if (data?.importCount) {
                 await db.dataValueResponses.put({
                     id,
@@ -127,6 +129,21 @@ export default function AggImportSummary() {
         },
     ];
 
+    const insertCompletions = async (dataValues: any[]) => {
+        try {
+            const response = await engine.mutate({
+                type: "create",
+                resource: "completeDataSetRegistrations",
+                data: { completeDataSetRegistrations: dataValues },
+                params: {
+                    async: false,
+                },
+            });
+        } catch (error: any) {
+            console.log(error);
+        }
+    };
+
     const insertChunk = async (dataValues: AggDataValue[]) => {
         try {
             const { response }: any = await engine.mutate({
@@ -178,14 +195,32 @@ export default function AggImportSummary() {
         await db.dataValueConflicts.clear();
         onOpen();
         if (mapping.prefetch) {
+            const completions = findUniqueDataSetCompletions(
+                mapping.aggregate?.dataSet ?? "",
+                processedData
+            );
+            console.log("======", completions, "=======");
             const allChunks = chunk(processedData, mapping.chunkSize);
             let current = 0;
+            let complete = 0;
             for (const ch of allChunks) {
                 setMessage(
                     () =>
                         `Inserting chunk of ${++current} of ${allChunks.length}`
                 );
                 await insertChunk(ch);
+            }
+
+            const completionChunks = chunk(completions, mapping.chunkSize);
+            console.log(completionChunks.length);
+            for (const ch of completionChunks) {
+                setMessage(
+                    () =>
+                        `Completing chunk of ${++complete} of ${
+                            completionChunks.length
+                        }`
+                );
+                await insertCompletions(ch);
             }
         } else {
             await processAggregateData({
@@ -196,6 +231,11 @@ export default function AggImportSummary() {
                 data,
                 dataCallback: async (dataValues) => {
                     await insertChunk(dataValues);
+                    const completions = findUniqueDataSetCompletions(
+                        mapping.aggregate?.dataSet ?? "",
+                        processedData
+                    );
+                    await insertCompletions(completions);
                 },
                 setMessage,
                 dataMapping,

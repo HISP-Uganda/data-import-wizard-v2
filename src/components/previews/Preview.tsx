@@ -23,11 +23,11 @@ import {
     $attributeMapping,
     $data,
     $goData,
+    $mapping,
     $metadata,
     $optionMapping,
     $organisationUnitMapping,
     $program,
-    $mapping,
     $programStageMapping,
     $programStageUniqueElements,
     $programUniqAttributes,
@@ -42,11 +42,11 @@ import {
     processor,
 } from "../../Events";
 import { $version } from "../../Store";
-import DHIS2Preview from "../previews/TrackerDataPreview";
-import GoDataPreview from "../GoDataPreview";
-import OtherSystemPreview from "../previews/OtherSystemPreview";
-import Progress from "../Progress";
 import { processInstances } from "../../utils/utils";
+import GoDataPreview from "../GoDataPreview";
+import Progress from "../Progress";
+import OtherSystemPreview from "./OtherSystemPreview";
+import DHIS2Preview from "./TrackerDataPreview";
 
 export default function Preview() {
     const version = useStore($version);
@@ -83,13 +83,18 @@ export default function Preview() {
                 mapping.dhis2SourceOptions?.programStage &&
                 mapping.dhis2SourceOptions.programStage.length > 0
             ) {
-                const events = await fetchEvents(
-                    { engine },
-                    mapping.dhis2SourceOptions.programStage,
-                    50,
-                    mapping.program?.program || ""
-                );
-                instances = { trackedEntityInstances: events };
+                // let events: Array<Partial<FlattenedInstance>> = [];
+                // fetchEvents({
+                //     api: { engine },
+                //     programStages: mapping.dhis2SourceOptions.programStage,
+                //     pageSize: 50,
+                //     afterFetch: (data) => {
+                //         events = events.concat(data);
+                //     },
+                //     others: {},
+                //     program: mapping.program?.program ?? "",
+                // });
+                // instances = { trackedEntityInstances: events };
             } else {
                 instances = await fetchTrackedEntityInstances({
                     api: { engine },
@@ -131,7 +136,10 @@ export default function Preview() {
                 otherProcessedApi.addNewInserts(data);
             }
         } else {
-            if (mapping.dataSource === "dhis2-program") {
+            if (
+                mapping.dataSource === "dhis2-program" &&
+                mapping.program?.remoteProgram
+            ) {
                 let api: Partial<{ engine: any; axios: AxiosInstance }> = {};
                 if (mapping.isCurrentInstance) {
                     api = { engine };
@@ -139,47 +147,130 @@ export default function Preview() {
                     api = { axios: remoteAPI };
                 }
                 setMessage(() => "Fetching program data");
-                await fetchTrackedEntityInstances(
-                    {
+
+                let additionalParams = {};
+                if (mapping.dhis2SourceOptions?.ous) {
+                    additionalParams = {
+                        ...additionalParams,
+                        ou: mapping.dhis2SourceOptions.ous,
+                    };
+                }
+                if (
+                    mapping.dhis2SourceOptions?.programStage &&
+                    mapping.dhis2SourceOptions.programStage.length > 0
+                ) {
+                    await fetchEvents({
                         api,
-                        program: mapping.program?.remoteProgram,
-                        additionalParams: {},
-                        uniqueAttributeValues: [],
-                        withAttributes: false,
-                        trackedEntityInstances: [],
-                    },
-                    async (trackedEntityInstances) => {
-                        processInstances(
-                            {
-                                engine,
-                                trackedEntityInstances,
-                                mapping,
-                                version,
-                                attributeMapping,
-                                program,
-                                programStageMapping,
-                                optionMapping,
-                                organisationUnitMapping,
-                                programStageUniqueElements,
-                                programUniqAttributes,
-                                setMessage,
-                            },
-                            async (data) => {
-                                processor.addInstances(
-                                    data.trackedEntityInstances
-                                );
-                                processor.addEnrollments(data.enrollments);
-                                processor.addEvents(data.events);
-                                processor.addInstanceUpdated(
-                                    data.trackedEntityInstanceUpdates
-                                );
-                                processor.addEventUpdates(data.eventUpdates);
-                                processor.addErrors(data.errors);
-                                processor.addConflicts(data.conflicts);
-                            }
-                        );
+                        programStages: mapping.dhis2SourceOptions.programStage,
+                        pageSize: 50,
+                        afterFetch: (data) => {
+                            processInstances(
+                                {
+                                    engine,
+                                    trackedEntityInstances: data,
+                                    mapping,
+                                    version,
+                                    attributeMapping,
+                                    program,
+                                    programStageMapping,
+                                    optionMapping,
+                                    organisationUnitMapping,
+                                    programStageUniqueElements,
+                                    programUniqAttributes,
+                                    setMessage,
+                                },
+                                async (data) => {
+                                    setMessage(() => "Adding data to preview");
+                                    processor.addInstances(
+                                        data.trackedEntityInstances
+                                    );
+                                    processor.addEnrollments(data.enrollments);
+                                    processor.addEvents(data.events);
+                                    processor.addInstanceUpdated(
+                                        data.trackedEntityInstanceUpdates
+                                    );
+                                    processor.addEventUpdates(
+                                        data.eventUpdates
+                                    );
+                                    processor.addErrors(data.errors);
+                                    processor.addConflicts(data.conflicts);
+                                }
+                            );
+                        },
+                        others: {
+                            orgUnit:
+                                mapping.dhis2SourceOptions?.ous?.join(";") ??
+                                "",
+                            fields: "*",
+                        },
+                        program: mapping.program.remoteProgram,
+                    });
+                } else {
+                    if (
+                        mapping.dhis2SourceOptions &&
+                        mapping.dhis2SourceOptions.period &&
+                        mapping.dhis2SourceOptions.period.length > 0 &&
+                        mapping.dhis2SourceOptions.period[0].startDate &&
+                        mapping.dhis2SourceOptions.period[0].endDate &&
+                        mapping.dhis2SourceOptions.searchPeriod ===
+                            "enrollmentDate"
+                    ) {
+                        const programStartDate =
+                            mapping.dhis2SourceOptions.period[0].startDate;
+                        const programEndDate =
+                            mapping.dhis2SourceOptions.period[0].endDate;
+
+                        additionalParams = {
+                            ...additionalParams,
+                            programEndDate,
+                            programStartDate,
+                        };
                     }
-                );
+                    await fetchTrackedEntityInstances(
+                        {
+                            api,
+                            program: mapping.program?.remoteProgram,
+                            additionalParams,
+                            uniqueAttributeValues: [],
+                            withAttributes: false,
+                            trackedEntityInstances: [],
+                        },
+                        async (trackedEntityInstances) => {
+                            processInstances(
+                                {
+                                    engine,
+                                    trackedEntityInstances,
+                                    mapping,
+                                    version,
+                                    attributeMapping,
+                                    program,
+                                    programStageMapping,
+                                    optionMapping,
+                                    organisationUnitMapping,
+                                    programStageUniqueElements,
+                                    programUniqAttributes,
+                                    setMessage,
+                                },
+                                async (data) => {
+                                    setMessage(() => "Adding data to preview");
+                                    processor.addInstances(
+                                        data.trackedEntityInstances
+                                    );
+                                    processor.addEnrollments(data.enrollments);
+                                    processor.addEvents(data.events);
+                                    processor.addInstanceUpdated(
+                                        data.trackedEntityInstanceUpdates
+                                    );
+                                    processor.addEventUpdates(
+                                        data.eventUpdates
+                                    );
+                                    processor.addErrors(data.errors);
+                                    processor.addConflicts(data.conflicts);
+                                }
+                            );
+                        }
+                    );
+                }
             } else if (mapping.dataSource === "go-data") {
                 const {
                     params,
@@ -285,7 +376,7 @@ export default function Preview() {
                                     programUniqAttributes,
                                     programStageUniqueElements,
                                     currentProgram: mapping.program?.program,
-                                    eventIdIdentifiesEvent: false,
+                                    programStageMapping,
                                     trackedEntityIdIdentifiesInstance: false,
                                 });
                                 const {
@@ -337,8 +428,7 @@ export default function Preview() {
                             programUniqAttributes,
                             programStageUniqueElements,
                             currentProgram: mapping.program?.program,
-                            eventIdIdentifiesEvent:
-                                metadata.trackedEntityInstanceIds.length > 0,
+                            programStageMapping,
                             trackedEntityIdIdentifiesInstance:
                                 metadata.trackedEntityInstanceIds.length > 0,
                         });

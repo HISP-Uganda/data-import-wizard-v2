@@ -22,15 +22,33 @@ export class CQIDexie extends Dexie {
         completed: string;
     }>;
     dataValueConflicts!: Table<AggConflict>;
-
+    trackerResponses!: Table<{
+        id: string;
+        created: number;
+        updated: number;
+        ignored: number;
+        deleted: number;
+        resource: string;
+        children: Array<{
+            id: string;
+            resource: string;
+            created: number;
+            updated: number;
+            ignored: number;
+            deleted: number;
+            completed: string;
+        }>;
+        completed: string;
+    }>;
     constructor() {
         super("diw");
-        this.version(4).stores({
+        this.version(7).stores({
             organisations: "++id,value,pId,title",
             expandedKeys: "++id,name",
             levels: "++value,label",
             groups: "++value,label",
             dataValueResponses: "id,completed",
+            trackerResponses: "id,completed",
             dataValueConflicts: "object",
         });
     }

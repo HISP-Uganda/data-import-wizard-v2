@@ -17,7 +17,6 @@ import {
     $goData,
     $goDataOptions,
     $mapping,
-    $metadata,
     $name,
     $names,
     $optionMapping,
@@ -36,15 +35,16 @@ import {
     stepper,
 } from "../Store";
 import { saveProgramMapping } from "../utils/utils";
+import ImportExportOptions from "./ImportExportOptions";
 import MappingDetails from "./MappingDetails";
 import OrganisationUnitMapping from "./OrganisationUnitMapping";
 import AttributeMapping from "./program/AttributeMapping";
-import DHIS2Options from "./program/DHIS2Options";
+import DHIS2ToDHIS2ProgramOptions from "./program/DHIS2ToDHIS2ProgramOptions";
 import EventMapping from "./program/EventMapping";
-import ImportSummary from "./program/ProgramImportSummary";
 import MappingOptions from "./program/MappingOptions";
 import { OtherSystemMapping } from "./program/OtherSystemMapping";
-import Preview from "./program/Preview";
+import Preview from "./previews/Preview";
+import ImportSummary from "./program/ProgramImportSummary";
 import ProgramSelect from "./program/ProgramSelect";
 import RemoteOutbreaks from "./RemoteOutbreak";
 import RemoteProgramSelect from "./RemoteProgramSelect";
@@ -74,7 +74,6 @@ const Program = () => {
     const action = useStore($action);
     const engine = useDataEngine();
     const names = useStore($names);
-    const { sourceOrgUnits, destinationOrgUnits } = useStore($metadata);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const navigate = useNavigate<LocationGenerics>();
 
@@ -151,6 +150,13 @@ const Program = () => {
             lastLabel: "Go to Mappings",
         },
         {
+            label: "DHIS2 Options",
+            content: <DHIS2ToDHIS2ProgramOptions />,
+            nextLabel: "Next Step",
+            id: 14,
+            lastLabel: "Go to Mappings",
+        },
+        {
             label: "Organisation Mapping",
             content: <OrganisationUnitMapping />,
             nextLabel: "Next Step",
@@ -179,8 +185,8 @@ const Program = () => {
             lastLabel: "Go to Mappings",
         },
         {
-            label: "DHIS2 Export Options",
-            content: <DHIS2Options />,
+            label: "Import/Export Options",
+            content: <ImportExportOptions />,
             nextLabel: "Next Step",
             id: 11,
             lastLabel: "Export Program",
@@ -243,19 +249,30 @@ const Program = () => {
             }
 
             if (programMapping.dataSource === "dhis2-program") {
-                if (programMapping.prefetch) {
-                    return [5, 4, 8].indexOf(id) === -1;
+                let removeAttributeMapping: number[] = [];
+                if (
+                    !programMapping.program?.createEntities &&
+                    !programMapping.program?.updateEntities
+                ) {
+                    removeAttributeMapping = [9];
                 }
-                return [5, 4, 8, 12].indexOf(id) === -1;
+                if (programMapping.prefetch) {
+                    return (
+                        [5, 4, 8, ...removeAttributeMapping].indexOf(id) === -1
+                    );
+                }
+                return (
+                    [5, 4, 8, 12, ...removeAttributeMapping].indexOf(id) === -1
+                );
             }
             if (programMapping.dataSource === "go-data") {
                 if (
                     programMapping.program?.programType ===
                     "WITHOUT_REGISTRATION"
                 ) {
-                    return [4, 6, 8, 9, 11].indexOf(id) === -1;
+                    return [4, 6, 8, 9, 11, 14].indexOf(id) === -1;
                 }
-                return [4, 6, 8, 11].indexOf(id) === -1;
+                return [4, 6, 8, 11, 14].indexOf(id) === -1;
             }
 
             return [1, 2, 3, 4, 7, 9, 10, 12, 13].indexOf(id) !== -1;

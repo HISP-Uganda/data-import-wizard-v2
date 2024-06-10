@@ -1,11 +1,12 @@
 import { Checkbox, Stack } from "@chakra-ui/react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useStore } from "effector-react";
-import { ChangeEvent, useEffect } from "react";
+import { ChangeEvent } from "react";
 import { db } from "../../db";
 
-import { mappingApi } from "../../Events";
-import { $configList, $dataSet, $mapping, $metadata } from "../../Store";
+import { dataApi, mappingApi } from "../../Events";
+import { $configList, $mapping, $metadata, $workbook } from "../../Store";
+import { generateData } from "../../utils/utils";
 import NumberProperty from "../mapping-fields/NumberProperty";
 import SelectField from "../mapping-fields/SelectProperty";
 
@@ -13,13 +14,9 @@ export default function Configuration() {
     const mapping = useStore($mapping);
     const metadata = useStore($metadata);
     const configList = useStore($configList);
+    const workbook = useStore($workbook);
 
     const levels = useLiveQuery(() => db.levels.toArray());
-
-    // useEffect(() => {
-    //     setHasAttribution();
-    //     return () => {};
-    // }, []);
 
     const allFields: Array<{ id: string; element: React.ReactNode }> = [
         {
@@ -29,6 +26,17 @@ export default function Configuration() {
                     title="Header row"
                     attribute="headerRow"
                     key="header-row"
+                    callback={() => {
+                        if (workbook && mapping.sheet) {
+                            const actual = generateData(
+                                mapping,
+                                workbook,
+                                mapping.sheet,
+                                "json"
+                            );
+                            dataApi.changeData(actual);
+                        }
+                    }}
                 />
             ),
         },
@@ -39,6 +47,17 @@ export default function Configuration() {
                     title="Data start row"
                     attribute="dataStartRow"
                     key="data-start-row"
+                    callback={() => {
+                        if (workbook && mapping.sheet) {
+                            const actual = generateData(
+                                mapping,
+                                workbook,
+                                mapping.sheet,
+                                "json"
+                            );
+                            dataApi.changeData(actual);
+                        }
+                    }}
                 />
             ),
         },
