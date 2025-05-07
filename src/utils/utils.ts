@@ -1,30 +1,56 @@
 import { ColumnsType } from "antd/es/table";
 import {
+    AggDataValue,
     Authentication,
-    convertToDHIS2,
+    CategoryCombo,
+    CellStyle,
+    convertToAggregate,
+    EventStageMapping,
+    ExcelHeader,
+    ExportColumn,
     Extraction,
-    fetchTrackedEntityInstances,
-    findUniqAttributes,
-    flattenTrackedEntityInstances,
+    flipMapping,
     generateUid,
     IMapping,
-    IProgram,
     Mapping,
-    Processed,
-    processPreviousInstances,
-    StageMapping,
-    TrackedEntityInstance,
+    mapToObject,
     Option,
-    convertToAggregate,
-    AggDataValue,
-    IDataSet,
+    RealMapping,
+    StageMapping,
+    updateNested,
 } from "data-import-wizard-utils";
 import dayjs from "dayjs";
-import { chunk, Dictionary, fromPairs, groupBy, orderBy, uniq } from "lodash";
+import { IndexableType, Table } from "dexie";
+import { Style as ExcelStyle } from "exceljs";
+
+import {
+    chunk,
+    fromPairs,
+    groupBy,
+    isEmpty,
+    orderBy,
+    range,
+    times,
+    uniq,
+} from "lodash";
 import { uniqBy } from "lodash/fp";
 import { utils, WorkBook } from "xlsx";
+import { mediumWidth, smallestWidth } from "../constants";
+import { CQIDexie } from "../db";
+import { ExcelGenerator } from "../ExcelGenerator";
 import { Column, Threshold } from "../Interfaces";
 import { getDHIS2Resource } from "../Queries";
+
+interface SearchMappingParams {
+    value: string;
+    label: string;
+    code: string;
+    id: string;
+    sourceOptions: Partial<Option>[];
+    mapping: Partial<IMapping>;
+    path: string;
+    isOrgUnitMapping?: boolean;
+}
 
 export function encodeToBinary(str: string): string {
     return btoa(
@@ -32,8 +58,8 @@ export function encodeToBinary(str: string): string {
             /%([0-9A-F]{2})/g,
             function (match, p1) {
                 return String.fromCharCode(parseInt(p1, 16));
-            }
-        )
+            },
+        ),
     );
 }
 export function decodeFromBinary(str: string): string {
@@ -42,7 +68,7 @@ export function decodeFromBinary(str: string): string {
             .call(atob(str), function (c) {
                 return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
             })
-            .join("")
+            .join(""),
     );
 }
 
@@ -54,13 +80,77 @@ export const convertDataToURL = (objs: any[]) => {
         .join("&");
 };
 
+export const getSheetData = (
+    workbook: WorkBook,
+    worksheet: string,
+    headerRow: number = 1,
+    dataStartRow: number = 2,
+    extraction: Extraction = "json",
+) => {
+    const ws = workbook.Sheets[worksheet];
+    if (extraction === "cell") {
+        const {
+            ["!cols"]: cols,
+            ["!rows"]: rows,
+            ["!merges"]: merges,
+            ["!protect"]: protect,
+            ["!autofilter"]: autofilter,
+            ["!ref"]: ref,
+            ["!margins"]: margins,
+            ["!type"]: type,
+            ...rest
+        } = ws;
+
+        const all = Object.entries(rest).map(([col, cell]) => {
+            if (cell && cell.t === "d") {
+                return [col, dayjs(cell.v).format("YYYY-MM-DD")];
+            } else if (cell) {
+                return [col, cell.v];
+            } else {
+                return [col, ""];
+            }
+        });
+        return [fromPairs(all)];
+    }
+
+    let range = utils.decode_range(ws["!ref"] ?? "");
+    let dense = ws["!data"] != null;
+    const columns = times(range.e.c + 1, (c) => {
+        let cell = dense
+            ? ws["!data"]?.[headerRow - 1]?.[c]
+            : ws[utils.encode_cell({ r: headerRow - 1, c })];
+        if (cell) return cell.v;
+        return "";
+    });
+    const data = [];
+
+    for (let R = dataStartRow - 1; R <= range.e.r; ++R) {
+        const currentRow: any[][] = [];
+        for (let C = 0; C <= range.e.c; ++C) {
+            let cell = dense
+                ? ws["!data"]?.[R]?.[C]
+                : ws[utils.encode_cell({ r: R, c: C })];
+            const column: string =
+                extraction === "column" ? utils.encode_col(C) : columns[C];
+            if (cell && cell.t === "d") {
+                currentRow.push([column, dayjs(cell.v).format("YYYY-MM-DD")]);
+            } else if (cell) {
+                currentRow.push([column, String(cell.w || cell.v)]);
+            } else {
+                currentRow.push([column, ""]);
+            }
+        }
+        data.push(fromPairs(currentRow));
+    }
+    return data;
+};
+
 export const generateData = (
     mapping: Partial<IMapping>,
     workbook: WorkBook,
-    sheet: string,
-    extraction: Extraction
+    extraction: Extraction,
 ) => {
-    const sheetData = workbook.Sheets[sheet];
+    const sheetData = workbook.Sheets[mapping.sheet ?? "Sheet 1"];
     if (extraction === "json") {
         if (mapping.headerRow === 1 && mapping.dataStartRow === 2) {
             return utils.sheet_to_json(sheetData, {
@@ -76,7 +166,7 @@ export const generateData = (
             return data
                 .slice(mapping.dataStartRow)
                 .map((d) =>
-                    fromPairs(d.map((dx, index) => [header[index], dx]))
+                    fromPairs(d.map((dx, index) => [header[index], dx])),
                 );
         }
         return [];
@@ -117,7 +207,7 @@ export const findColor = (val: number, thresholds: Threshold[]) => {
             return [];
         }),
         ["value"],
-        ["asc"]
+        ["asc"],
     );
     const baseline =
         thresholds.find(({ id }) => id === "baseline")?.color || "";
@@ -141,7 +231,7 @@ const calculation = {
             aggregationColumn: string;
             col2: string;
             prevValue: number;
-        }>
+        }>,
     ) => {
         const value = data.length;
         const color = findColor(value, thresholds);
@@ -156,7 +246,7 @@ const calculation = {
 const findMerged = (
     list: string[],
     data: Array<any>,
-    properties?: { [key: string]: any }
+    properties?: { [key: string]: any },
 ) => {
     if (data) {
         let finalColumns: Array<Array<Column>> = [];
@@ -241,7 +331,7 @@ export const processTable = ({
         const finalRows = findMerged(rows, data, properties);
 
         const groupedData = groupBy(data, (d) =>
-            rows.map((r) => d[r]).join("")
+            rows.map((r) => d[r]).join(""),
         );
 
         const allKeys = Object.keys(groupedData);
@@ -253,12 +343,12 @@ export const processTable = ({
                 rows = uniqBy(aggregationColumn, values);
             }
             const groupedByColumn = groupBy(values, (d) =>
-                columns.map((r) => d[r]).join("")
+                columns.map((r) => d[r]).join(""),
             );
             let currentObj: any = fromPairs(
                 otherColumns
                     .filter((d) => !!d)
-                    .map((d) => [d, uniqBy("id", values).length])
+                    .map((d) => [d, uniqBy("id", values).length]),
             );
 
             Object.entries(groupedByColumn).forEach(
@@ -269,7 +359,7 @@ export const processTable = ({
                         {
                             aggregationColumn,
                             prevValue: rows.length,
-                        }
+                        },
                     );
                     currentObj = {
                         ...currentObj,
@@ -279,7 +369,7 @@ export const processTable = ({
                         ...columnData[0],
                         key,
                     };
-                }
+                },
             );
             return currentObj;
         });
@@ -321,7 +411,7 @@ export function invertHex(hex: string, bw: boolean = true) {
 
 export function columnTree(
     list: Array<ColumnsType<any>>,
-    properties: { [key: string]: any }
+    properties: { [key: string]: any },
 ): Array<ColumnsType<any>> {
     if (list.length === 0) {
         return [];
@@ -372,7 +462,7 @@ export function columnTree(
                                             backgroundColor: cell[`${a.key}bg`],
                                             color: invertHex(
                                                 cell[`${a.key}bg`],
-                                                true
+                                                true,
                                             ),
                                         },
                                     };
@@ -382,7 +472,7 @@ export function columnTree(
                     };
                 }),
             ],
-            properties
+            properties,
         );
     } else {
         return columnTree(
@@ -390,174 +480,119 @@ export function columnTree(
                 ...list.slice(0, list.length - 2),
                 ...columnTree(list.slice(-2), properties),
             ],
-            properties
+            properties,
         );
     }
 }
 
-export const saveProgramMapping = async ({
+export const saveMapping = async ({
     engine,
     mapping,
-    organisationUnitMapping,
-    attributeMapping,
-    optionMapping,
-    programStageMapping,
     action,
+    mappings,
 }: {
     engine: any;
     mapping: Partial<IMapping>;
-    organisationUnitMapping: Mapping;
-    attributeMapping: Mapping;
-    programStageMapping: StageMapping;
-    optionMapping: Record<string, string>;
+    mappings: Partial<{
+        organisationUnitMapping: Mapping;
+        attributeMapping: Mapping;
+        enrollmentMapping: Mapping;
+        attributionMapping: Mapping;
+        optionMapping: Map<string, string>;
+        programStageMapping: StageMapping;
+    }>;
     action: "creating" | "editing";
 }) => {
     const type = action === "creating" ? "create" : "update";
-    const mutation: any = {
-        type,
-        resource: `dataStore/iw-mapping/${mapping.id}`,
-        data: {
-            ...mapping,
-            lastUpdated: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        },
-    };
-    const mutation2: any = {
-        type,
-        resource: `dataStore/iw-ou-mapping/${mapping.id}`,
-        data: organisationUnitMapping,
-    };
-    const mutation3: any = {
-        type,
-        resource: `dataStore/iw-attribute-mapping/${mapping.id}`,
-        data: attributeMapping,
-    };
-    const mutation4: any = {
-        type,
-        resource: `dataStore/iw-stage-mapping/${mapping.id}`,
-        data: programStageMapping,
-    };
-    const mutation5: any = {
-        type,
-        resource: `dataStore/iw-option-mapping/${mapping.id}`,
-        data: optionMapping,
-    };
-
-    return await Promise.all([
-        engine.mutate(mutation),
-        engine.mutate(mutation2),
-        engine.mutate(mutation3),
-        engine.mutate(mutation4),
-        engine.mutate(mutation5),
-    ]);
-};
-
-export const processInstances = async (
-    {
-        trackedEntityInstances,
-        mapping,
-        attributeMapping,
-        engine,
-        version,
-        program,
-        optionMapping,
+    const {
         organisationUnitMapping,
+        attributeMapping,
         programStageMapping,
-        programStageUniqueElements,
-        programUniqAttributes,
-        setMessage,
-    }: {
-        attributeMapping: Mapping;
-        mapping: Partial<IMapping>;
-        trackedEntityInstances: Array<Partial<TrackedEntityInstance>>;
-        engine: any;
-        version: number;
-        program: Partial<IProgram>;
-        optionMapping: Record<string, string>;
-        organisationUnitMapping: Mapping;
-        programStageMapping: StageMapping;
-        programStageUniqueElements: Dictionary<string[]>;
-        programUniqAttributes: string[];
-        setMessage: React.Dispatch<React.SetStateAction<string>>;
-    },
-    callback: (processedData: Processed) => Promise<void>
-) => {
-    const currentData = flattenTrackedEntityInstances(
-        {
-            trackedEntityInstances,
-        },
-        "ALL"
-    );
-    let instances: Array<Partial<TrackedEntityInstance>> = [];
+        enrollmentMapping,
+        attributionMapping,
+        optionMapping,
+    } = mappings;
 
-    let uniqueAttributeValues: any[] = [];
-    let trackedInstanceIds: string[] = [];
+    let mutations: any[] = [
+        engine.mutate({
+            type,
+            resource: `dataStore/iw-mapping/${mapping.id}`,
+            data: {
+                ...mapping,
+                lastUpdated: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+                eventStageMapping: mapToObject(
+                    mapping.eventStageMapping ??
+                        new Map<string, Partial<EventStageMapping>>(),
+                ),
+                categoryColumns: mapToObject(
+                    mapping.categoryColumns ?? new Map<string, string>(),
+                ),
+            },
+        }),
+    ];
 
-    if (
-        mapping.program?.program === mapping.program?.remoteProgram &&
-        mapping.dataSource === "dhis2-program" &&
-        mapping.isCurrentInstance
-    ) {
-        instances = trackedEntityInstances;
-        trackedInstanceIds = trackedEntityInstances.flatMap(
-            ({ trackedEntityInstance }) => {
-                if (trackedEntityInstance) return trackedEntityInstance;
-                return [];
-            }
-        );
-    } else {
-        if (mapping.program?.trackedEntityInstanceColumn) {
-            trackedInstanceIds = trackedEntityInstances.flatMap(
-                ({ trackedEntityInstance }) => {
-                    if (trackedEntityInstance) return trackedEntityInstance;
-                    return [];
-                }
-            );
-        } else {
-            uniqueAttributeValues = findUniqAttributes(
-                currentData,
-                attributeMapping
-            );
-        }
-        if (currentData.length > 0) {
-            const { trackedEntityInstances } =
-                await fetchTrackedEntityInstances({
-                    api: { engine },
-                    program: mapping.program?.program,
-                    additionalParams: {},
-                    uniqueAttributeValues,
-                    withAttributes: true,
-                    trackedEntityInstances: trackedInstanceIds,
-                    fields: "*",
-                    pageSize: "50",
-                });
-            instances = trackedEntityInstances;
-        }
+    if (organisationUnitMapping) {
+        mutations = mutations.concat([
+            engine.mutate({
+                type,
+                resource: `dataStore/iw-ou-mapping/${mapping.id}`,
+                data: mapToObject(organisationUnitMapping),
+            }),
+        ]);
     }
 
-    const {} = programStageMapping;
+    if (attributionMapping) {
+        mutations = mutations.concat([
+            engine.mutate({
+                type,
+                resource: `dataStore/iw-attribution-mapping/${mapping.id}`,
+                data: mapToObject(attributionMapping),
+            }),
+        ]);
+    }
 
-    const previous = processPreviousInstances({
-        trackedEntityInstances: instances,
-        programUniqAttributes,
-        programStageUniqueElements,
-        currentProgram: mapping.program?.program,
-        programStageMapping,
-        trackedEntityIdIdentifiesInstance: trackedInstanceIds.length > 0,
-    });
+    if (attributeMapping && attributeMapping.size > 0) {
+        mutations = mutations.concat([
+            engine.mutate({
+                type,
+                resource: `dataStore/iw-attribute-mapping/${mapping.id}`,
+                data: mapToObject(attributeMapping),
+            }),
+        ]);
+    }
 
-    setMessage(() => `Converting data to destination DHIS2`);
-    const convertedData = await convertToDHIS2({
-        previousData: previous,
-        data: currentData,
-        mapping: mapping,
-        organisationUnitMapping,
-        attributeMapping,
-        programStageMapping,
-        optionMapping,
-        version,
-        program,
-    });
-    await callback(convertedData);
+    if (mapping.type === "individual") {
+        if (programStageMapping) {
+            mutations = mutations.concat([
+                engine.mutate({
+                    type,
+                    resource: `dataStore/iw-stage-mapping/${mapping.id}`,
+                    data: mapToObject(programStageMapping),
+                }),
+            ]);
+        }
+
+        if (optionMapping) {
+            mutations = mutations.concat([
+                engine.mutate({
+                    type,
+                    resource: `dataStore/iw-option-mapping/${mapping.id}`,
+                    data: mapToObject(optionMapping),
+                }),
+            ]);
+        }
+
+        if (enrollmentMapping) {
+            mutations = mutations.concat([
+                engine.mutate({
+                    type,
+                    resource: `dataStore/iw-enrollment-mapping/${mapping.id}`,
+                    data: mapToObject(enrollmentMapping),
+                }),
+            ]);
+        }
+    }
+    return await Promise.all(mutations);
 };
 
 export const authentication: Partial<Authentication> =
@@ -586,21 +621,17 @@ export const defaultMapping: Partial<IMapping> = {
     type: "aggregate",
 };
 
-export const findMapped = (mapping: Mapping, source: Option[]) => {
-    return Object.entries(mapping).filter(([_, val]) => {
-        return (
-            val.value && source.find((current) => current.value === val.value)
-        );
-    }).length;
+export const findMapped = (destinationOptions: Array<Partial<Option>>) => {
+    return destinationOptions.filter(({ source }) => !!source).length;
 };
 export const isMapped = (value: any, mapping: Mapping) => {
     if (value === undefined) return false;
-    return mapping[value] && mapping[value].value;
+    return mapping.get(value) && mapping.get(value)?.source;
 };
 
 export const processAggregateData = async ({
     mapping,
-    ouMapping,
+    organisationUnitMapping,
     dataMapping,
     data,
     attributionMapping,
@@ -609,14 +640,22 @@ export const processAggregateData = async ({
     dataCallback,
 }: {
     mapping: Partial<IMapping>;
-    ouMapping: Mapping;
+    organisationUnitMapping: Mapping;
     dataMapping: Mapping;
     data: any[];
     attributionMapping: Mapping;
-    setMessage: React.Dispatch<React.SetStateAction<string>>;
+    setMessage: (message: string) => void;
     engine: any;
-    dataCallback: (aggDataValue: AggDataValue[]) => Promise<void>;
+    dataCallback: ({
+        validData,
+        invalidData,
+    }: {
+        validData: Array<AggDataValue>;
+        invalidData: any[];
+    }) => void;
 }) => {
+    const flippedAttribution = flipMapping(attributionMapping);
+    const flippedOrgUnits = flipMapping(organisationUnitMapping);
     if (
         [
             "xlsx-line-list",
@@ -625,14 +664,14 @@ export const processAggregateData = async ({
             "csv-line-list",
         ].indexOf(mapping.dataSource ?? "") !== -1
     ) {
-        await dataCallback(
+        dataCallback(
             convertToAggregate({
                 mapping,
-                ouMapping,
+                flippedOrgUnits,
                 dataMapping,
                 data,
-                attributionMapping,
-            })
+                flippedAttribution,
+            }),
         );
     } else if (mapping.dataSource === "dhis2-data-set") {
         for (const orgUnit of mapping.dhis2SourceOptions?.ous ?? []) {
@@ -648,158 +687,454 @@ export const processAggregateData = async ({
                         startDate: p.startDate,
                         endDate: p.endDate,
                     };
+                } else {
+                    params = {
+                        ...params,
+                        period: p.value ?? "",
+                    };
                 }
                 setMessage(
-                    () =>
-                        `Querying data orgUnit ${orgUnit} and period ${p.value}`
+                    `Querying data orgUnit ${orgUnit} and period ${p.value}`,
                 );
-                const data = await getDHIS2Resource<any>({
-                    isCurrentDHIS2: mapping.isCurrentInstance,
-                    auth: mapping.authentication,
-                    engine,
-                    resource: "dataValueSets.json",
-                    params,
-                });
+                try {
+                    const data = await getDHIS2Resource<any>({
+                        isCurrentDHIS2: mapping.isCurrentInstance,
+                        auth: mapping.authentication,
+                        engine,
+                        resource: "dataValueSets.json",
+                        params,
+                    });
 
-                if (data.dataValues) {
-                    setMessage(
-                        () =>
-                            `Converting data for orgUnit ${orgUnit} and period ${p.value}`
-                    );
-                    await dataCallback(
-                        convertToAggregate({
-                            mapping: mapping,
-                            ouMapping,
-                            dataMapping,
-                            data: data.dataValues,
-                            attributionMapping,
-                        })
-                    );
+                    if (data.dataValues) {
+                        setMessage(
+                            `Converting data for orgUnit ${orgUnit} and period ${p.value}`,
+                        );
+                        dataCallback(
+                            convertToAggregate({
+                                mapping,
+                                flippedOrgUnits,
+                                dataMapping,
+                                data: data.dataValues,
+                                flippedAttribution,
+                            }),
+                        );
+                    }
+                } catch (error) {
+                    console.error(error);
                 }
             }
         }
     } else if (
         ["dhis2-indicators", "dhis2-program-indicators"].indexOf(
-            mapping.dataSource ?? ""
+            mapping.dataSource ?? "",
         ) !== -1
     ) {
         const allKeys = Object.values(dataMapping).flatMap((a) => {
-            if (a.value) {
-                return a.value;
+            if (a.source) {
+                return a.source;
             }
             return [];
         });
 
+        const ous =
+            mapping.dhis2SourceOptions &&
+            mapping.dhis2SourceOptions.ous &&
+            mapping.dhis2SourceOptions.ous.length > 0
+                ? `${mapping.dhis2SourceOptions.ous.join(";")};`
+                : "";
+        let page = 0;
+        const allChunks = chunk(allKeys, 10);
         if (allKeys.length > 0) {
-            for (const indicators of chunk(allKeys, 25)) {
+            for (const indicators of allChunks) {
                 setMessage(
-                    () =>
-                        `Querying data for orgUnit level ${
-                            mapping.aggregate?.indicatorGenerationLevel
-                        } and periods ${(
-                            mapping.dhis2SourceOptions?.period?.map(
-                                (p) => p.value
-                            ) ?? []
-                        ).join(";")} for indicators ${indicators.join(";")}`
+                    `Querying page ${page + 1} of ${
+                        allChunks.length
+                    } indicators of ${allKeys.length}`,
                 );
-                const data = await getDHIS2Resource<{
-                    headers: Array<{ name: string }>;
-                    rows: string[][];
-                }>({
-                    isCurrentDHIS2: mapping.isCurrentInstance,
-                    auth: mapping.authentication,
-                    engine,
-                    resource: `analytics.json?dimension=dx:${indicators.join(
-                        ";"
-                    )}&dimension=ou:LEVEL-${
-                        mapping.aggregate?.indicatorGenerationLevel ?? []
-                    }&dimension=pe:${(
-                        mapping.dhis2SourceOptions?.period?.map(
-                            (p) => p.value
-                        ) ?? []
-                    ).join(";")}`,
-                });
+                try {
+                    const data = await getDHIS2Resource<{
+                        headers: Array<{ name: string }>;
+                        rows: string[][];
+                    }>({
+                        isCurrentDHIS2: mapping.isCurrentInstance,
+                        auth: mapping.authentication,
+                        engine,
+                        resource: `analytics.json?dimension=dx:${indicators.join(
+                            ";",
+                        )}&dimension=ou:${ous}LEVEL-${
+                            mapping.aggregate?.indicatorGenerationLevel ?? []
+                        }&dimension=pe:${(
+                            mapping.dhis2SourceOptions?.period?.map(
+                                (p) => p.value,
+                            ) ?? []
+                        ).join(";")}`,
+                    });
+                    setMessage(
+                        `Processing page ${page + 1} of ${
+                            allChunks.length
+                        } indicators of ${allKeys.length}`,
+                    );
+                    if (data.rows && data.rows.length > 0) {
+                        const finalData = data.rows.map((row) =>
+                            fromPairs(
+                                row.map((r, index) => [
+                                    data.headers?.[index].name,
+                                    r,
+                                ]),
+                            ),
+                        );
+                        dataCallback(
+                            convertToAggregate({
+                                mapping,
+                                flippedAttribution,
+                                dataMapping,
+                                data: finalData,
+                                flippedOrgUnits,
+                            }),
+                        );
+                    }
+                } catch (error) {}
 
-                setMessage(
-                    () =>
-                        `Processing and converting data for orgUnit level ${
-                            mapping.aggregate?.indicatorGenerationLevel
-                        } and periods ${(
-                            mapping.dhis2SourceOptions?.period?.map(
-                                (p) => p.value
-                            ) ?? []
-                        ).join(";")} for indicators ${indicators.join(";")}`
-                );
-                if (data.rows && data.rows.length > 0) {
-                    const finalData = data.rows.map((row) =>
-                        fromPairs(
-                            row.map((r, index) => [
-                                data.headers?.[index].name,
-                                r,
-                            ])
-                        )
-                    );
-                    dataCallback(
-                        convertToAggregate({
-                            mapping: mapping,
-                            ouMapping,
-                            dataMapping,
-                            data: finalData,
-                            attributionMapping,
-                        })
-                    );
-                }
+                page = page + 1;
             }
         }
     }
 };
 
-export const aggregateDataColumns: ColumnsType<AggDataValue> = [
-    {
-        title: "Data Element",
-        dataIndex: "dataElement",
-        key: "dataElement",
-    },
-    {
-        title: "Organisation",
-        dataIndex: "orgUnit",
-        key: "orgUnit",
-    },
-    {
-        title: "Period",
-        dataIndex: "period",
-        key: "period",
-    },
-    {
-        title: "Category OptionCombo",
-        dataIndex: "categoryOptionCombo",
-        key: "categoryOptionCombo",
-    },
-    {
-        title: "Attribute OptionCombo",
-        dataIndex: "attributeOptionCombo",
-        key: "attributeOptionCombo",
-    },
-    {
-        title: "Value",
-        dataIndex: "value",
-        key: "value",
-    },
-];
+export const makeAggregateColumns = (metadata: Record<string, string>) => {
+    const aggregateDataColumns: ColumnsType<AggDataValue> = [
+        {
+            title: "Data Element",
+            dataIndex: "dataElement",
+            key: "dataElement",
+            render: (dataElement) => metadata[dataElement] || dataElement,
+        },
+        {
+            title: "Organisation",
+            dataIndex: "orgUnit",
+            key: "orgUnit",
+            render: (orgUnit) => metadata[orgUnit] || orgUnit,
+        },
+        {
+            title: "Period",
+            dataIndex: "period",
+            key: "period",
+        },
+        {
+            title: "Category OptionCombo",
+            dataIndex: "categoryOptionCombo",
+            key: "categoryOptionCombo",
+            render: (categoryOptionCombo) =>
+                metadata[categoryOptionCombo] || categoryOptionCombo,
+        },
+        {
+            title: "Attribute OptionCombo",
+            dataIndex: "attributeOptionCombo",
+            key: "attributeOptionCombo",
+            render: (attributeOptionCombo) =>
+                metadata[attributeOptionCombo] || attributeOptionCombo,
+        },
+        {
+            title: "Value",
+            dataIndex: "value",
+            key: "value",
+        },
+    ];
+    return aggregateDataColumns;
+};
 
-export const hasAttribution = (dataSet: Partial<IDataSet>) => {
-    const categories = dataSet.categoryCombo?.categories.filter(
-        ({ name }) => name !== "default"
+export const invalidDataColumns = (
+    invalidData: any[] | undefined,
+): ColumnsType<any> => {
+    if (invalidData && invalidData.length > 0) {
+        const keys = Object.keys(invalidData[0]);
+        return keys.map((key) => {
+            return {
+                title: key,
+                dataIndex: key,
+                key,
+            };
+        });
+    }
+    return [];
+};
+
+export const hasAttribution = (categoryCombo: CategoryCombo | undefined) => {
+    const categories = categoryCombo?.categories.filter(
+        ({ name }) => name !== "default",
     );
     return categories && categories.length > 0;
 };
 
 export const findUniqueDataSetCompletions = (
     dataSet: string,
-    values: AggDataValue[]
+    values: AggDataValue[],
 ) => {
     return uniq(values.map((x) => `${x.orgUnit},${x.period}`)).map((a) => {
         const [organisationUnit, period] = a.split(",");
         return { organisationUnit, period, completed: true, dataSet };
     });
 };
+
+export const processProgramMapping = () => {};
+
+function cleanString(input: string, preserveSpaces: boolean = false): string {
+    if (preserveSpaces) {
+        return input.replace(/[^a-zA-Z0-9 ]/g, "");
+    } else {
+        return input.replace(/[^a-zA-Z0-9]/g, "");
+    }
+}
+
+export const searchMapping = ({
+    code,
+    value,
+    id,
+    sourceOptions,
+    mapping,
+    label,
+    path,
+    isOrgUnitMapping,
+}: SearchMappingParams): Partial<Option> | undefined => {
+    if (mapping.orgUnitMapping?.matchHierarchy && isOrgUnitMapping) {
+        let search = sourceOptions.find((option) => {
+            const { path: path1 = "" } = option;
+            const sourcePath = cleanString(path1).toLowerCase();
+            const destPath = cleanString(path).toLowerCase();
+            return destPath.endsWith(sourcePath);
+        });
+        if (search === undefined) {
+            search = sourceOptions.find((option) => {
+                const { path: path1 = "" } = option;
+                const sourcePath = cleanString(path1).toLowerCase();
+                const destPath = cleanString(path).toLowerCase();
+                return destPath.includes(sourcePath);
+            });
+        }
+        return search;
+    } else {
+        return sourceOptions.find((option) => {
+            const {
+                code: code1 = "",
+                value: value1 = "",
+                label: label1 = "",
+                id: id1 = "",
+            } = option;
+
+            if (value1 && value && value === value1) return true;
+            if (code && code1 && code === code1) return true;
+            if (id && id1 && id === id1) return true;
+            return (
+                cleanString(label).toLowerCase() ===
+                cleanString(label1).toLowerCase()
+            );
+        });
+    }
+};
+
+export const updateMapping = async ({
+    table,
+    currentValues,
+}: {
+    table: Table<Partial<Option>, IndexableType>;
+    currentValues: Partial<Option>;
+}) => {
+    if (currentValues.source) {
+        let prev = undefined;
+        if (currentValues.source && currentValues.stage) {
+            prev = await table
+                .where({
+                    source: currentValues.source,
+                    stage: currentValues.stage,
+                })
+                .first();
+        } else if (currentValues.source) {
+            prev = await table.get(currentValues.source);
+        }
+
+        if (prev) {
+            await table.put({
+                ...prev,
+                ...currentValues,
+            });
+        } else {
+            await table.put(currentValues);
+        }
+    } else if (currentValues.value && currentValues.stage) {
+        await table.delete([currentValues.stage, currentValues.value]);
+    } else if (currentValues.value) {
+        await table.delete(currentValues.value);
+    }
+};
+
+export const readMappings = async (db: CQIDexie) => {
+    if (db) {
+        const unitsMapping = await db.organisationMapping.toArray();
+        const aMapping = await db.attributeMapping.toArray();
+        const enrollment = await db.enrollmentMapping.toArray();
+        const stageMapping = await db.programStageMapping.toArray();
+        const attribution = await db.attributionMapping.toArray();
+        const options = await db.optionsMapping.toArray();
+
+        const attributionMapping = attribution?.reduce<Mapping>((a, b) => {
+            if (b.value) {
+                a.set(b.value, b);
+            }
+            return a;
+        }, new Map<string, Partial<RealMapping>>());
+        const optionsMapping = options?.reduce<Mapping>((a, b) => {
+            if (b.value) {
+                a.set(b.value, b);
+            }
+            return a;
+        }, new Map<string, Partial<RealMapping>>());
+
+        const organisationUnitMapping = unitsMapping?.reduce<Mapping>(
+            (a, b) => {
+                if (b.value) {
+                    a.set(b.value, b);
+                }
+                return a;
+            },
+            new Map<string, Partial<RealMapping>>(),
+        );
+
+        const attributeMapping = aMapping?.reduce<Mapping>((a, b) => {
+            if (b.value) {
+                a.set(b.value, b);
+            }
+            return a;
+        }, new Map<string, Partial<RealMapping>>());
+        const enrollmentMapping = enrollment?.reduce<Mapping>((a, b) => {
+            if (b.value) {
+                a.set(b.value, b);
+            }
+            return a;
+        }, new Map<string, Partial<RealMapping>>());
+        const programStageMapping = stageMapping?.reduce<StageMapping>(
+            (a, b) => {
+                a = updateNested(
+                    a,
+                    b.stage ?? "",
+                    b.value ?? "",
+                    () => b as Partial<RealMapping>,
+                );
+                return a;
+            },
+            new Map<string, Mapping>(),
+        );
+
+        return {
+            attributeMapping,
+            organisationUnitMapping,
+            enrollmentMapping,
+            programStageMapping,
+            optionsMapping,
+            attributionMapping,
+        };
+    }
+
+    return {
+        attributeMapping: {},
+        organisationUnitMapping: {},
+        enrollmentMapping: {},
+        programStageMapping: {},
+        optionsMapping: {},
+        attributionMapping: {},
+    };
+};
+
+export const generateExcelData = async (
+    columns: ExportColumn[],
+    stagesMax: Record<string, number>,
+    processedData: any[],
+) => {
+    const headers: ExcelHeader[] = columns.map((parent) => {
+        let children: ExcelHeader[] = [];
+        const totalEvents = stagesMax[parent.column] ?? 1;
+
+        if (parent.children.length > 0) {
+            if (parent.repeatable) {
+                children = range(totalEvents).flatMap((d) => {
+                    return parent.children.map((child) => ({
+                        title: `#${d + 1} ${child.label}`,
+                        key: `0-${parent.column}-${child.column}-${d}`,
+                    }));
+                });
+            } else {
+                children = parent.children.map((child) => ({
+                    title: child.label,
+                    key: `0-${parent.column}-${child.column}-0`,
+                }));
+            }
+        }
+        return {
+            title: parent.label,
+            key: parent.column,
+            children,
+        };
+    });
+    const generator = new ExcelGenerator();
+    try {
+        await generator.downloadExcel(
+            headers,
+            processedData,
+            `${new Date().toISOString()}-report.xlsx`,
+            {
+                sheetName: "Export",
+            },
+        );
+    } catch (error) {
+        console.error("Error generating Excel file:", error);
+    }
+};
+
+export const enrollmentOptions: Option[] = [
+    { label: "Enrollment Date", value: "enrollmentDate" },
+    { label: "Enrollment Id", value: "enrollment" },
+];
+
+export const calculateWidth = (width: number) => {
+    const allSmall = smallestWidth * 5;
+    return width - allSmall - mediumWidth - 200;
+};
+
+export function convertToExcelStyle(
+    customStyle?: CellStyle,
+): Partial<ExcelStyle> | undefined {
+    if (!customStyle) return undefined;
+
+    return {
+        font: customStyle.font,
+        fill: customStyle.fill,
+        border: customStyle.border,
+        alignment: customStyle.alignment,
+        numFmt: customStyle.numFmt,
+    };
+}
+
+export const DEFAULT_HEADER_STYLE: CellStyle = {
+    font: {
+        bold: true,
+        color: { argb: "000000" },
+    },
+    alignment: {
+        vertical: "middle",
+        horizontal: "center",
+    },
+    border: {
+        top: { style: "thin", color: { argb: "000000" } },
+        left: { style: "thin", color: { argb: "000000" } },
+        bottom: { style: "thin", color: { argb: "000000" } },
+        right: { style: "thin", color: { argb: "000000" } },
+    },
+};
+
+export const isFileBasedMapping = (mapping: Partial<IMapping>) =>
+    new Set<string>([
+        "csv-line-list",
+        "xlsx-line-list",
+        "xlsx-tabular-data",
+        "xlsx-form",
+        "json",
+    ]).has(mapping?.dataSource ?? "");

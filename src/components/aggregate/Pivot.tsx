@@ -9,7 +9,6 @@ import PivotQuery from "./PivotQuery";
 
 export default function Pivot() {
     const { isLoading, isError, isSuccess, error, data } = usePrograms(1, 100);
-    const [fields, setFields] = useState<string[]>([]);
     const [program, setProgram] = useState<Partial<IProgram>>({});
 
     return (

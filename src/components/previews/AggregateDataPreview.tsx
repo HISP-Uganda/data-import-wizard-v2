@@ -1,69 +1,149 @@
-import { Stack, useDisclosure } from "@chakra-ui/react";
+import { Stack, Text, useDisclosure } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
-import { Table } from "antd";
+import type { TabsProps } from "antd";
+import { Badge, Table, Tabs } from "antd";
+import { CQIDexie } from "../../db";
+
 import { useStore } from "effector-react";
-import { useEffect, useState } from "react";
-import { processedDataApi } from "../../Events";
+import { useEffect } from "react";
+import { invalidDataApi, processedDataApi } from "../../Events";
 import {
     $attributeMapping,
     $attributionMapping,
     $data,
+    $dataSet,
+    $invalidData,
     $mapping,
     $organisationUnitMapping,
     $processedData,
 } from "../../Store";
-import { aggregateDataColumns, processAggregateData } from "../../utils/utils";
+import {
+    invalidDataColumns,
+    makeAggregateColumns,
+    processAggregateData,
+} from "../../utils/utils";
 import Progress from "../Progress";
 
-export default function AggregateDataPreview() {
+export default function AggregateDataPreview({ db }: { db: CQIDexie }) {
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const [message, setMessage] = useState<string>("");
-    const mapping = useStore($mapping);
-    const ouMapping = useStore($organisationUnitMapping);
-    const dataMapping = useStore($attributeMapping);
-    const attributionMapping = useStore($attributionMapping);
-    const data = useStore($data);
-    const processedData = useStore($processedData);
     const engine = useDataEngine();
+    const data = useStore($data);
+    const dataSet = useStore($dataSet);
+    const mapping = useStore($mapping);
+    const processedData = useStore($processedData);
+    const invalidData = useStore($invalidData);
+    const attributionMapping = useStore($attributionMapping);
+    const dataMapping = useStore($attributeMapping);
+    const organisationUnitMapping = useStore($organisationUnitMapping);
     const queryData = async () => {
+        processedDataApi.set([]);
         onOpen();
         await processAggregateData({
             mapping,
             attributionMapping,
             dataMapping,
             data,
-            dataCallback: async (aggDataValue) => {
-                processedDataApi.add(aggDataValue);
+            dataCallback: ({ validData, invalidData }) => {
+                processedDataApi.add(validData);
+                invalidDataApi.add(invalidData);
             },
             engine,
-            ouMapping,
-            setMessage,
+            organisationUnitMapping,
+            setMessage: async (message: string) => {
+                await db.messages.put({
+                    message,
+                    id: 1,
+                });
+            },
         });
         onClose();
     };
 
     useEffect(() => {
-        processedDataApi.set([]);
         queryData();
         return () => {};
     }, []);
 
+    const des = dataSet.dataSetElements?.reduce<Record<string, string>>(
+        (a, b) => {
+            if (b.dataElement) {
+                a[b.dataElement.id] = b.dataElement.name;
+            }
+            return a;
+        },
+        {},
+    );
+
+    const ous = dataSet.organisationUnits?.reduce<Record<string, string>>(
+        (a, b) => {
+            a[b.id] = b.name;
+            return a;
+        },
+        {},
+    );
+
+    const aoc = dataSet.categoryCombo?.categoryOptionCombos?.reduce<
+        Record<string, string>
+    >((a, b) => {
+        a[b.id] = b.name;
+        return a;
+    }, {});
+
+    const coc = dataSet.dataSetElements
+        ?.flatMap((a) => a.dataElement.categoryCombo?.categoryOptionCombos)
+        .reduce<Record<string, string>>((a, b) => {
+            a[b.id] = b.name;
+            return a;
+        }, {});
+
+    const items: TabsProps["items"] = [
+        {
+            key: "1",
+            label: (
+                <Badge count={processedData?.length} offset={[15, -5]}>
+                    <Text>Data Values</Text>
+                </Badge>
+            ),
+            children: (
+                <Table
+                    columns={makeAggregateColumns({
+                        ...coc,
+                        ...ous,
+                        ...des,
+                        ...aoc,
+                    })}
+                    dataSource={processedData}
+                    rowKey={(r) =>
+                        `${r.dataElement}${r.orgUnit}${r.period}${r.categoryOptionCombo}${r.attributeOptionCombo}`
+                    }
+                    pagination={{ pageSize: 8 }}
+                />
+            ),
+        },
+        {
+            key: "2",
+            label: (
+                <Badge count={invalidData?.length} offset={[15, -5]}>
+                    <Text>Conflicts/Errors</Text>
+                </Badge>
+            ),
+            children: (
+                <Table
+                    columns={invalidDataColumns(invalidData)}
+                    dataSource={invalidData}
+                    rowKey={(r) =>
+                        `${r.dataElement}${r.orgUnit}${r.period}${r.categoryOptionCombo}${r.attributeOptionCombo}`
+                    }
+                    pagination={{ pageSize: 8 }}
+                />
+            ),
+        },
+    ];
+
     return (
         <Stack>
-            <Table
-                columns={aggregateDataColumns}
-                dataSource={processedData}
-                rowKey={(r) =>
-                    `${r.dataElement}${r.orgUnit}${r.period}${r.categoryOptionCombo}${r.attributeOptionCombo}`
-                }
-            />
-
-            <Progress
-                onClose={onClose}
-                isOpen={isOpen}
-                message={message}
-                onOpen={onOpen}
-            />
+            <Tabs items={items} />
+            <Progress onClose={onClose} isOpen={isOpen} db={db} />
         </Stack>
     );
 }

@@ -9,48 +9,19 @@ import {
 import { ColumnDef } from "@tanstack/react-table";
 import { useStore } from "effector-react";
 import { useEffect, useState } from "react";
-import {
-    $conflicts,
-    $errors,
-    $mandatoryAttribute,
-    $otherProcessed,
-} from "../../Store";
+import { $conflicts, $errors, $mandatoryAttribute } from "../../Store";
 import Superscript from "../Superscript";
 import TableDisplay from "../TableDisplay";
 
 export default function OtherSystemPreview() {
-    const { newInserts, updates } = useStore($otherProcessed);
     const errors = useStore($errors);
     const conflicts = useStore($conflicts);
     const [columns, setColumns] = useState<ColumnDef<any>[]>([]);
     const [errorColumns, setErrorColumns] = useState<ColumnDef<any>[]>([]);
     const [conflictColumns, setConflictColumns] = useState<ColumnDef<any>[]>(
-        []
+        [],
     );
     const mandatoryAttributes = useStore($mandatoryAttribute);
-    useEffect(() => {
-        if (newInserts && newInserts.length > 0) {
-            setColumns(() =>
-                Object.keys(newInserts[0]).map((col) => ({
-                    accessorKey: col,
-                    header: col,
-                }))
-            );
-        }
-        return () => {};
-    }, [JSON.stringify(newInserts)]);
-
-    useEffect(() => {
-        if (updates && updates.length > 0) {
-            setColumns(() =>
-                Object.keys(updates[0]).map((col) => ({
-                    accessorKey: col,
-                    header: col,
-                }))
-            );
-        }
-        return () => {};
-    }, [JSON.stringify(updates)]);
 
     useEffect(() => {
         if (errors.length > 0) {
@@ -58,7 +29,7 @@ export default function OtherSystemPreview() {
                 Object.keys(errors[0]).map((col) => ({
                     accessorKey: col,
                     header: col,
-                }))
+                })),
             );
         }
         return () => {};
@@ -70,7 +41,7 @@ export default function OtherSystemPreview() {
                 Object.keys(conflicts[0]).map((col) => ({
                     accessorKey: col,
                     header: col,
-                }))
+                })),
             );
         }
         return () => {};
@@ -81,14 +52,11 @@ export default function OtherSystemPreview() {
             <TabList>
                 <Tab>
                     <Text fontSize="18px">New Inserts</Text>
-                    <Superscript
-                        value={newInserts?.length || 0}
-                        bg="green.500"
-                    />
+                    <Superscript value={0} bg="green.500" />
                 </Tab>
                 <Tab>
                     <Text fontSize="18px">Updates</Text>
-                    <Superscript value={updates?.length || 0} bg="green.500" />
+                    <Superscript value={0} bg="green.500" />
                 </Tab>
                 <Tab>
                     <Text>Conflicts</Text>
@@ -106,19 +74,16 @@ export default function OtherSystemPreview() {
                 <TabPanel>
                     <TableDisplay<any>
                         columns={columns}
-                        generatedData={newInserts || []}
-                        queryKey={[
-                            "processed",
-                            JSON.stringify(newInserts || []),
-                        ]}
+                        generatedData={[]}
+                        queryKey={["processed", JSON.stringify([])]}
                         idField={mandatoryAttributes[0]}
                     />
                 </TabPanel>
                 <TabPanel>
                     <TableDisplay<any>
                         columns={columns}
-                        generatedData={updates || []}
-                        queryKey={["updates", JSON.stringify(updates || [])]}
+                        generatedData={[]}
+                        queryKey={["updates", JSON.stringify([])]}
                         idField={mandatoryAttributes[0]}
                     />
                 </TabPanel>

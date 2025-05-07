@@ -1,10 +1,11 @@
 import { Button, Flex, Stack, Text } from "@chakra-ui/react";
 import { useStore } from "effector-react";
 import { useState } from "react";
+import { CQIDexie } from "../../db";
 import { $program } from "../../Store";
 import ProgramStageMapping from "../ProgramStageMapping";
 
-export default function EventMapping() {
+export default function EventMapping({ db }: { db: CQIDexie }) {
     const program = useStore($program);
     const [active, setActive] = useState<string>(() => {
         if (program.programStages && program.programStages.length > 0) {
@@ -65,15 +66,15 @@ export default function EventMapping() {
                             <ProgramStageMapping
                                 key={psId}
                                 psId={psId}
-                                repeatable={repeatable}
                                 programStageDataElements={
                                     programStageDataElements
                                 }
                                 featureType={featureType}
+                                db={db}
                             />
                         )
                     );
-                }
+                },
             )}
         </Stack>
     );

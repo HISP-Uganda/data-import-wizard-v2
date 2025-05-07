@@ -1,28 +1,27 @@
 import {
     AggDataValue,
     AggMetadata,
-    Enrollment,
-    Event,
+    deleteNested,
+    emptyProcessedData,
+    EventStageMapping,
     GODataOption,
-    GoResponse,
     IDataSet,
     IGoData,
     IMapping,
     IProgram,
     Mapping,
     MappingEvent,
+    mapUnion,
     Option,
-    RealMapping,
+    Processed,
     StageMapping,
     StageUpdate,
     Step,
-    TrackedEntityInstance,
-    Update,
-    updateObject,
+    updateNested,
 } from "data-import-wizard-utils";
 import { createApi } from "effector";
-import { Dictionary } from "lodash";
 import { set } from "lodash/fp";
+import { MappingUpdate, Merger } from "./Interfaces";
 import {
     $activeSteps,
     $attributeMapping,
@@ -34,19 +33,21 @@ import {
     $dataSet,
     $dhis2DataSet,
     $dhis2Program,
+    $enrollmentMapping,
     $errors,
+    $excel,
+    $fhir,
     $goData,
     $goDataOptions,
     $indicators,
+    $invalidData,
     $mapping,
     $metadata,
     $optionMapping,
     $organisationUnitMapping,
-    $otherProcessed,
     $prevGoData,
     $processed,
     $processedData,
-    $processedGoDataData,
     $program,
     $programIndicators,
     $programStageMapping,
@@ -56,6 +57,25 @@ import {
     $tokens,
 } from "./Store";
 import { defaultMapping } from "./utils/utils";
+
+const multiUpdate = (state: Mapping, { attribute, update }: MappingUpdate) => {
+    const newMap: Mapping = new Map(state);
+    if (!newMap.has(attribute)) {
+        newMap.set(attribute, update);
+    } else {
+        const previous = newMap.get(attribute);
+        newMap.set(attribute, { ...previous, ...update });
+    }
+
+    return newMap;
+};
+
+const deleteValue = (state: Mapping, value: string) => {
+    const newMap: Mapping = new Map(state);
+    newMap.delete(value);
+    return newMap;
+};
+
 export const mappingApi = createApi($mapping, {
     set: (_, mapping: Partial<IMapping>) => mapping,
     update: (state, { attribute, value, path, subPath }: MappingEvent) => {
@@ -68,12 +88,29 @@ export const mappingApi = createApi($mapping, {
         return { ...state, ...update };
     },
     reset: (_, update: Partial<IMapping>) => update,
+    updateStage: (
+        state,
+        {
+            stage,
+            update,
+        }: { stage: string; update: Partial<EventStageMapping> },
+    ) => {
+        const prev = state.eventStageMapping?.get(stage) ?? {};
+        const clone = new Map(state.eventStageMapping);
+        clone.set(stage, { ...prev, ...update });
+        return {
+            ...state,
+            eventStageMapping: clone,
+        };
+    },
 });
 
 export const optionMappingApi = createApi($optionMapping, {
-    set: (_, value: Record<string, string>) => value,
+    set: (_, value: Map<string, string>) => value,
     add: (state, { key, value }: { key: string; value: string }) => {
-        return { ...state, [key]: value };
+        const clone: Map<string, string> = new Map(state);
+        clone.set(key, value);
+        return clone;
     },
 });
 
@@ -82,7 +119,7 @@ export const dhis2ProgramApi = createApi($dhis2Program, {
 });
 
 export const tokensApi = createApi($tokens, {
-    set: (_, values: Dictionary<string>) => values,
+    set: (_, values: Map<string, string>) => new Map(values),
 });
 
 export const tokenApi = createApi($token, {
@@ -101,121 +138,168 @@ export const conflictsApi = createApi($conflicts, {
 });
 
 export const prevGoDataApi = createApi($prevGoData, {
-    set: (_, data: Dictionary<string>) => data,
+    set: (_, data: Map<string, string>) => new Map(data),
 });
 export const goDataApi = createApi($goData, {
     set: (_, data: Partial<IGoData>) => data,
 });
-
-export const processedGoDataDataApi = createApi($processedGoDataData, {
-    set: (
-        _,
-        data: Partial<{
-            errors: GoResponse;
-            conflicts: GoResponse;
-            processed: { updates: GoResponse; inserts: GoResponse };
-        }>
-    ) => data,
-    reset: () => ({}),
-});
-
-export const otherProcessedApi = createApi($otherProcessed, {
-    addNewInserts: (state, newInserts: any[]) => ({ ...state, newInserts }),
-    addUpdates: (state, updates: any[]) => ({ ...state, updates }),
-    addEvents: (state, events: any[]) => ({ ...state, events }),
-    addLab: (state, labResults: { [key: string]: any }) => ({
-        ...state,
-        labResults,
-    }),
-    reset: () => ({}),
-});
-
 export const processor = createApi($processed, {
-    addInstances: (
-        state,
-        trackedEntityInstances: Array<Partial<TrackedEntityInstance>>
-    ) => {
-        if (state.trackedEntityInstances) {
-            return {
-                ...state,
+    addDHIS2Data: (state, processedData: Processed) => {
+        return {
+            ...state,
+            dhis2: {
+                ...state.dhis2,
                 trackedEntityInstances: [
-                    ...state.trackedEntityInstances,
-                    ...trackedEntityInstances,
+                    ...state.dhis2.trackedEntityInstances,
+                    ...processedData.dhis2.trackedEntityInstances,
                 ],
-            };
-        }
-        return { ...state, trackedEntityInstances };
-    },
-
-    addEnrollments: (state, enrollments: Array<Partial<Enrollment>>) => {
-        if (state.enrollments) {
-            return {
-                ...state,
-                enrollments: [...state.enrollments, ...enrollments],
-            };
-        }
-        return { ...state, enrollments };
-    },
-    addEvents: (state, events: Array<Partial<Event>>) => {
-        if (state.events) {
-            return {
-                ...state,
-                events: [...state.events, ...events],
-            };
-        }
-        return { ...state, events };
-    },
-
-    addInstanceUpdated: (
-        state,
-        trackedEntityInstanceUpdates: Array<Partial<TrackedEntityInstance>>
-    ) => {
-        if (state.trackedEntityInstanceUpdates) {
-            return {
-                ...state,
+                enrollments: [
+                    ...state.dhis2.enrollments,
+                    ...processedData.dhis2.enrollments,
+                ],
+                events: [...state.dhis2.events, ...processedData.dhis2.events],
+                errors: [...state.dhis2.errors, ...processedData.dhis2.errors],
+                conflicts: [
+                    ...state.dhis2.conflicts,
+                    ...processedData.dhis2.conflicts,
+                ],
+                eventUpdates: [
+                    ...state.dhis2.eventUpdates,
+                    ...processedData.dhis2.eventUpdates,
+                ],
+                enrollmentUpdates: [
+                    ...state.dhis2.enrollmentUpdates,
+                    ...processedData.dhis2.enrollmentUpdates,
+                ],
                 trackedEntityInstanceUpdates: [
-                    ...state.trackedEntityInstanceUpdates,
-                    ...trackedEntityInstanceUpdates,
+                    ...state.dhis2.trackedEntityInstanceUpdates,
+                    ...processedData.dhis2.trackedEntityInstanceUpdates,
                 ],
-            };
-        }
-        return { ...state, trackedEntityInstanceUpdates };
+            },
+        };
     },
-    addEventUpdates: (state, eventUpdates: Array<Partial<Event>>) => {
-        if (state.eventUpdates) {
-            return {
-                ...state,
-                eventUpdates: [...state.eventUpdates, ...eventUpdates],
-            };
-        }
-        return { ...state, eventUpdates };
+    addGoData: (state, processedData: Processed) => {
+        return {
+            ...state,
+            goData: {
+                conflicts: {
+                    epidemiology: [
+                        ...state.goData.conflicts.epidemiology,
+                        ...processedData.goData.conflicts.epidemiology,
+                    ],
+                    events: [
+                        ...state.goData.conflicts.events,
+                        ...processedData.goData.conflicts.events,
+                    ],
+                    lab: [
+                        ...state.goData.conflicts.lab,
+                        ...processedData.goData.conflicts.lab,
+                    ],
+                    person: [
+                        ...state.goData.conflicts.person,
+                        ...processedData.goData.conflicts.person,
+                    ],
+                    questionnaire: [
+                        ...state.goData.conflicts.questionnaire,
+                        ...processedData.goData.conflicts.questionnaire,
+                    ],
+                    relationships: [
+                        ...state.goData.conflicts.relationships,
+                        ...processedData.goData.conflicts.relationships,
+                    ],
+                },
+                errors: {
+                    epidemiology: [
+                        ...state.goData.errors.epidemiology,
+                        ...processedData.goData.errors.epidemiology,
+                    ],
+                    events: [
+                        ...state.goData.errors.events,
+                        ...processedData.goData.errors.events,
+                    ],
+                    lab: [
+                        ...state.goData.errors.lab,
+                        ...processedData.goData.errors.lab,
+                    ],
+                    person: [
+                        ...state.goData.errors.person,
+                        ...processedData.goData.errors.person,
+                    ],
+                    questionnaire: [
+                        ...state.goData.errors.questionnaire,
+                        ...processedData.goData.errors.questionnaire,
+                    ],
+                    relationships: [
+                        ...state.goData.errors.relationships,
+                        ...processedData.goData.errors.relationships,
+                    ],
+                },
+                inserts: {
+                    epidemiology: [
+                        ...state.goData.inserts.epidemiology,
+                        ...processedData.goData.inserts.epidemiology,
+                    ],
+                    events: [
+                        ...state.goData.inserts.events,
+                        ...processedData.goData.inserts.events,
+                    ],
+                    lab: [
+                        ...state.goData.inserts.lab,
+                        ...processedData.goData.inserts.lab,
+                    ],
+                    person: [
+                        ...state.goData.inserts.person,
+                        ...processedData.goData.inserts.person,
+                    ],
+                    questionnaire: [
+                        ...state.goData.inserts.questionnaire,
+                        ...processedData.goData.inserts.questionnaire,
+                    ],
+                    relationships: [
+                        ...state.goData.inserts.relationships,
+                        ...processedData.goData.inserts.relationships,
+                    ],
+                },
+                updates: {
+                    epidemiology: [
+                        ...state.goData.updates.epidemiology,
+                        ...processedData.goData.updates.epidemiology,
+                    ],
+                    events: [
+                        ...state.goData.updates.events,
+                        ...processedData.goData.updates.events,
+                    ],
+                    lab: [
+                        ...state.goData.updates.lab,
+                        ...processedData.goData.updates.lab,
+                    ],
+                    person: [
+                        ...state.goData.updates.person,
+                        ...processedData.goData.updates.person,
+                    ],
+                    questionnaire: [
+                        ...state.goData.updates.questionnaire,
+                        ...processedData.goData.updates.questionnaire,
+                    ],
+                    relationships: [
+                        ...state.goData.updates.relationships,
+                        ...processedData.goData.updates.relationships,
+                    ],
+                },
+            },
+        };
     },
-    addErrors: (state, errors: Array<any>) => {
-        if (state.errors) {
-            return {
-                ...state,
-                errors: [...state.errors, ...errors],
-            };
-        }
-        return { ...state, errors };
-    },
-    addConflicts: (state, conflicts: Array<any>) => {
-        if (state.conflicts) {
-            return {
-                ...state,
-                conflicts: [...state.conflicts, ...conflicts],
-            };
-        }
-        return { ...state, conflicts };
+    addProcessedData: (state, processedData: Processed) => {
+        return {
+            ...state,
+            processedData: [
+                ...state.processedData,
+                ...processedData.processedData,
+            ],
+        };
     },
     reset: () => {
-        return {
-            trackedEntityInstances: [],
-            enrollments: [],
-            events: [],
-            eventsUpdates: [],
-            trackedEntityUpdates: [],
-        };
+        return emptyProcessedData;
     },
 });
 
@@ -239,63 +323,71 @@ export const stageMappingApi = createApi($programStageMapping, {
         return set(`${stage}.${attribute}`, value, state);
     },
     set: (_, value: StageMapping) => value,
-    updateMany: (
-        state,
-        { stage, update }: { stage: string; update: Mapping }
-    ) => {
-        return { ...state, ...{ [stage]: { ...state[stage], ...update } } };
+    updateMany: (state, { stage = "", update, attribute }: MappingUpdate) => {
+        return updateNested(new Map(state), stage, attribute, (current) => ({
+            ...current,
+            ...update,
+        }));
     },
-    reset: () => ({}),
+    remove: (
+        state,
+        { attribute, stage }: { attribute: string; stage: string },
+    ) => {
+        return deleteNested(new Map(state), stage, attribute);
+    },
+    merge: (state, { mapping, stage = "" }: Merger) => {
+        const clone = new Map(state);
+        const current = clone.get(stage);
+        if (current) {
+            const merger = mapUnion(current, mapping);
+            clone.set(stage, merger);
+        }
+        return clone;
+    },
+    reset: (state) => state.clear(),
 });
 
 export const remoteMappingApi = createApi($remoteMapping, {
-    update: (state, payload: Update) => {
-        return updateObject(state, payload);
+    updateMany: (state, args: MappingUpdate) => {
+        return multiUpdate(state, args);
     },
-    updateMany: (
-        state,
-        {
-            attribute,
-            update,
-        }: { attribute: string; update: Partial<RealMapping> }
-    ) => {
-        return {
-            ...state,
-            ...{ [attribute]: { ...state[attribute], ...update } },
-        };
-    },
-    reset: () => ({}),
+    reset: () => new Map(),
+    merge: (state, { mapping }: Merger) => mapUnion(new Map(state), mapping),
 });
 
 export const attributeMappingApi = createApi($attributeMapping, {
-    update: (state, payload: Update) => {
-        return updateObject(state, payload);
-    },
     set: (_, value: Mapping) => value,
-    updateMany: (
-        state,
-        {
-            attribute,
-            update,
-        }: { attribute: string; update: Partial<RealMapping> }
-    ) => {
-        return {
-            ...state,
-            ...{ [attribute]: { ...state[attribute], ...update } },
-        };
+    updateMany: (state, args: MappingUpdate) => {
+        return multiUpdate(state, args);
     },
-    reset: () => ({}),
+    remove: (state, value: string) => {
+        return deleteValue(state, value);
+    },
+    merge: (state, { mapping }: Merger) => mapUnion(new Map(state), mapping),
+    reset: () => new Map(),
+});
+export const enrollmentMappingApi = createApi($enrollmentMapping, {
+    set: (_, value: Mapping) => value,
+    updateMany: (state, args: MappingUpdate) => {
+        return multiUpdate(state, args);
+    },
+    remove: (state, value: string) => {
+        return deleteValue(state, value);
+    },
+    reset: () => new Map(),
+    merge: (state, { mapping }: Merger) => mapUnion(new Map(state), mapping),
 });
 
 export const ouMappingApi = createApi($organisationUnitMapping, {
-    update: (state, payload: Update) => {
-        return updateObject(state, payload);
-    },
     set: (_, value: Mapping) => value,
-    updateMany: (state, update: Mapping) => {
-        return { ...state, ...update };
+    remove: (state, value: string) => {
+        return deleteValue(state, value);
     },
-    reset: () => ({}),
+    updateMany: (state, args: MappingUpdate) => {
+        return multiUpdate(state, args);
+    },
+    merge: (state, { mapping }: Merger) => mapUnion(new Map(state), mapping),
+    reset: (state) => state.clear(),
 });
 
 export const remoteOrganisationsApi = createApi($remoteOrganisations, {
@@ -330,34 +422,48 @@ export const indicatorApi = createApi($indicators, {
     set: (_, indicators: Option[]) => indicators,
     reset: () => [],
 });
+
 export const processedDataApi = createApi($processedData, {
     set: (_, data: Array<AggDataValue>) => data,
     add: (state, data: Array<AggDataValue>) => [...state, ...data],
 });
 
+export const invalidDataApi = createApi($invalidData, {
+    set: (_, data: Array<any>) => data,
+    add: (state, data: Array<any>) => [...state, ...data],
+});
+
 export const attributionMappingApi = createApi($attributionMapping, {
-    update: (state, payload: Update) => {
-        return updateObject(state, payload);
-    },
     set: (_, value: Mapping) => value,
-    updateMany: (
-        state,
-        {
-            attribute,
-            update,
-        }: { attribute: string; update: Partial<RealMapping> }
-    ) => {
-        return {
-            ...state,
-            ...{ [attribute]: { ...state[attribute], ...update } },
-        };
+    updateMany: (state, args: MappingUpdate) => {
+        return multiUpdate(state, args);
     },
-    reset: () => ({}),
+    remove: (state, value: string) => {
+        return deleteValue(state, value);
+    },
+    merge: (state, { mapping }: Merger) => mapUnion(new Map(state), mapping),
+    reset: (state) => state.clear(),
 });
 
 export const metadataApi = createApi($metadata, {
     set: (
         state,
-        { key, value }: { value: Option[]; key: keyof AggMetadata }
+        { key, value }: { value: Option[]; key: keyof AggMetadata },
     ) => ({ ...state, [key]: value }),
+});
+
+export const excelApi = createApi($excel, {
+    add: (state, data: any[]) => state.concat(data),
+});
+
+export const fhirApi = createApi($fhir, {
+    setConcepts: (state, value: any[]) => ({ ...state, concepts: value }),
+    changeLabelColumn: (state, value: string) => ({
+        ...state,
+        labelColumn: value,
+    }),
+    changeValueColumn: (state, value: string) => ({
+        ...state,
+        valueColumn: value,
+    }),
 });

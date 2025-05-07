@@ -80,4 +80,5 @@ typings/
 
 # dotenv environment variables file
 .env
-
+db.json
+.qodo

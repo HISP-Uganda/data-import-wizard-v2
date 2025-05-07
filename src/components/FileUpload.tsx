@@ -1,26 +1,27 @@
 import { Stack } from "@chakra-ui/react";
-import { IMapping, Extraction, MappingEvent } from "data-import-wizard-utils";
+import { Extraction } from "data-import-wizard-utils";
 import { Event } from "effector";
 import { useStore } from "effector-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { read, utils } from "xlsx";
-import { dataApi, mappingApi } from "../Events";
+import { read } from "xlsx";
+import { mappingApi } from "../Events";
 import { $mapping, workbookApi } from "../Store";
-import { generateData } from "../utils/utils";
+import { getSheetData } from "../utils/utils";
 
 export default function FileUpload({
     type,
-    callback,
     extraction,
+    onDataChange,
+    fileUploadLabel,
 }: {
     type: string;
     extraction: Extraction;
-    callback?: Event<MappingEvent>;
+    onDataChange: Event<any>;
+    fileUploadLabel: string;
 }) {
     const inputRef = useRef<HTMLInputElement>(null);
     const [hasFile, setHasFile] = useState<boolean>(false);
     const mapping = useStore($mapping);
-
     const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             let fileReader = new FileReader();
@@ -29,11 +30,11 @@ export default function FileUpload({
             fileReader.onload = async (e) => {
                 const result = e.target?.result;
                 if (result && type === "json") {
-                    dataApi.changeData(JSON.parse(String(result)));
+                    onDataChange(JSON.parse(String(result)));
                 } else {
                     const workbook = read(e.target?.result, {
                         type: "array",
-                        raw: true,
+                        cellDates: true,
                     });
                     workbookApi.set(workbook);
                     mappingApi.update({
@@ -41,14 +42,14 @@ export default function FileUpload({
                         value: workbook.SheetNames[0],
                     });
 
-                    const actual = generateData(
-                        mapping,
+                    const sheetData = getSheetData(
                         workbook,
                         workbook.SheetNames[0],
-                        extraction
+                        mapping.headerRow,
+                        mapping.dataStartRow,
+                        extraction,
                     );
-
-                    dataApi.changeData(actual);
+                    onDataChange(sheetData);
                 }
             };
             type === "json"
@@ -63,8 +64,10 @@ export default function FileUpload({
             setHasFile(() => false);
         }
     };
+    if (mapping.isSource) return null;
     return (
         <Stack direction="row" alignItems="center">
+            <label htmlFor="input">{fileUploadLabel}</label>
             <input
                 ref={inputRef}
                 type="file"

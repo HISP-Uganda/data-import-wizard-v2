@@ -2,7 +2,7 @@ import { Checkbox, Stack } from "@chakra-ui/react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
-import { db } from "../../db";
+import { CQIDexie } from "../../db";
 
 import { dataApi, mappingApi } from "../../Events";
 import { $configList, $mapping, $metadata, $workbook } from "../../Store";
@@ -10,7 +10,7 @@ import { generateData } from "../../utils/utils";
 import NumberProperty from "../mapping-fields/NumberProperty";
 import SelectField from "../mapping-fields/SelectProperty";
 
-export default function Configuration() {
+export default function Configuration({ db }: { db: CQIDexie }) {
     const mapping = useStore($mapping);
     const metadata = useStore($metadata);
     const configList = useStore($configList);
@@ -26,13 +26,13 @@ export default function Configuration() {
                     title="Header row"
                     attribute="headerRow"
                     key="header-row"
-                    callback={() => {
+                    value={mapping.headerRow}
+                    onChange={() => {
                         if (workbook && mapping.sheet) {
                             const actual = generateData(
                                 mapping,
                                 workbook,
-                                mapping.sheet,
-                                "json"
+                                "json",
                             );
                             dataApi.changeData(actual);
                         }
@@ -47,29 +47,17 @@ export default function Configuration() {
                     title="Data start row"
                     attribute="dataStartRow"
                     key="data-start-row"
-                    callback={() => {
+                    value={mapping.dataStartRow}
+                    onChange={() => {
                         if (workbook && mapping.sheet) {
                             const actual = generateData(
                                 mapping,
                                 workbook,
-                                mapping.sheet,
-                                "json"
+                                "json",
                             );
                             dataApi.changeData(actual);
                         }
                     }}
-                />
-            ),
-        },
-        {
-            id: "ou-column",
-            element: (
-                <SelectField
-                    title="Organisation column"
-                    attribute="orgUnitColumn"
-                    options={metadata.sourceColumns}
-                    multiple={false}
-                    key="ou-column"
                 />
             ),
         },
@@ -117,10 +105,9 @@ export default function Configuration() {
             element: (
                 <SelectField
                     title="Attribute option combo column"
-                    attribute="aggregate"
+                    attribute="attributeOptionComboColumn"
                     options={metadata.sourceColumns}
                     multiple={false}
-                    path="attributeOptionComboColumn"
                     key="aoc-column"
                 />
             ),
@@ -143,24 +130,21 @@ export default function Configuration() {
             element: (
                 <Stack spacing="30px" key="attribution">
                     <Checkbox
-                        isChecked={mapping.aggregate?.attributionMerged}
+                        isChecked={mapping.attributionMerged}
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            mappingApi.update({
-                                attribute: "aggregate",
-                                value: e.target.checked,
-                                path: "attributionMerged",
+                            mappingApi.updateMany({
+                                attributionMerged: e.target.checked,
                             })
                         }
                     >
                         Data Set Attribution merged
                     </Checkbox>
-                    {mapping.aggregate?.attributionMerged ? (
+                    {mapping.attributionMerged ? (
                         <SelectField
                             title="Attribute option combo column"
-                            attribute="aggregate"
+                            attribute="attributeOptionComboColumn"
                             options={metadata.sourceColumns}
                             multiple={false}
-                            path="attributeOptionComboColumn"
                         />
                     ) : (
                         <Stack
@@ -180,7 +164,7 @@ export default function Configuration() {
                                         flex={1}
                                         key={value}
                                     />
-                                )
+                                ),
                             )}
                         </Stack>
                     )}

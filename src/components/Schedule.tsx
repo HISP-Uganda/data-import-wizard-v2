@@ -22,7 +22,7 @@ import {
     Tr,
     useDisclosure,
 } from "@chakra-ui/react";
-import { useDataEngine, useConfig } from "@dhis2/app-runtime";
+import { useConfig, useDataEngine } from "@dhis2/app-runtime";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { GroupBase, Select } from "chakra-react-select";
@@ -39,9 +39,7 @@ const scheduleTypes: Option[] = [
 
 const Schedule = () => {
     const engine = useDataEngine();
-    const { baseUrl } = useConfig();
     const { isOpen, onOpen, onClose } = useDisclosure();
-    const [additionalDays, setAdditionalDays] = useState<string>("0");
     const [isScheduleCustom, setIsScheduleCustom] = useState<boolean>(false);
     const [loading, setLoading] = useState<boolean>(false);
     const [action, setAction] = useState<string>("create");
@@ -53,15 +51,15 @@ const Schedule = () => {
             { label: "Every5m", value: "*/5 * * * *" },
             { label: "Hourly", value: "0 * * * *" },
             { label: "Daily", value: "0 0 * * *" },
-            { label: "Weekly", value: `0 0 * * ${additionalDays}` },
-            { label: "Monthly", value: `0 0 ${additionalDays} * *` },
-            { label: "BiMonthly", value: `0 0 ${additionalDays} */2 *` },
-            { label: "Quarterly", value: `0 0 ${additionalDays} */3 *` },
-            { label: "SixMonthly", value: `0 0 ${additionalDays} */6 *` },
-            { label: "Yearly", value: `0 0 ${additionalDays} 1 *` },
-            { label: "FinancialJuly", value: `0 0 ${additionalDays} 7 *` },
-            { label: "FinancialApril", value: `0 0 ${additionalDays} 4 *` },
-            { label: "FinancialOct", value: `0 0 ${additionalDays} 10 *` },
+            { label: "Weekly", value: `0 0 * * add` },
+            { label: "Monthly", value: `0 0 add * *` },
+            { label: "BiMonthly", value: `0 0 add */2 *` },
+            { label: "Quarterly", value: `0 0 add */3 *` },
+            { label: "SixMonthly", value: `0 0 add */6 *` },
+            { label: "Yearly", value: `0 0 add 1 *` },
+            { label: "FinancialJuly", value: `0 0 add 7 *` },
+            { label: "FinancialApril", value: `0 0 add 4 *` },
+            { label: "FinancialOct", value: `0 0 add 10 *` },
         ];
     };
 
@@ -80,7 +78,7 @@ const Schedule = () => {
                         return { ...s, ...schedule };
                     }
                     return s;
-                })
+                }),
         );
     };
 
@@ -95,7 +93,8 @@ const Schedule = () => {
                 description: "",
                 schedulingSeverURL: "",
                 status: "created",
-                url: `${baseUrl}/api`,
+                url: "",
+                additionalDays: 0,
             };
         });
         onOpen();
@@ -129,19 +128,22 @@ const Schedule = () => {
     };
 
     const start = async (schedule: Partial<ISchedule>) => {
-        if (schedule.id && schedule.schedule && schedule.schedulingSeverURL) {
-            await axios.post(`${schedule.schedulingSeverURL}/start`, schedule);
-            await update({ status: "running" });
-        }
+        await axios.post(`${schedule.schedulingSeverURL}/schedule`, {
+            ...schedule,
+            additionalDays: schedule.additionalDays
+                ? Number(schedule.additionalDays)
+                : 0,
+            lastRun: schedule.lastRun ?? "",
+            immediate: schedule.immediate ?? false,
+        });
+        await update({ status: "running" });
     };
 
     const stop = async (schedule: Partial<ISchedule>) => {
-        if (schedule.id && schedule.schedule && schedule.schedulingSeverURL) {
-            await axios.post(`${schedule.schedulingSeverURL}/stop`, {
-                id: schedule.id,
-            });
-            await update({ status: "stopped" });
-        }
+        await axios.delete(
+            `${schedule.schedulingSeverURL}/schedule/${schedule.id}`,
+        );
+        await update({ status: "stopped" });
     };
     return (
         <Stack p="10px">
@@ -164,6 +166,7 @@ const Schedule = () => {
                                 <Th>Mapping</Th>
                                 <Th>Created At</Th>
                                 <Th>Last Updated At</Th>
+                                <Th>Status</Th>
                                 <Th>Last Run</Th>
                                 <Th>Next Run</Th>
                                 <Th w="300px">Actions</Th>
@@ -182,6 +185,7 @@ const Schedule = () => {
                                     <Td>{s.mapping}</Td>
                                     <Td>{s.createdAt}</Td>
                                     <Td>{s.updatedAt}</Td>
+                                    <Td>{s.status}</Td>
                                     <Td>{s.lastRun}</Td>
                                     <Td>{s.nextRun}</Td>
                                     <Td>
@@ -219,15 +223,12 @@ const Schedule = () => {
                                                     Delete
                                                 </Button>
                                             )}
-                                            {(s.status === "scheduled" ||
-                                                s.status === "running") && (
-                                                <Button
-                                                    size="xs"
-                                                    onClick={() => stop(s)}
-                                                >
-                                                    Stop
-                                                </Button>
-                                            )}
+                                            <Button
+                                                size="xs"
+                                                onClick={() => stop(s)}
+                                            >
+                                                Stop
+                                            </Button>
                                         </Stack>
                                     </Td>
                                 </Tr>
@@ -248,19 +249,19 @@ const Schedule = () => {
                 <ModalContent>
                     <ModalHeader>New Schedule</ModalHeader>
                     <ModalCloseButton />
-                    <ModalBody m="0" p="10px">
+                    <ModalBody p="20px">
                         <Stack>
-                            <Stack spacing="30px">
+                            <Stack spacing="10px">
                                 <Stack>
                                     <Text>Schedule Name</Text>
                                     <Input
                                         value={schedule.name}
                                         onChange={(
-                                            e: ChangeEvent<HTMLInputElement>
+                                            e: ChangeEvent<HTMLInputElement>,
                                         ) =>
                                             updateSchedule(
                                                 "name",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                     />
@@ -272,7 +273,7 @@ const Schedule = () => {
                                         onChange={(e) =>
                                             updateSchedule(
                                                 "description",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                     />
@@ -282,11 +283,11 @@ const Schedule = () => {
                                     <Input
                                         value={schedule.schedulingSeverURL}
                                         onChange={(
-                                            e: ChangeEvent<HTMLInputElement>
+                                            e: ChangeEvent<HTMLInputElement>,
                                         ) =>
                                             updateSchedule(
                                                 "schedulingSeverURL",
-                                                e.target.value
+                                                e.target.value,
                                             )
                                         }
                                     />
@@ -299,7 +300,7 @@ const Schedule = () => {
                                         value={scheduleTypes.find(
                                             (scheduleType) =>
                                                 scheduleType.value ===
-                                                schedule.type
+                                                schedule.type,
                                         )}
                                         onChange={(e) =>
                                             updateSchedule("type", e?.value)
@@ -321,11 +322,11 @@ const Schedule = () => {
                                     <Checkbox
                                         isChecked={isScheduleCustom}
                                         onChange={(
-                                            e: ChangeEvent<HTMLInputElement>
+                                            e: ChangeEvent<HTMLInputElement>,
                                         ) => {
                                             e.persist();
                                             setIsScheduleCustom(
-                                                () => e.target.checked
+                                                () => e.target.checked,
                                             );
                                         }}
                                     >
@@ -336,68 +337,63 @@ const Schedule = () => {
                                             w="150px"
                                             value={schedule.schedule}
                                             onChange={(
-                                                e: ChangeEvent<HTMLInputElement>
+                                                e: ChangeEvent<HTMLInputElement>,
                                             ) =>
                                                 updateSchedule(
                                                     "schedule",
-                                                    e.target.value
+                                                    e.target.value,
                                                 )
                                             }
                                         />
                                     )}
                                 </Stack>
 
-                                {!isScheduleCustom && (
-                                    <Stack direction="row" spacing="10px">
-                                        <Stack
-                                            direction="row"
-                                            alignItems="center"
-                                        >
-                                            <Text>Additional Days</Text>
-                                            <Input
-                                                value={additionalDays}
-                                                w="60px"
-                                                textAlign="center"
-                                                onChange={(
-                                                    e: ChangeEvent<HTMLInputElement>
-                                                ) => {
-                                                    e.persist();
-                                                    setAdditionalDays(
-                                                        () => e.target.value
-                                                    );
-                                                }}
-                                            />
-                                        </Stack>
-                                        <Stack
-                                            direction="row"
-                                            alignItems="center"
-                                            flex={1}
-                                        >
-                                            <Text>Schedule Period</Text>
-                                            <Box flex={1}>
-                                                <Select<
-                                                    Option,
-                                                    false,
-                                                    GroupBase<Option>
-                                                >
-                                                    options={schedulePeriods()}
-                                                    isClearable
-                                                    value={schedulePeriods().find(
-                                                        (schedulePeriod) =>
-                                                            schedulePeriod.value ===
-                                                            schedule.schedule
-                                                    )}
-                                                    onChange={(e) =>
-                                                        updateSchedule(
-                                                            "schedule",
-                                                            e?.value
-                                                        )
-                                                    }
-                                                />
-                                            </Box>
-                                        </Stack>
+                                <Stack direction="row" spacing="10px">
+                                    <Stack direction="row" alignItems="center">
+                                        <Text>Additional Days</Text>
+                                        <Input
+                                            value={schedule.additionalDays}
+                                            w="60px"
+                                            textAlign="center"
+                                            onChange={(
+                                                e: ChangeEvent<HTMLInputElement>,
+                                            ) => {
+                                                updateSchedule(
+                                                    "additionalDays",
+                                                    e.target.value,
+                                                );
+                                            }}
+                                        />
                                     </Stack>
-                                )}
+                                    <Stack
+                                        direction="row"
+                                        alignItems="center"
+                                        flex={1}
+                                    >
+                                        <Text>Schedule Period</Text>
+                                        <Box flex={1}>
+                                            <Select<
+                                                Option,
+                                                false,
+                                                GroupBase<Option>
+                                            >
+                                                options={schedulePeriods()}
+                                                isClearable
+                                                value={schedulePeriods().find(
+                                                    (schedulePeriod) =>
+                                                        schedulePeriod.value ===
+                                                        schedule.schedule,
+                                                )}
+                                                onChange={(e) =>
+                                                    updateSchedule(
+                                                        "schedule",
+                                                        e?.value,
+                                                    )
+                                                }
+                                            />
+                                        </Box>
+                                    </Stack>
+                                </Stack>
                             </Stack>
                         </Stack>
                     </ModalBody>

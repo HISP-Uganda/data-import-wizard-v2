@@ -25,7 +25,7 @@ export default function Tables({ data }: { data: any[] }) {
             dimensions: {},
             properties,
             aggregationColumn: "",
-        })
+        }),
     );
 
     const real: Array<ColumnsType<any>> = columns.map((a) => {
@@ -52,7 +52,7 @@ export default function Tables({ data }: { data: any[] }) {
                 dimensions: {},
                 properties,
                 aggregationColumn: "",
-            })
+            }),
         );
         const allColumns = columnTree(real, properties);
         const othersColumns: ColumnsType<any> = rows.map((d, index) => {
@@ -139,7 +139,7 @@ export default function Tables({ data }: { data: any[] }) {
                 bordered
                 pagination={false}
                 rowKey="key"
-                scroll={{ x: true }}
+                scroll={{ y: 55 * 10 }}
                 sticky
             />
         </Stack>

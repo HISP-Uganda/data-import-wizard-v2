@@ -11,7 +11,7 @@ export default function PivotQuery({ program }: { program: string }) {
     const mapping = useStore($mapping);
     const { isLoading, isError, isSuccess, error, data } = useSQLViewMetadata(
         program,
-        mapping.id ?? generateUid()
+        mapping.id ?? generateUid(),
     );
 
     const items: TabsProps["items"] = [
@@ -27,9 +27,7 @@ export default function PivotQuery({ program }: { program: string }) {
         },
     ];
 
-    const onChange = (key: string) => {
-        console.log(key);
-    };
+    const onChange = (key: string) => {};
 
     if (isError) return <pre>{JSON.stringify(error, null, 2)}</pre>;
     if (isLoading) return <Loader />;

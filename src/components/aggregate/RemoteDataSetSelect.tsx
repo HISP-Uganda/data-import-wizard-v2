@@ -9,7 +9,8 @@ import { getDHIS2Resource, useDHIS2Resource } from "../../Queries";
 import { stepper } from "../../Store";
 import Loader from "../Loader";
 import Progress from "../Progress";
-export default function RemoteDataSetSelect() {
+import { CQIDexie } from "../../db";
+export default function RemoteDataSetSelect({ db }: { db: CQIDexie }) {
     const engine = useDataEngine();
     const mapping = useStore($mapping);
     const { isOpen, onOpen, onClose } = useDisclosure();
@@ -37,10 +38,8 @@ export default function RemoteDataSetSelect() {
             auth: mapping.authentication,
         });
         dhis2DataSetApi.set(dataSet);
-        mappingApi.update({
-            attribute: "aggregate",
-            path: "remote",
-            value: data.id,
+        mappingApi.updateMany({
+            aggregate: { ...mapping.aggregate, remote: data.id },
         });
         onClose();
         stepper.next();
@@ -87,12 +86,7 @@ export default function RemoteDataSetSelect() {
                 </Box>
             </Box>
 
-            <Progress
-                onClose={onClose}
-                isOpen={isOpen}
-                message="Loading Selected Program"
-                onOpen={onOpen}
-            />
+            <Progress onClose={onClose} isOpen={isOpen} db={db} />
         </Stack>
     );
 }

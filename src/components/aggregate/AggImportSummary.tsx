@@ -7,20 +7,14 @@ import {
     AggConflict,
     AggDataValue,
     generateUid,
+    Mapping,
 } from "data-import-wizard-utils";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useStore } from "effector-react";
 import { chunk } from "lodash";
 import { useEffect, useState } from "react";
-import { db } from "../../db";
-import {
-    $attributeMapping,
-    $attributionMapping,
-    $data,
-    $mapping,
-    $organisationUnitMapping,
-    $processedData,
-} from "../../Store";
+import { CQIDexie } from "../../db";
+import { $data, $mapping, $metadata, $processedData } from "../../Store";
 import {
     findUniqueDataSetCompletions,
     processAggregateData,
@@ -36,7 +30,7 @@ type Addition = {
     deleted: number;
 };
 
-export default function AggImportSummary() {
+export default function AggImportSummary({ db }: { db: CQIDexie }) {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const [message, setMessage] = useState<string>("");
     const engine = useDataEngine();
@@ -44,9 +38,7 @@ export default function AggImportSummary() {
     const mapping = useStore($mapping);
     const [count, setCount] = useState(0);
     const data = useStore($data);
-    const ouMapping = useStore($organisationUnitMapping);
-    const attributionMapping = useStore($attributionMapping);
-    const dataMapping = useStore($attributeMapping);
+    const metadata = useStore($metadata);
 
     const responses = useLiveQuery(() => db.dataValueResponses.toArray());
     const conflicts = useLiveQuery(() => db.dataValueConflicts.toArray());
@@ -194,46 +186,71 @@ export default function AggImportSummary() {
         await db.dataValueResponses.clear();
         await db.dataValueConflicts.clear();
         onOpen();
-        if (mapping.prefetch) {
+        if (
+            mapping.prefetch ||
+            [
+                "csv-line-list",
+                "xlsx-line-list",
+                "xlsx-tabular-data",
+                "xlsx-form",
+            ].includes(mapping.dataSource ?? "")
+        ) {
             const completions = findUniqueDataSetCompletions(
                 mapping.aggregate?.dataSet ?? "",
-                processedData
+                processedData,
             );
-            console.log("======", completions, "=======");
             const allChunks = chunk(processedData, mapping.chunkSize);
             let current = 0;
             let complete = 0;
             for (const ch of allChunks) {
                 setMessage(
                     () =>
-                        `Inserting chunk of ${++current} of ${allChunks.length}`
+                        `Inserting chunk of ${++current} of ${
+                            allChunks.length
+                        }`,
                 );
                 await insertChunk(ch);
             }
 
             const completionChunks = chunk(completions, mapping.chunkSize);
-            console.log(completionChunks.length);
             for (const ch of completionChunks) {
                 setMessage(
                     () =>
                         `Completing chunk of ${++complete} of ${
                             completionChunks.length
-                        }`
+                        }`,
                 );
                 await insertCompletions(ch);
             }
         } else {
+            const organisationUnitMapping =
+                metadata.destinationOrgUnits.reduce<Mapping>((a, b) => {
+                    if (b.source && b.value) a.set(b.value, b);
+                    return a;
+                }, new Map());
+            const attributionMapping =
+                metadata.destinationCategories.reduce<Mapping>((a, b) => {
+                    if (b.source && b.value) a.set(b.value, b);
+                    return a;
+                }, new Map());
+            const dataMapping = metadata.destinationCategories.reduce<Mapping>(
+                (a, b) => {
+                    if (b.source && b.value) a.set(b.value, b);
+                    return a;
+                },
+                new Map(),
+            );
             await processAggregateData({
                 mapping,
-                ouMapping,
+                organisationUnitMapping,
                 attributionMapping,
                 engine,
                 data,
-                dataCallback: async (dataValues) => {
-                    await insertChunk(dataValues);
+                dataCallback: async ({ validData }) => {
+                    await insertChunk(validData);
                     const completions = findUniqueDataSetCompletions(
                         mapping.aggregate?.dataSet ?? "",
-                        processedData
+                        processedData,
                     );
                     await insertCompletions(completions);
                 },
@@ -277,7 +294,7 @@ export default function AggImportSummary() {
                                 <Text>
                                     {
                                         responses.filter(
-                                            (a) => a.completed === "true"
+                                            (a) => a.completed === "true",
                                         ).length
                                     }
                                 </Text>
@@ -312,12 +329,7 @@ export default function AggImportSummary() {
     return (
         <Stack>
             <Tabs items={items} />
-            <Progress
-                onClose={onClose}
-                isOpen={isOpen}
-                message={message}
-                onOpen={onOpen}
-            />
+            <Progress onClose={onClose} isOpen={isOpen} db={db} />
         </Stack>
     );
 }

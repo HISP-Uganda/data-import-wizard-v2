@@ -7,14 +7,16 @@ import {
     Stack,
     Text,
 } from "@chakra-ui/react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { CQIDexie } from "../db";
 
 type ProgressProps = {
-    onOpen: () => void;
     isOpen: boolean;
     onClose: () => void;
-    message: string;
+    db: CQIDexie;
 };
-const Progress = ({ message, onClose, isOpen }: ProgressProps) => {
+const Progress = ({ onClose, isOpen, db }: ProgressProps) => {
+    const response = useLiveQuery(() => db.messages.limit(1).first());
     return (
         <Modal
             onClose={onClose}
@@ -26,8 +28,8 @@ const Progress = ({ message, onClose, isOpen }: ProgressProps) => {
             <ModalContent w="100%" boxShadow="none" bg="none">
                 <ModalBody m="0" p="10px">
                     <Stack alignItems="center" color="white">
-                        <Spinner />
-                        <Text fontSize="18px">{message}</Text>
+                        <Spinner color="white" />
+                        <Text fontSize="18px">{response?.message}</Text>
                     </Stack>
                 </ModalBody>
             </ModalContent>

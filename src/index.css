@@ -1,4 +1,3 @@
-.active {
-    color: #4388cc;
-    font-weight: bolder;
+.ant-select-item-option-content {
+    white-space: wrap !important;
 }

@@ -5,7 +5,6 @@ import dayjs from "dayjs";
 import { useStore } from "effector-react";
 import {
     $attributeMapping,
-    $attributionMapping,
     $data,
     $dataSet,
     $dhis2DataSet,
@@ -13,13 +12,16 @@ import {
     $mapping,
     $name,
     $names,
+    $optionMapping,
     $organisationUnitMapping,
     $otherName,
 } from "../Store";
 
 import { useEffect } from "react";
+import { CQIDexie } from "../db";
 import { mappingApi } from "../Events";
 import { $action, $steps, actionApi, stepper } from "../Store";
+import { saveMapping } from "../utils/utils";
 import ImportSummary from "./aggregate/AggImportSummary";
 import Attribution from "./aggregate/Attribution";
 import Configuration from "./aggregate/Configuration";
@@ -33,6 +35,7 @@ import MappingDetails from "./MappingDetails";
 import OrganisationUnitMapping from "./OrganisationUnitMapping";
 import StepperButtons from "./StepperButtons";
 import StepsDisplay from "./StepsDisplay";
+
 const importTypes: Option[] = [
     { value: "api", label: "api" },
     { value: "json", label: "json" },
@@ -49,7 +52,7 @@ const importTypes: Option[] = [
     },
 ];
 
-const Aggregate = () => {
+const Aggregate = ({ db }: { db: CQIDexie }) => {
     const activeStep = useStore($steps);
     const mapping = useStore($mapping);
     const disabled = useStore($disabled);
@@ -58,35 +61,35 @@ const Aggregate = () => {
     const otherName = useStore($otherName);
     const toast = useToast();
     const names = useStore($names);
-    const engine = useDataEngine();
+    const optionMapping = useStore($optionMapping);
     const organisationUnitMapping = useStore($organisationUnitMapping);
     const attributeMapping = useStore($attributeMapping);
-    const attributionMapping = useStore($attributionMapping);
+    const engine = useDataEngine();
     const steps: Step[] = [
         {
             label: "Mapping Details",
-            content: <MappingDetails importTypes={importTypes} />,
+            content: <MappingDetails importTypes={importTypes} db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 2,
         },
         {
             label: `${name} Data Set`,
-            content: <DataSetSelect />,
+            content: <DataSetSelect db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 3,
         },
         {
             label: `${otherName} Data Set`,
-            content: <RemoteDataSetSelect />,
+            content: <RemoteDataSetSelect db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 4,
         },
         {
             label: "Configuration",
-            content: <Configuration />,
+            content: <Configuration db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 5,
@@ -100,42 +103,42 @@ const Aggregate = () => {
         },
         {
             label: "Organisation Mapping",
-            content: <OrganisationUnitMapping />,
+            content: <OrganisationUnitMapping db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 6,
         },
         {
             label: "Attribution Mapping",
-            content: <Attribution />,
+            content: <Attribution db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 11,
         },
         {
             label: "Data Mapping",
-            content: <DataMapping />,
+            content: <DataMapping db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 7,
         },
         {
-            label: "Options",
-            content: <ImportExportOptions />,
+            label: "Import/Export Options",
+            content: <ImportExportOptions showFileUpload={false} db={db} />,
             lastLabel: "",
             nextLabel: "Next Step",
             id: 8,
         },
         {
             label: "Preview",
-            content: <DataPreview />,
+            content: <DataPreview db={db} />,
             lastLabel: "",
             nextLabel: "Import",
             id: 9,
         },
         {
             label: "Import Summary",
-            content: <ImportSummary />,
+            content: <ImportSummary db={db} />,
             lastLabel: "Finish",
             nextLabel: "Next Step",
             id: 10,
@@ -146,12 +149,8 @@ const Aggregate = () => {
         return steps.filter(({ id }) => {
             const notPrefetch = mapping.prefetch ? [] : [9];
             const prefetch = mapping.prefetch ? [9] : [];
-            const hasAttribution = mapping.aggregate?.hasAttribution
-                ? [11]
-                : [];
-            const hasNoAttribution = mapping.aggregate?.hasAttribution
-                ? []
-                : [11];
+            const hasAttribution = mapping.hasAttribution ? [11] : [];
+            const hasNoAttribution = mapping.hasAttribution ? [] : [11];
             if (mapping.dataSource === "api") {
                 return (
                     [1, 2, 3, ...prefetch, ...hasAttribution].indexOf(id) !== -1
@@ -167,21 +166,21 @@ const Aggregate = () => {
             if (mapping.dataSource === "dhis2-indicators") {
                 return (
                     [4, 11, 12, ...notPrefetch, ...hasNoAttribution].indexOf(
-                        id
+                        id,
                     ) === -1
                 );
             }
             if (mapping.dataSource === "dhis2-program-indicators") {
                 return (
                     [4, 11, 12, ...notPrefetch, ...hasNoAttribution].indexOf(
-                        id
+                        id,
                     ) === -1
                 );
             }
             if (
                 mapping.dataSource &&
                 ["csv-line-list", "xlsx-line-list"].indexOf(
-                    mapping.dataSource
+                    mapping.dataSource,
                 ) !== -1
             ) {
                 return [4, 7, 12, ...hasNoAttribution].indexOf(id) === -1;
@@ -202,39 +201,19 @@ const Aggregate = () => {
     };
 
     const onSave = async () => {
-        const type = action === "creating" ? "create" : "update";
-        const mutation: any = {
-            type,
-            resource: `dataStore/iw-mapping/${mapping.id}`,
-            data: {
+        await saveMapping({
+            engine,
+            mapping: {
                 ...mapping,
-                lastUpdated: dayjs().format("YYYY-MM-DD HH:mm:ss"),
                 ...names,
-                type: "aggregate",
             },
-        };
-        const mutation2: any = {
-            type,
-            resource: `dataStore/iw-ou-mapping/${mapping.id}`,
-            data: organisationUnitMapping,
-        };
-        const mutation3: any = {
-            type,
-            resource: `dataStore/iw-attribute-mapping/${mapping.id}`,
-            data: attributeMapping,
-        };
-        const mutation4: any = {
-            type,
-            resource: `dataStore/iw-attribution-mapping/${mapping.id}`,
-            data: attributionMapping,
-        };
-
-        await Promise.all([
-            engine.mutate(mutation),
-            engine.mutate(mutation2),
-            engine.mutate(mutation3),
-            engine.mutate(mutation4),
-        ]);
+            action,
+            mappings: {
+                organisationUnitMapping,
+                attributeMapping,
+                optionMapping,
+            },
+        });
 
         actionApi.edit();
         toast({

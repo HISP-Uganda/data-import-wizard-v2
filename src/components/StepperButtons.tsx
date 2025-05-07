@@ -28,7 +28,6 @@ export default function StepperButtons({
                     <Button
                         colorScheme="blue"
                         onClick={async () => {
-                            // onFinish();
                             await onSave();
                             mappingApi.reset({});
                             navigate({ to: "/mappings" });

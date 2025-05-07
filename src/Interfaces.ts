@@ -1,7 +1,7 @@
 import { MakeGenerics } from "@tanstack/react-location";
 import { Event } from "effector";
 import type { DataNode as IDataNode } from "antd/es/tree";
-import { ImportType } from "data-import-wizard-utils";
+import { ImportType, Mapping, Option, RealMapping } from "data-import-wizard-utils";
 
 export interface Threshold {
     id: string;
@@ -49,3 +49,11 @@ export type AttributeProps<T> = {
     func: Event<{ attribute: keyof T; value: any; key?: string }>;
     direction?: "row" | "column";
 };
+
+export type MappingUpdate = {
+    attribute: string;
+    update: Partial<RealMapping>;
+    stage?: string;
+};
+
+export type Merger = { mapping: Mapping; stage?: string };

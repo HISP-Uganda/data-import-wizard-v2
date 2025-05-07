@@ -6,7 +6,7 @@ export default function SourceIcon({
 }: {
     mapping: Partial<IMapping>;
 }) {
-    if (!mapping.isSource && mapping.dataSource) {
+    if (mapping && !mapping.isSource && mapping.dataSource) {
         return available[mapping.dataSource];
     }
 

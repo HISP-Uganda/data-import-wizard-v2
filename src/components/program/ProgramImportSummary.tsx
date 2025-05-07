@@ -1,58 +1,45 @@
-import {
-    Stack,
-    Stat,
-    StatLabel,
-    StatNumber,
-    Text,
-    useDisclosure,
-    useToast,
-} from "@chakra-ui/react";
-import type { TabsProps } from "antd";
+import { Stack, Text, useDisclosure } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
-import { Badge, Table, Tabs } from "antd";
+import { Badge, Table, Tabs, TabsProps } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { AxiosInstance } from "axios";
 import {
-    convertFromDHIS2,
-    convertToGoData,
-    fetchEvents,
-    fetchGoDataData,
-    fetchTrackedEntityInstances,
-    flattenTrackedEntityInstances,
+    AggConflict,
+    convert,
     generateUid,
     groupGoData4Insert,
+    IMapping,
     insertTrackerData,
     insertTrackerData38,
-    postRemote,
+    Processed,
 } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { isArray, isObject, uniq } from "lodash";
-import { getOr } from "lodash/fp";
 import { useEffect, useState } from "react";
 import {
     $attributeMapping,
+    $attributionMapping,
+    $data,
+    $enrollmentMapping,
     $goData,
+    $goDataOptions,
+    $mapping,
+    $metadata,
     $optionMapping,
     $organisationUnitMapping,
-    $otherProcessed,
     $prevGoData,
     $processed,
-    $processedGoDataData,
     $program,
-    $mapping,
     $programStageMapping,
-    $programStageUniqueElements,
-    $programUniqAttributes,
     $remoteAPI,
     $tokens,
+    $version,
 } from "../../Store";
-import { $version } from "../../Store";
 import Progress from "../Progress";
-import Superscript from "../Superscript";
 
-import { processInstances } from "../../utils/utils";
-import { db } from "../../db";
 import { useLiveQuery } from "dexie-react-hooks";
+import { maxBy } from "lodash";
+import { CQIDexie } from "../../db";
+import { generateExcelData, isFileBasedMapping } from "../../utils/utils";
 
 type TrackerAddition = {
     id: string;
@@ -71,86 +58,118 @@ type TrackerAddition = {
     }>;
 };
 
-export default function ProgramImportSummary() {
-    const toast = useToast();
+export default function ProgramImportSummary({ db }: { db: CQIDexie }) {
     const engine = useDataEngine();
     const version = useStore($version);
     const { isOpen, onOpen, onClose } = useDisclosure();
     const program = useStore($program);
     const [count, setCount] = useState(0);
-    const programStageMapping = useStore($programStageMapping);
     const mapping = useStore($mapping);
-    const attributeMapping = useStore($attributeMapping);
-    const programUniqAttributes = useStore($programUniqAttributes);
-    const programStageUniqueElements = useStore($programStageUniqueElements);
     const optionMapping = useStore($optionMapping);
+    const attributionMapping = useStore($attributionMapping);
     const tokens = useStore($tokens);
-    const otherProcessed = useStore($otherProcessed);
-    const processedGoDataData = useStore($processedGoDataData);
     const prevGoData = useStore($prevGoData);
     const goData = useStore($goData);
-    const organisationUnitMapping = useStore($organisationUnitMapping);
     const processed = useStore($processed);
     const remoteAPI = useStore($remoteAPI);
-    const [message, setMessage] = useState<string>("");
-    const [inserted, setInserted] = useState<any[]>([]);
-    const [errored, setErrored] = useState<any[]>([]);
-    const [updates, setUpdates] = useState<any[]>([]);
+    const referenceData = useStore($goDataOptions);
+    const [excelData, setExcelData] = useState<any[]>([]);
+    const metadata = useStore($metadata);
+    const data = useStore($data);
+    const realColumns = mapping.dhis2SourceOptions?.columns || [];
 
     const responses = useLiveQuery(() => db.trackerResponses.toArray());
+    const errors = useLiveQuery(() => db.dataValueErrors.toArray());
+    const conflicts = useLiveQuery(() => db.dataValueConflicts.toArray());
+
+    const programStageMapping = useStore($programStageMapping);
+    const attributeMapping = useStore($attributeMapping);
+    const organisationUnitMapping = useStore($organisationUnitMapping);
+    const enrollmentMapping = useStore($enrollmentMapping);
 
     const processRecords = async () => {
         const notProcessed = await db.trackerResponses
             .where({ completed: "false" })
             .toArray();
-        for (const { id } of notProcessed ?? []) {
-            const { data }: any = await engine.query({
-                data: {
-                    resource: `system/taskSummaries/TRACKER_IMPORT_JOB/${id}`,
-                },
-            });
-            if (data && data.status && ["OK"].indexOf(data.status) !== -1) {
-                await db.trackerResponses.put({
-                    id,
-                    completed: "true",
-                    children: [
-                        {
-                            ...data.bundleReport.typeReportMap["TRACKED_ENTITY"]
-                                .stats,
-                            completed: "true",
-                            resource: "entities",
-                            id: id + "entities",
-                        },
-                        {
-                            ...data.bundleReport.typeReportMap["ENROLLMENT"]
-                                .stats,
-                            completed: "true",
-                            resource: "enrollments",
-                            id: id + "enrollments",
-                        },
-                        {
-                            ...data.bundleReport.typeReportMap["EVENT"].stats,
-                            completed: "true",
-                            resource: "events",
-                            id: id + "events",
-                        },
-                        {
-                            ...data.bundleReport.typeReportMap["RELATIONSHIP"]
-                                .stats,
-                            completed: "true",
-                            resource: "relationships",
-                            id: id + "relationships",
-                        },
-                    ],
-                    resource: "multiple",
-                    ...data.stats,
+        if (notProcessed.length === 0) {
+            onClose();
+        } else {
+            for (const { id } of notProcessed) {
+                const { data }: any = await engine.query({
+                    data: {
+                        resource: `system/taskSummaries/TRACKER_IMPORT_JOB/${id}`,
+                    },
                 });
-            } else if (data && data.status && data.status === "ERROR") {
+                if (data && data.status && ["OK"].indexOf(data.status) !== -1) {
+                    await db.trackerResponses.put({
+                        id,
+                        completed: "true",
+                        children: [
+                            {
+                                ...data.bundleReport.typeReportMap[
+                                    "TRACKED_ENTITY"
+                                ].stats,
+                                completed: "true",
+                                resource: "entities",
+                                id: id + "entities",
+                            },
+                            {
+                                ...data.bundleReport.typeReportMap["ENROLLMENT"]
+                                    .stats,
+                                completed: "true",
+                                resource: "enrollments",
+                                id: id + "enrollments",
+                            },
+                            {
+                                ...data.bundleReport.typeReportMap["EVENT"]
+                                    .stats,
+                                completed: "true",
+                                resource: "events",
+                                id: id + "events",
+                            },
+                            {
+                                ...data.bundleReport.typeReportMap[
+                                    "RELATIONSHIP"
+                                ].stats,
+                                completed: "true",
+                                resource: "relationships",
+                                id: id + "relationships",
+                            },
+                        ],
+                        resource: "multiple",
+                        ...data.stats,
+                    });
+                } else if (data && data.status && data.status === "ERROR") {
+                    await db.trackerResponses.put({
+                        id,
+                        completed: "true",
+                        children: [],
+                        resource: "multiple",
+                        ...data.stats,
+                    });
+                    if (data && data.conflicts && data.conflicts.length > 0) {
+                        await db.dataValueConflicts.bulkPut(data.conflicts);
+                    }
+                    if (
+                        data &&
+                        data.validationReport &&
+                        data.validationReport.errorReports
+                    ) {
+                        db.dataValueErrors.bulkPut(
+                            data.validationReport.errorReports,
+                        );
+                    }
+                    if (
+                        data &&
+                        data.validationReport &&
+                        data.validationReport.warningReports
+                    ) {
+                        db.dataValueConflicts.bulkPut(
+                            data.validationReport.warningReports,
+                        );
+                    }
+                }
             }
-
-            // if (data && data.conflicts && data.conflicts.length > 0) {
-            //     await db.dataValueConflicts.bulkPut(data.conflicts);
-            // }
         }
     };
 
@@ -163,7 +182,7 @@ export default function ProgramImportSummary() {
             deleted: number;
             total: number;
             ignored: number;
-        }
+        },
     ) => {
         await db.trackerResponses.put({
             id: generateUid(),
@@ -215,6 +234,44 @@ export default function ProgramImportSummary() {
         },
     ];
 
+    const columns: ColumnsType<Partial<AggConflict>> = [
+        {
+            title: "message",
+            dataIndex: "message",
+            key: "message",
+        },
+        {
+            title: "trackerType",
+            dataIndex: "trackerType",
+            key: "trackerType",
+        },
+        {
+            title: "uid",
+            dataIndex: "uid",
+            key: "uid",
+        },
+        {
+            title: "errorCode",
+            dataIndex: "errorCode",
+            key: "errorCode",
+        },
+        {
+            title: "object",
+            dataIndex: "object",
+            key: "object",
+        },
+        {
+            title: "value",
+            dataIndex: "value",
+            key: "value",
+        },
+        {
+            title: "property",
+            dataIndex: "property",
+            key: "property",
+        },
+    ];
+
     const items: TabsProps["items"] = [
         {
             key: "1",
@@ -231,12 +288,11 @@ export default function ProgramImportSummary() {
                                 <Text>
                                     {
                                         responses.filter(
-                                            (a) => a.completed === "true"
+                                            (a) => a.completed === "true",
                                         ).length
                                     }
                                 </Text>
                             )}
-
                             <Text>of</Text>
                             {responses && <Text>{responses.length}</Text>}
                         </Stack>
@@ -244,231 +300,101 @@ export default function ProgramImportSummary() {
                 />
             ),
         },
-        // {
-        //     key: "3",
-        //     label: (
-        //         <Badge count={conflicts?.length} offset={[15, -5]}>
-        //             <Text>Conflicts</Text>
-        //         </Badge>
-        //     ),
-        //     children: (
-        //         <Table
-        //             columns={columns}
-        //             dataSource={conflicts}
-        //             rowKey={(r) =>
-        //                 `${r.errorCode}${r.object}${r.value}${r.property}`
-        //             }
-        //         />
-        //     ),
-        // },
+        {
+            key: "3",
+            label: (
+                <Badge count={conflicts?.length} offset={[15, -5]}>
+                    <Text>Conflicts</Text>
+                </Badge>
+            ),
+            children: (
+                <Table
+                    columns={columns}
+                    dataSource={conflicts}
+                    rowKey={(r) =>
+                        `${r.uid}${r.errorCode}${r.object}${r.value}${r.property}`
+                    }
+                    scroll={{ x: 400 }}
+                />
+            ),
+        },
+        {
+            key: "4",
+            label: (
+                <Badge count={errors?.length} offset={[15, -5]}>
+                    <Text>Errors</Text>
+                </Badge>
+            ),
+            children: (
+                <Table
+                    columns={columns}
+                    dataSource={errors}
+                    rowKey={(r) =>
+                        `${r.uid}${r.errorCode}${r.object}${r.value}${r.property}`
+                    }
+                />
+            ),
+        },
     ];
 
-    const fetchAndInsert = async () => {
-        console.log("Thi is the beginning");
-        await db.trackerResponses.clear();
-        onOpen();
+    const insertData = async (
+        api: Partial<{ engine: any; axios: AxiosInstance }>,
+        processedData: Processed,
+        mapping: Partial<IMapping>,
+    ) => {
         if (mapping.isSource) {
-            if (mapping.dataSource === "dhis2-program") {
-            } else if (mapping.dataSource === "go-data") {
-                const {
-                    params,
-                    basicAuth,
-                    hasNextLink,
-                    headers,
-                    password,
-                    username,
-                    ...rest
-                } = mapping.authentication || {};
-
-                if (mapping.prefetch) {
-                    const { conflicts, errors, processed } =
-                        processedGoDataData;
-                    if (processed) {
-                        const { updates, inserts } = processed;
-                        await groupGoData4Insert(
-                            goData,
-                            inserts,
-                            updates,
-                            prevGoData,
-                            mapping.authentication || {},
-                            setMessage,
-                            setInserted,
-                            setUpdates,
-                            setErrored
-                        );
-                    }
-                } else {
-                    const { metadata, prev } = await fetchGoDataData(
-                        goData,
-                        mapping.authentication || {}
-                    );
-                    await fetchTrackedEntityInstances(
-                        {
-                            api: { engine },
-                            program: mapping.program?.program,
-                            additionalParams: {},
-                            uniqueAttributeValues: [],
-                            withAttributes: false,
-                            trackedEntityInstances: [],
-                        },
-                        async (trackedEntityInstances, page) => {
-                            setMessage(
-                                () =>
-                                    `Working on page ${page} for tracked entities`
-                            );
-                            const { processed, errors, conflicts } =
-                                convertToGoData(
-                                    flattenTrackedEntityInstances(
-                                        {
-                                            trackedEntityInstances,
-                                        },
-                                        "ALL"
-                                    ),
-                                    organisationUnitMapping,
-                                    attributeMapping,
-                                    goData,
-                                    optionMapping,
-                                    tokens,
-                                    metadata
-                                );
-                            const { inserts, updates } = processed;
-                            await groupGoData4Insert(
-                                goData,
-                                inserts,
-                                updates,
-                                prev,
-                                mapping.authentication || {},
-                                setMessage,
-                                setInserted,
-                                setUpdates,
-                                setErrored
-                            );
-                        }
-                    );
-                }
-            } else if (mapping.dataSource === "api") {
-                const { newInserts } = otherProcessed;
-                if (mapping.prefetch && newInserts) {
-                    for (const payload of newInserts) {
-                        const response = await postRemote<any>(
-                            mapping.authentication,
-                            "",
-                            payload,
-                            {}
-                        );
-                    }
-                } else {
-                    if (mapping.dhis2SourceOptions?.programStage) {
-                        await fetchEvents({
-                            api: { engine },
-                            programStages:
-                                mapping.dhis2SourceOptions.programStage,
-                            program: mapping.program?.program || "",
-                            pageSize: 50,
-                            afterFetch: async (data) => {
-                                const actual = await convertFromDHIS2(
-                                    data as any,
-                                    mapping,
-                                    organisationUnitMapping,
-                                    attributeMapping,
-                                    true,
-                                    optionMapping
-                                );
-                                for (const payload of actual) {
-                                    try {
-                                        const response = await postRemote<any>(
-                                            mapping.authentication,
-                                            "",
-                                            payload,
-                                            {}
-                                        );
-                                    } catch (error: any) {
-                                        toast({
-                                            title: "insert Failed",
-                                            description: error?.message,
-                                            status: "error",
-                                            duration: 9000,
-                                            isClosable: true,
-                                        });
-                                    }
-                                }
-                            },
-                            others: {
-                                orgUnit:
-                                    mapping.dhis2SourceOptions?.ous?.join(
-                                        ";"
-                                    ) ?? "",
-                                fields: "*",
-                            },
+            if (mapping.dataSource === "go-data") {
+                await groupGoData4Insert(
+                    goData,
+                    processedData.goData.inserts,
+                    processedData.goData.updates,
+                    prevGoData,
+                    mapping.authentication || {},
+                    async (message) => {
+                        await db.messages.put({
+                            message,
+                            id: 1,
                         });
-                    } else {
-                        await fetchTrackedEntityInstances(
-                            {
-                                api: { engine },
-                                program: mapping.program?.program,
-                                additionalParams: {},
-                                uniqueAttributeValues: [],
-                                withAttributes: false,
-                                trackedEntityInstances: [],
-                            },
-                            async (trackedEntityInstances, page) => {
-                                setMessage(
-                                    () =>
-                                        `Working on page ${page} for tracked entities`
-                                );
-                                const actual = await convertFromDHIS2(
-                                    flattenTrackedEntityInstances(
-                                        {
-                                            trackedEntityInstances,
-                                        },
-                                        "ALL"
-                                    ),
-                                    mapping,
-                                    organisationUnitMapping,
-                                    attributeMapping,
-                                    false,
-                                    optionMapping
-                                );
-
-                                for (const payload of actual) {
-                                    try {
-                                        const response = await postRemote<any>(
-                                            mapping.authentication,
-                                            "",
-                                            payload,
-                                            {}
-                                        );
-                                    } catch (error: any) {
-                                        toast({
-                                            title: "insert Failed",
-                                            description: error?.message,
-                                            status: "error",
-                                            duration: 9000,
-                                            isClosable: true,
-                                        });
-                                    }
-                                }
-                            }
-                        );
-                    }
-                }
+                    },
+                    ({ errors, inserts, updates }) => {
+                        console.log(errors, inserts, updates);
+                    },
+                );
+                onClose();
+            } else if (
+                mapping.dataSource &&
+                ["csv-line-list", "xlsx-line-list"].indexOf(
+                    mapping.dataSource,
+                ) !== -1
+            ) {
+                const allStages =
+                    program.programStages?.reduce<Record<string, number>>(
+                        (a, b) => {
+                            const stageData = maxBy(
+                                processedData.processedData,
+                                `0-${b.id}-max`,
+                            );
+                            a[b.id] = stageData?.[`0-${b.id}-max`] ?? 1;
+                            return a;
+                        },
+                        {},
+                    ) ?? {};
+                await generateExcelData(
+                    realColumns,
+                    allStages,
+                    processedData.processedData,
+                );
+                onClose();
             }
-        } else if (mapping.dataSource === "dhis2-program") {
-            let api: Partial<{ engine: any; axios: AxiosInstance }> = {};
-            if (mapping.isCurrentInstance) {
-                api = { engine };
-            } else {
-                api = { axios: remoteAPI };
-            }
-            if (mapping.prefetch) {
-                if (version >= 38) {
-                    await insertTrackerData38({
-                        processedData: processed,
-                        async: mapping.dhis2DestinationOptions?.async ?? false,
-                        chunkSize: mapping.chunkSize ?? 100,
-                        api,
-                        onInsert: async (response) => {
-                            if (mapping.dhis2DestinationOptions?.async) {
+        } else {
+            if (version >= 38) {
+                await insertTrackerData38({
+                    processedData,
+                    mapping,
+                    api,
+                    onInsert: async (response) => {
+                        if (mapping.dhis2DestinationOptions?.async) {
+                            try {
                                 await db.trackerResponses.put({
                                     id: response.response.id,
                                     completed: "false",
@@ -480,139 +406,157 @@ export default function ProgramImportSummary() {
                                     resource: "multiple",
                                 });
                                 setCount((c) => c + 1);
-                            } else {
-                                const id = generateUid();
-                                await db.trackerResponses.put({
-                                    id: generateUid(),
-                                    completed: "true",
-                                    children: [
-                                        {
-                                            ...response.bundleReport
-                                                .typeReportMap["TRACKED_ENTITY"]
-                                                .stats,
-                                            completed: "true",
-                                            resource: "entities",
-                                            id: id + "entities",
-                                        },
-                                        {
-                                            ...response.bundleReport
-                                                .typeReportMap["ENROLLMENT"]
-                                                .stats,
-                                            completed: "true",
-                                            resource: "enrollments",
-                                            id: id + "enrollments",
-                                        },
-                                        {
-                                            ...response.bundleReport
-                                                .typeReportMap["EVENT"].stats,
-                                            completed: "true",
-                                            resource: "events",
-                                            id: id + "events",
-                                        },
-                                        {
-                                            ...response.bundleReport
-                                                .typeReportMap["RELATIONSHIP"]
-                                                .stats,
-                                            completed: "true",
-                                            resource: "relationships",
-                                            id: id + "relationships",
-                                        },
-                                    ],
-                                    ...response.stats,
-                                });
-                            }
-                        },
-                    });
-                } else {
-                    await insertTrackerData({
-                        processedData: processed,
-                        callBack: (message: string) =>
-                            setMessage(() => message),
-                        api,
-                        onInsert: (resource, response) => {
-                            updateResponse(resource, response);
-                        },
-                        chunkSize: mapping.chunkSize ?? 100,
-                    });
-                }
-            } else {
-                await fetchTrackedEntityInstances(
-                    {
-                        api,
-                        program: mapping.program?.remoteProgram,
-                        withAttributes: false,
-                        uniqueAttributeValues: [],
-                        additionalParams: {},
-                        trackedEntityInstances: [],
+                            } catch (error) {}
+                        } else {
+                            const id = generateUid();
+                            await db.trackerResponses.put({
+                                id,
+                                completed: "true",
+                                children: [
+                                    {
+                                        ...response.bundleReport.typeReportMap[
+                                            "TRACKED_ENTITY"
+                                        ].stats,
+                                        completed: "true",
+                                        resource: "entities",
+                                        id: id + "entities",
+                                    },
+                                    {
+                                        ...response.bundleReport.typeReportMap[
+                                            "ENROLLMENT"
+                                        ].stats,
+                                        completed: "true",
+                                        resource: "enrollments",
+                                        id: id + "enrollments",
+                                    },
+                                    {
+                                        ...response.bundleReport.typeReportMap[
+                                            "EVENT"
+                                        ].stats,
+                                        completed: "true",
+                                        resource: "events",
+                                        id: id + "events",
+                                    },
+                                    {
+                                        ...response.bundleReport.typeReportMap[
+                                            "RELATIONSHIP"
+                                        ].stats,
+                                        completed: "true",
+                                        resource: "relationships",
+                                        id: id + "relationships",
+                                    },
+                                ],
+                                ...response.stats,
+                            });
+                        }
                     },
-                    async (trackedEntityInstances, { pager }) => {
-                        setMessage(
-                            () =>
-                                `Finished fetching page ${pager?.page} of ${pager?.pageCount} from source`
-                        );
-                        await processInstances(
-                            {
-                                engine,
-                                trackedEntityInstances,
-                                mapping,
-                                version,
-                                attributeMapping,
-                                program,
-                                programStageMapping,
-                                optionMapping,
-                                organisationUnitMapping,
-                                programStageUniqueElements,
-                                programUniqAttributes,
-                                setMessage,
-                            },
-                            async (data) => {
-                                await insertTrackerData({
-                                    processedData: data,
-                                    callBack: (message: string) =>
-                                        setMessage(() => message),
-                                    api: { engine },
-                                    onInsert: () => {},
-                                    chunkSize: mapping.chunkSize ?? 500,
-                                });
-                            }
-                        );
-                    }
-                );
+                });
+            } else {
+                await insertTrackerData({
+                    processedData: processed,
+                    callBack: (message: string) =>
+                        db.messages.put({ message, id: 1 }),
+                    api,
+                    onInsert: (resource, response) => {
+                        updateResponse(resource, response);
+                    },
+                    chunkSize: mapping.chunkSize ?? 100,
+                });
             }
-        } else if (mapping.dataSource === "go-data" && !mapping.prefetch) {
-            console.log("We seem to be in a wrong place");
-        } else {
-            await insertTrackerData({
-                processedData: processed,
-                callBack: (message: string) => setMessage(() => message),
-                api: { engine },
-                onInsert: () => {},
-                chunkSize: mapping.chunkSize ?? 500,
-            });
         }
-        onClose();
     };
 
+    const fetchAndInsert = async () => {
+        let insertApi: Partial<{ engine: any; axios: AxiosInstance }> = {};
+        let queryApi: Partial<{ engine: any; axios: AxiosInstance }> = {};
+        if (mapping.isSource) {
+            queryApi = { engine };
+            if (remoteAPI) {
+                insertApi = { axios: remoteAPI };
+            }
+        } else {
+            insertApi = { engine };
+            if (mapping.isCurrentInstance) {
+                queryApi = insertApi;
+            } else if (remoteAPI) {
+                queryApi = { axios: remoteAPI };
+            }
+        }
+        await db.trackerResponses.clear();
+        await db.dataValueConflicts.clear();
+        await db.dataValueErrors.clear();
+        await db.messages.clear();
+        onOpen();
+        if (mapping.prefetch || isFileBasedMapping(mapping)) {
+            await insertData(insertApi, processed, mapping);
+        } else {
+            await convert({
+                afterConversion: async (converted) => {
+                    if (
+                        mapping.dataSource &&
+                        mapping.isSource &&
+                        ["csv-line-list", "xlsx-line-list"].indexOf(
+                            mapping.dataSource,
+                        ) !== -1
+                    ) {
+                        setExcelData((prev) => [
+                            ...prev,
+                            ...converted.processedData,
+                        ]);
+                    } else {
+                        await insertData(insertApi, converted, mapping);
+                    }
+                },
+                attributeMapping,
+                programStageMapping,
+                mapping,
+                sourceApi: queryApi,
+                destinationApi: insertApi,
+                optionMapping: optionMapping,
+                enrollmentMapping,
+                version,
+                additionalParams: {},
+                setMessage: async (message) => {
+                    await db.messages.put({
+                        message,
+                        id: 1,
+                    });
+                },
+                organisationUnitMapping,
+                goData,
+                data,
+                tokens,
+                program,
+                metadata,
+                referenceData,
+                attributionMapping,
+            });
+
+            if (
+                mapping.dataSource &&
+                mapping.isSource &&
+                ["csv-line-list", "xlsx-line-list"].indexOf(
+                    mapping.dataSource,
+                ) !== -1
+            ) {
+                setExcelData(excelData);
+            }
+        }
+    };
     useEffect(() => {
         fetchAndInsert();
     }, []);
-
     useEffect(() => {
         const intervalId = setInterval(() => {
             processRecords();
         }, 2000);
-
         return () => clearInterval(intervalId);
     }, [count]);
     return (
         <Stack>
+            <Text>Import Summary</Text>
             <Tabs items={items} />
-            <Progress
-                onClose={onClose}
-                isOpen={isOpen}
-                message={message}
-                onOpen={onOpen}
-            />
+            <Progress onClose={onClose} isOpen={isOpen} db={db} />
         </Stack>
     );
 }

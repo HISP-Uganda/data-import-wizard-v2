@@ -15,7 +15,7 @@ const Feature = ({ title, text, icon }: FeatureProps) => {
         <Stack
             justifyContent="center"
             alignItems="center"
-            h="200px"
+            h="150px"
             spacing="2px"
             borderRadius="10px"
             boxShadow="md"
@@ -25,8 +25,8 @@ const Feature = ({ title, text, icon }: FeatureProps) => {
             onClick={() => navigate({ to: "/mappings" })}
             cursor="pointer"
         >
-            <Image src={icon} alt="godata" w="96px" h="96px" />
-            <Text textTransform="uppercase" fontSize="22px">
+            <Image src={icon} alt="godata" w="50px" h="50px" />
+            <Text textTransform="uppercase" fontSize="18px">
                 {title}
             </Text>
             <Text letterSpacing="wider">{text}</Text>
@@ -35,7 +35,7 @@ const Feature = ({ title, text, icon }: FeatureProps) => {
 };
 export default function Home() {
     return (
-        <Stack h="100%">
+        <Stack h="calc(100vh - 48px - 48px)">
             <Stack p="40px" spacing="30px">
                 <Stack p="30px" alignContent="center" spacing="20px">
                     <Text
@@ -46,7 +46,7 @@ export default function Home() {
                         Welcome to Import Wizard, your all-in-one data import
                         solution!
                     </Text>
-                    <Text fontSize="1.3em" textAlign="justify">
+                    <Text fontSize="1em" textAlign="justify">
                         Efficiently pull data from JSON, API, Excel, CSV, DHIS2,
                         and Go.Data with our easy mapping tool. Save your
                         mappings to automate future imports on your schedule.
@@ -54,7 +54,7 @@ export default function Home() {
                         aggregate data, Import Wizard streamlines the process,
                         saving you time and hassle.
                     </Text>
-                    <Text fontSize="1.3em" textAlign="justify">
+                    <Text fontSize="1em" textAlign="justify">
                         Get started and transform data management into a simple,
                         scheduled, and systematic process. Welcome to seamless
                         integration!
@@ -100,28 +100,28 @@ export default function Home() {
             </Stack>
 
             <Spacer />
-            <Text textAlign="center" textTransform="uppercase" opacity={0.6}>
+            <Text textAlign="center" textTransform="uppercase" opacity={0.5}>
                 Supported Data Sources
             </Text>
             <SimpleGrid
                 columns={7}
                 w="100%"
-                h="100px"
+                h="60px"
                 bg="gray.100"
                 alignItems="center"
             >
                 <Stack justifyContent="center" alignItems="center">
-                    <Image src="./go.data.png" alt="godata" h="60px" />
+                    <Image src="./go.data.png" alt="godata" h="32px" />
                 </Stack>
                 <Stack justifyContent="center" alignItems="center">
-                    <Image src="./dhis2-text.svg" alt="godata" h="60px" />
+                    <Image src="./dhis2-text.svg" alt="godata" h="32px" />
                 </Stack>
                 <Stack
                     justifyContent="center"
                     alignItems="center"
                     direction="row"
                 >
-                    <Image src="./excel.svg" alt="godata" h="60px" />
+                    <Image src="./excel.svg" alt="godata" h="32px" />
                     <Text fontSize="24px" fontWeight="bold">
                         EXCEL
                     </Text>
@@ -131,7 +131,7 @@ export default function Home() {
                     alignItems="center"
                     direction="row"
                 >
-                    <Image src="./browser.png" alt="godata" h="60px" />
+                    <Image src="./browser.png" alt="godata" h="32px" />
                     <Text fontSize="24px" fontWeight="bold">
                         API
                     </Text>
@@ -141,7 +141,7 @@ export default function Home() {
                     alignItems="center"
                     direction="row"
                 >
-                    <Image src="./json.png" alt="godata" h="60px" />
+                    <Image src="./json.png" alt="godata" h="32px" />
                     <Text fontSize="24px" fontWeight="bold">
                         JSON
                     </Text>
@@ -151,7 +151,7 @@ export default function Home() {
                     alignItems="center"
                     direction="row"
                 >
-                    <Image src="./csv.png" alt="godata" h="60px" />
+                    <Image src="./csv.png" alt="godata" h="32px" />
                     <Text fontSize="24px" fontWeight="bold">
                         CSV
                     </Text>

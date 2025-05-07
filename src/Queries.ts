@@ -4,11 +4,13 @@ import {
     Authentication,
     fetchRemote,
     IProgram,
+    mapUnion,
+    Param,
     postRemote,
 } from "data-import-wizard-utils";
 import { fromPairs, groupBy, map, pick } from "lodash";
 import { useQuery } from "react-query";
-import { db } from "./db";
+import { CQIDexie, initializeDatabase } from "./db";
 import { tokenApi } from "./Events";
 import { versionApi } from "./Store";
 import { convertDataToURL } from "./utils/utils";
@@ -18,7 +20,7 @@ export const useDHIS2Metadata = <TData>(
     page: number,
     pageSize: number,
     fields: string,
-    searchQuery = ""
+    searchQuery = "",
 ) => {
     const engine = useDataEngine();
 
@@ -71,7 +73,7 @@ export const useDHIS2Metadata = <TData>(
                 data: actual,
                 total,
             };
-        }
+        },
     );
 };
 
@@ -84,14 +86,14 @@ export const useInitials = () => {
         organisationUnits: {
             resource: "organisationUnits.json",
             params: {
-                fields: "id,name,path,leaf",
-                level: 1,
+                fields: "id,name,path,leaf,parent[id]",
+                paging: "false",
             },
         },
         levels: {
             resource: "filledOrganisationUnitLevels.json",
             params: {
-                fields: "id,level~rename(value),name~rename(label)",
+                fields: "id,level,name",
             },
         },
         groups: {
@@ -102,7 +104,8 @@ export const useInitials = () => {
         },
     };
 
-    return useQuery<boolean, Error>(["initials"], async () => {
+    return useQuery<CQIDexie, Error>(["initials"], async () => {
+        const db = await initializeDatabase();
         const {
             info: { version },
             organisationUnits: { organisationUnits },
@@ -113,18 +116,29 @@ export const useInitials = () => {
         const availableUnits = organisationUnits.map((unit: any) => {
             return {
                 id: unit.id,
-                pId: unit.pId || "",
+                pId: unit.parent?.id || "",
                 value: unit.id,
                 title: unit.name,
                 key: unit.id,
                 isLeaf: unit.leaf,
             };
         });
-        await db.organisations.bulkPut(availableUnits);
-        await db.levels.bulkPut(organisationUnitLevels);
-        await db.groups.bulkPut(organisationUnitGroups);
+
         versionApi.set(Number(versionNumbers[1]));
-        return true;
+        await db.levels.clear();
+        await db.groups.clear();
+        await db.organisations.clear();
+
+        await db.organisations.bulkPut(availableUnits);
+        await db.levels.bulkPut(
+            organisationUnitLevels.map((a: any) => ({
+                id: a.id,
+                label: a.name,
+                value: a.level,
+            })),
+        );
+        await db.groups.bulkPut(organisationUnitGroups);
+        return db;
     });
 };
 export const useNamespace = <IData>(namespace: string) => {
@@ -143,7 +157,7 @@ export const useNamespace = <IData>(namespace: string) => {
                     {
                         resource: `dataStore/${namespace}/${n}`,
                     },
-                ])
+                ]),
             );
             const response: any = await engine.query(query);
             return Object.values<IData>(response);
@@ -192,60 +206,6 @@ export const useNamespaceKey = <IData>(namespace: string, key: string) => {
     });
 };
 
-// export const getDHIS2SingleResource = async <T>({
-//     isCurrentDHIS2,
-//     params,
-//     resource,
-//     engine,
-//     auth,
-// }: Partial<{
-//     params: { [key: string]: string };
-//     resource: string;
-//     isCurrentDHIS2?: boolean;
-//     resourceKey: string;
-//     auth?: Partial<Authentication>;
-//     engine: any;
-// }>) => {
-//     if (isCurrentDHIS2 && resource) {
-//         const { data }: any = await engine.query({
-//             data: {
-//                 resource,
-//                 params,
-//             },
-//         });
-
-//         const { pager } = data;
-//         let total = params?.pageSize || 10;
-
-//         if (pager && pager.total) {
-//             total = pager.total;
-//         }
-
-//         return data as Partial<T>;
-//     } else if (auth && !isEmpty(auth)) {
-//         let config: AxiosRequestConfig = {
-//             baseURL: `${auth.url}/api`,
-//         };
-//         if (auth.username && auth.password) {
-//             config = {
-//                 ...config,
-//                 auth: {
-//                     username: auth.username,
-//                     password: auth.password,
-//                 },
-//             };
-//         }
-//         const api = axios.create(config);
-//         if (resource) {
-//             const { data } = await api.get<Partial<T>>(resource, {
-//                 params,
-//             });
-//             return data;
-//         }
-//     }
-//     return {} as Partial<T>;
-// };
-
 export const getDHIS2Resource = async <T>({
     isCurrentDHIS2,
     params,
@@ -267,7 +227,6 @@ export const getDHIS2Resource = async <T>({
                 params,
             },
         });
-
         return data as T;
     }
     if (auth && resource) {
@@ -336,49 +295,32 @@ export const useDHIS2Resource = <T>({
             });
 
             return data;
-        }
+        },
     );
 };
 
 export const usePrograms = (
     page: number,
     pageSize: number,
-    searchQuery = ""
+    searchQuery = "",
 ) => {
     const engine = useDataEngine();
-    let params: { [key: string]: any } = {
-        page,
-        pageSize,
-        fields: "id,name,displayName,lastUpdated,programType",
-        order: "name:ASC",
-    };
-    let parameters = [params];
+    const search = new URLSearchParams();
+
+    search.append("fields", "id,name,displayName,lastUpdated,programType");
+    search.append("order", "name:ASC");
+    search.append("page", page.toString());
+    search.append("pageSize", pageSize.toString());
+
     if (searchQuery !== "") {
-        parameters = [
-            ...parameters,
-            {
-                param: "filter",
-                value: `name:ilike:${searchQuery}`,
-            },
-            {
-                param: "filter",
-                value: `code:like:${searchQuery}`,
-            },
-            {
-                param: "filter",
-                value: `id:like:${searchQuery}`,
-            },
-            {
-                param: "rootJunction",
-                value: "OR",
-            },
-        ];
+        search.append("filter", `name:ilike:${searchQuery}`);
+        search.append("filter", `code:like:${searchQuery}`);
+        search.append("filter", `id:like:${searchQuery}`);
+        search.append("rootJunction", "OR");
     }
-    const stringParams = convertDataToURL(parameters);
     const programsQuery = {
         data: {
-            resource: `programs.json?${stringParams}`,
-            params: params,
+            resource: `programs.json?${search.toString()}`,
         },
     };
 
@@ -401,20 +343,14 @@ export const usePrograms = (
                 })),
                 total,
             };
-        }
+        },
     );
 };
 
-export const makeQueryKeys = (params?: {
-    [key: string]: Partial<{
-        param: string;
-        value: string;
-        forUpdates: boolean;
-    }>;
-}) => {
+export const makeQueryKeys = (params?: Map<string, Partial<Param>>) => {
     if (params) {
         let allParams = new URLSearchParams();
-        Object.values(params).forEach(({ param, value }) => {
+        Array.from(params.values()).forEach(({ param, value }) => {
             if (param && value) {
                 allParams.append(param, value);
             }
@@ -444,7 +380,7 @@ export const useRemoteGet = <T, V>(
         getToken: false,
         addTokenTo: "params",
         tokenName: "access_token",
-    }
+    },
 ) => {
     const { keys } = makeQueryKeys(fields.authentication?.params);
 
@@ -481,7 +417,7 @@ export const useRemoteGet = <T, V>(
                             fields.authentication.username,
                         [tokenGenerationPasswordField]:
                             fields.authentication.password,
-                    }
+                    },
                 );
 
                 if (data) {
@@ -492,26 +428,36 @@ export const useRemoteGet = <T, V>(
                         currentAuth = {
                             ...currentAuth,
                             basicAuth: false,
-                            params: {
-                                ...params,
-                                auth: {
-                                    param: fields.tokenName,
-                                    value: token as string,
-                                },
-                            },
+                            params: mapUnion(
+                                params ?? new Map(),
+                                new Map([
+                                    [
+                                        "auth",
+                                        {
+                                            param: fields.tokenName,
+                                            value: token as string,
+                                        },
+                                    ],
+                                ]),
+                            ),
                             headers,
                         };
                     } else {
                         currentAuth = {
                             ...currentAuth,
                             basicAuth: false,
-                            headers: {
-                                ...headers,
-                                auth: {
-                                    param: fields.tokenName,
-                                    value: token as string,
-                                },
-                            },
+                            headers: mapUnion(
+                                headers ?? new Map(),
+                                new Map([
+                                    [
+                                        "auth",
+                                        {
+                                            param: fields.tokenName,
+                                            value: token as string,
+                                        },
+                                    ],
+                                ]),
+                            ),
                             params,
                         };
                     }
@@ -522,7 +468,7 @@ export const useRemoteGet = <T, V>(
                 return await fetchRemote<T>(fields.authentication, fields.url);
             }
             return undefined;
-        }
+        },
     );
 };
 
@@ -537,7 +483,6 @@ export const useProgram = (id: string | undefined) => {
             },
         },
     };
-
     return useQuery<Partial<IProgram>, Error>(["programs", id], async () => {
         if (id) {
             const { data }: any = await engine.query(programQuery);
@@ -550,7 +495,7 @@ export const useProgram = (id: string | undefined) => {
 export const useDataSets = (
     page: number,
     pageSize: number,
-    searchQuery = ""
+    searchQuery = "",
 ) => {
     let params: { [key: string]: any } = {
         page,
@@ -599,7 +544,6 @@ export const useDataSets = (
                     dataSets,
                 },
             }: any = await engine.query(dataSetsQuery);
-            // setTotalDataSets(totalDataSets);
 
             const des = dataSets.map((dataSet: any) => {
                 const processed = dataSet.dataSetElements.map(
@@ -615,7 +559,7 @@ export const useDataSets = (
                                             dse.categoryCombo &&
                                             dse.categoryCombo.isDefault
                                         );
-                                    }
+                                    },
                                 );
 
                             if (newCombo) {
@@ -629,14 +573,14 @@ export const useDataSets = (
                             }
                         }
                         return dataSetElement;
-                    }
+                    },
                 );
 
                 dataSet = { ...dataSet, dataSetElements: processed };
 
                 const groupedDataElements = groupBy(
                     dataSet["dataSetElements"],
-                    "dataElement.categoryCombo.id"
+                    "dataElement.categoryCombo.id",
                 );
                 const forms = map(groupedDataElements, (v) => {
                     const dataElements = v.map((des) => {
@@ -673,122 +617,16 @@ export const useDataSets = (
                     organisationUnits,
                     forms,
                 };
-                return dataSets;
             });
-        }
+        },
     );
 };
-
-export const useDataElements = () => {};
-
-export const useUserGroups = () => {};
-
-// export const getDHIS2Resource2 = async <T>({
-//     params,
-//     resource,
-//     engine,
-//     auth,
-//     isCurrentDHIS2,
-// }: Partial<{
-//     params: { [key: string]: string };
-//     resource: string;
-//     engine: any;
-//     isCurrentDHIS2?: boolean;
-//     auth?: Partial<Authentication>;
-// }>) => {
-//     if (isCurrentDHIS2 && resource) {
-//         let query: any = {
-//             data: {
-//                 resource,
-//             },
-//         };
-//         if (!isEmpty(params)) {
-//             query = {
-//                 data: { resource, params },
-//             };
-//         }
-//         const { data }: any = await engine.query(query);
-//         return data as T;
-//     }
-//     if (auth && resource) {
-//         let config: AxiosRequestConfig = {
-//             baseURL: auth.url,
-//         };
-//         if (auth.username && auth.password) {
-//             config = {
-//                 ...config,
-//                 auth: {
-//                     username: auth.username,
-//                     password: auth.password,
-//                 },
-//             };
-//         }
-//         const api = axios.create(config);
-//         const { data } = await api.get<T>(resource, {
-//             params,
-//         });
-//         return data;
-//     }
-//     return {
-//         data: [],
-//         pager: { total: 0, page: 1, pageSize: 50, pageCount: 1 },
-//     };
-// };
-
-// export const useInfiniteDHIS2Query = <
-//     T extends { pager: { page: number; pageCount: number } }
-// >({
-//     search,
-//     resource,
-//     isCurrentDHIS2,
-//     auth,
-// }: {
-//     search: string;
-//     resource: string;
-//     isCurrentDHIS2?: boolean | undefined;
-//     auth?: Partial<Authentication> | undefined;
-// }) => {
-//     const engine = useDataEngine();
-//     return useInfiniteQuery<T, Error>(
-//         [resource, search],
-//         async ({ pageParam = 1 }) => {
-//             let params: { [key: string]: any } = {
-//                 fields: "id,name",
-//                 page: pageParam,
-//                 paging: true,
-//                 totalPages: true,
-//             };
-//             if (search) {
-//                 params = { ...params, filter: `identifiable:token:${search}` };
-//             }
-
-//             const data = await getDHIS2Resource2<T>({
-//                 resource,
-//                 params,
-//                 engine,
-//                 isCurrentDHIS2,
-//                 auth,
-//             });
-//             return data;
-//         },
-//         {
-//             getPreviousPageParam: (firstPage) =>
-//                 firstPage.pager.page ?? undefined,
-//             getNextPageParam: (lastPage) => {
-//                 if (lastPage.pager.page < lastPage.pager.pageCount) {
-//                     return lastPage.pager.page + 1;
-//                 }
-//                 return undefined;
-//             },
-//         }
-//     );
-// };
 
 export const makeSQLQuery = async (
     engine: any,
     id: string,
     query: string,
-    name: string
+    name: string,
 ) => {
     const sqlQuery = {
         description: name,
@@ -819,7 +657,7 @@ export const useSQLViewMetadata = (program: string, mapping: string) => {
                 engine,
                 mapping,
                 `select * from analytics_event_${program.toLowerCase()}`,
-                mapping
+                mapping,
             );
 
             const metadataQuery = {
@@ -859,8 +697,8 @@ export const useSQLViewMetadata = (program: string, mapping: string) => {
 
                 const allObjects = fromPairs(
                     Object.values(rest).flatMap((a: any) =>
-                        a.map(({ id, name }: any) => [id, name])
-                    )
+                        a.map(({ id, name }: any) => [id, name]),
+                    ),
                 );
 
                 headers = headers.map((h: any) => {
@@ -875,8 +713,8 @@ export const useSQLViewMetadata = (program: string, mapping: string) => {
                 });
             }
             return rows.map((row: string[]) =>
-                fromPairs(row.map((r, index) => [headers[index].name, r]))
+                fromPairs(row.map((r, index) => [headers[index].name, r])),
             );
-        }
+        },
     );
 };

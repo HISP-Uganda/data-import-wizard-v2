@@ -1,6 +1,6 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack } from "@chakra-ui/react";
 import { GroupBase, Select } from "chakra-react-select";
-import { Mapping, Option } from "data-import-wizard-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { getOr } from "lodash/fp";
 import { $metadata } from "../Store";
@@ -10,31 +10,35 @@ export default function MultipleSelect({
     mapping,
     onValueChange,
     title,
+    placeholder = "Select column",
 }: {
     value: string;
     mapping: any;
     onValueChange: (e: string) => void;
     title: React.ReactElement;
+    placeholder?: string;
 }) {
     const metadata = useStore($metadata);
     return (
-        <Stack alignItems="center" direction="row" spacing="20px">
+        <Stack alignItems="center" direction="row" spacing="20px" flex={1}>
             {title}
             <Box flex={1}>
                 <Select<Option, true, GroupBase<Option>>
-                    value={metadata.sourceColumns.filter(
-                        (pt) =>
-                            getOr("", value, mapping)
-                                .split(",")
-                                .indexOf(String(pt.value)) !== -1
-                    )}
+                    value={metadata.sourceColumns.filter((pt) => {
+                        const all = getOr("", value, mapping);
+                        if (all) {
+                            return all.split(",").index(String(pt.value));
+                        }
+                        return false;
+                    })}
                     isMulti
                     options={metadata.sourceColumns}
                     isClearable
-                    placeholder="Select tracked entity column"
-                    onChange={(e) =>
-                        onValueChange(e.map((x) => x.value ?? "").join(","))
-                    }
+                    placeholder={placeholder}
+                    onChange={(e) => {
+                        const data = e.map((x) => x.value ?? "");
+                        onValueChange(data.join(","));
+                    }}
                 />
             </Box>
         </Stack>

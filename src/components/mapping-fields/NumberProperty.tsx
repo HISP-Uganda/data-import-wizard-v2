@@ -9,9 +9,6 @@ import {
     Text,
 } from "@chakra-ui/react";
 import { MappingEvent } from "data-import-wizard-utils";
-import { useStore } from "effector-react";
-import { mappingApi } from "../../Events";
-import { $mapping } from "../../Store";
 
 export default function NumberProperty({
     attribute,
@@ -21,36 +18,28 @@ export default function NumberProperty({
     step = 1,
     path,
     subPath,
-    callback,
+    onChange,
+    value,
     ...rest
 }: {
     max?: number;
     step?: number;
     min?: number;
-    callback?: () => void;
+    onChange: (value: number) => void;
+    value: number | undefined;
 } & Omit<MappingEvent, "value"> &
     StackProps) {
-    const mapping = useStore($mapping);
-
     return (
         <Stack {...rest}>
             <Text>{title}</Text>
             <NumberInput
-                value={Number(mapping[attribute])}
+                value={value}
                 max={max}
                 min={min}
                 step={step}
                 size="sm"
-                onChange={(value1: string, value2: number) => {
-                    mappingApi.update({
-                        attribute,
-                        value: value2,
-                        path,
-                        subPath,
-                    });
-                    if (callback) {
-                        callback();
-                    }
+                onChange={(_, value2: number) => {
+                    onChange(value2);
                 }}
                 flex={1}
             >

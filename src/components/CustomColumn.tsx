@@ -13,7 +13,7 @@ import {
     useDisclosure,
 } from "@chakra-ui/react";
 import { GroupBase, Select, SingleValue } from "chakra-react-select";
-import { createOptions, Mapping, Option } from "data-import-wizard-utils";
+import { createOptions, Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
 import { $metadata } from "../Store";
@@ -21,12 +21,12 @@ import { $metadata } from "../Store";
 const options = createOptions(["join columns", "extract year", "expression"]);
 export default function CustomColumn({
     value,
-    mapping,
+    customType,
     onTypeUpdate,
     onValueChange,
 }: {
-    value: string;
-    mapping: Mapping;
+    value?: string;
+    customType: string;
     onTypeUpdate: (e: SingleValue<Option>) => void;
     onValueChange: (e: string | undefined) => void;
 }) {
@@ -34,18 +34,17 @@ export default function CustomColumn({
     const metadata = useStore($metadata);
 
     const getTitle = () => {
-        if (mapping[value].value && mapping[value].customType) {
-            const values = mapping[value].value
+        if (value && customType) {
+            const values = value
                 ?.split(",")
                 .map(
                     (a) =>
                         metadata.sourceColumns.find((b) => b.value === a)
-                            ?.label ?? ""
+                            ?.label ?? "",
                 )
                 .join(",");
-            return `${mapping[value].customType} : ${values}`;
+            return `${customType} : ${values || value}`;
         }
-
         return "Update";
     };
 
@@ -77,9 +76,7 @@ export default function CustomColumn({
                                 <Box w="100%">
                                     <Select<Option, false, GroupBase<Option>>
                                         value={options.find(
-                                            (pt) =>
-                                                pt.value ===
-                                                mapping[value].customType
+                                            (pt) => pt.value === customType,
                                         )}
                                         onChange={(e) => onTypeUpdate(e)}
                                         options={options}
@@ -87,27 +84,28 @@ export default function CustomColumn({
                                     />
                                 </Box>
                             </Stack>
-                            {mapping[value].customType === "join columns" && (
+                            {customType === "join columns" && (
                                 <Stack w="100%">
                                     <Text>Columns</Text>
                                     <Box w="100%">
                                         <Select<Option, true, GroupBase<Option>>
                                             value={metadata.sourceColumns.filter(
                                                 (pt) =>
-                                                    mapping[value].value
+                                                    value
                                                         ?.split(",")
                                                         .indexOf(
-                                                            String(pt.value)
-                                                        ) !== -1
+                                                            String(pt.value),
+                                                        ) !== -1,
                                             )}
                                             isMulti
                                             onChange={(e) =>
                                                 onValueChange(
                                                     e
                                                         .map(
-                                                            (x) => x.value ?? ""
+                                                            (x) =>
+                                                                x.value ?? "",
                                                         )
-                                                        .join(",")
+                                                        .join(","),
                                                 )
                                             }
                                             options={metadata.sourceColumns}
@@ -117,7 +115,7 @@ export default function CustomColumn({
                                 </Stack>
                             )}
 
-                            {mapping[value].customType === "extract year" && (
+                            {customType === "extract year" && (
                                 <Stack w="100%" spacing="10px">
                                     <Text>Type</Text>
                                     <Box w="100%">
@@ -127,9 +125,7 @@ export default function CustomColumn({
                                             GroupBase<Option>
                                         >
                                             value={metadata.sourceColumns.find(
-                                                (pt) =>
-                                                    pt.value ===
-                                                    mapping[value].value
+                                                (pt) => pt.value === value,
                                             )}
                                             onChange={(e) => {
                                                 onValueChange(e?.value);
@@ -140,13 +136,13 @@ export default function CustomColumn({
                                     </Box>
                                 </Stack>
                             )}
-                            {mapping[value].customType === "expression" && (
+                            {customType === "expression" && (
                                 <Stack w="100%" spacing="10px">
                                     <Text>Expression</Text>
                                     <Input
-                                        value={mapping[value].value}
+                                        value={value}
                                         onChange={(
-                                            e: ChangeEvent<HTMLInputElement>
+                                            e: ChangeEvent<HTMLInputElement>,
                                         ) => onValueChange(e.target.value)}
                                     />
                                 </Stack>

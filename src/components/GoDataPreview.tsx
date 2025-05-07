@@ -12,11 +12,13 @@ import { useStore } from "effector-react";
 import { isArray, isObject, uniq } from "lodash";
 import { getOr } from "lodash/fp";
 import { useEffect, useState } from "react";
-import { $mandatoryAttribute, $processedGoDataData } from "../Store";
+import { $processed } from "../Store";
 import Superscript from "./Superscript";
 
 export default function GoDataPreview() {
-    const { processed, conflicts, errors } = useStore($processedGoDataData);
+    const {
+        goData: { inserts, updates, errors, conflicts },
+    } = useStore($processed);
     const [columns, setColumns] = useState<{
         person: ColumnsType<any>;
         epidemiology: ColumnsType<any>;
@@ -78,14 +80,11 @@ export default function GoDataPreview() {
         questionnaire: [],
     });
 
-    const mandatoryAttributes = useStore($mandatoryAttribute);
     useEffect(() => {
-        if (processed && processed.inserts) {
-            setColumns((prev) => ({
-                ...prev,
-                person: uniq(
-                    processed.inserts.person.flatMap((p) => Object.keys(p))
-                ).map((col) => ({
+        setColumns((prev) => ({
+            ...prev,
+            person: uniq(inserts.person.flatMap((p) => Object.keys(p))).map(
+                (col) => ({
                     title: col,
                     render: (_, data) => {
                         let value = getOr("", col, data);
@@ -94,10 +93,10 @@ export default function GoDataPreview() {
                         return value;
                     },
                     key: col,
-                })),
-                lab: uniq(
-                    processed.inserts.lab.flatMap((p) => Object.keys(p))
-                ).map((col) => ({
+                }),
+            ),
+            lab: uniq(inserts.lab.flatMap((p) => Object.keys(p))).map(
+                (col) => ({
                     title: col,
                     render: (_, data) => {
                         const value = getOr("", col, data);
@@ -106,24 +105,22 @@ export default function GoDataPreview() {
                         return value;
                     },
                     key: col,
-                })),
-                epidemiology: uniq(
-                    processed.inserts.epidemiology.flatMap((p) =>
-                        Object.keys(p)
-                    )
-                ).map((col) => ({
-                    title: col,
-                    render: (_, data) => {
-                        const value = getOr("", col, data);
-                        if (isArray(value)) return JSON.stringify(value);
-                        if (isObject(value)) return JSON.stringify(value);
-                        return value;
-                    },
-                    key: col,
-                })),
-                events: uniq(
-                    processed.inserts.events.flatMap((p) => Object.keys(p))
-                ).map((col) => ({
+                }),
+            ),
+            epidemiology: uniq(
+                inserts.epidemiology.flatMap((p) => Object.keys(p)),
+            ).map((col) => ({
+                title: col,
+                render: (_, data) => {
+                    const value = getOr("", col, data);
+                    if (isArray(value)) return JSON.stringify(value);
+                    if (isObject(value)) return JSON.stringify(value);
+                    return value;
+                },
+                key: col,
+            })),
+            events: uniq(inserts.events.flatMap((p) => Object.keys(p))).map(
+                (col) => ({
                     title: col,
                     render: (text, data) => {
                         const value = getOr("", col, data);
@@ -132,47 +129,42 @@ export default function GoDataPreview() {
                         return value;
                     },
                     key: col,
-                })),
-                questionnaire: uniq(
-                    processed.inserts.questionnaire.flatMap((p) =>
-                        Object.keys(p)
-                    )
-                ).map((col) => ({
-                    title: col,
-                    render: (text, data) => {
-                        const value = getOr("", col, data);
-                        if (isArray(value)) return JSON.stringify(value);
-                        if (isObject(value)) return JSON.stringify(value);
-                        return value;
-                    },
-                    key: col,
-                })),
-                relationships: uniq(
-                    processed.inserts.relationships.flatMap((p) =>
-                        Object.keys(p)
-                    )
-                ).map((col) => ({
-                    title: col,
-                    render: (text, data) => {
-                        const value = getOr("", col, data);
-                        if (isArray(value)) return JSON.stringify(value);
-                        if (isObject(value)) return JSON.stringify(value);
-                        return value;
-                    },
-                    key: col,
-                })),
-            }));
-        }
+                }),
+            ),
+            questionnaire: uniq(
+                inserts.questionnaire.flatMap((p) => Object.keys(p)),
+            ).map((col) => ({
+                title: col,
+                render: (text, data) => {
+                    const value = getOr("", col, data);
+                    if (isArray(value)) return JSON.stringify(value);
+                    if (isObject(value)) return JSON.stringify(value);
+                    return value;
+                },
+                key: col,
+            })),
+            relationships: uniq(
+                inserts.relationships.flatMap((p) => Object.keys(p)),
+            ).map((col) => ({
+                title: col,
+                render: (text, data) => {
+                    const value = getOr("", col, data);
+                    if (isArray(value)) return JSON.stringify(value);
+                    if (isObject(value)) return JSON.stringify(value);
+                    return value;
+                },
+                key: col,
+            })),
+        }));
+
         return () => {};
-    }, [JSON.stringify(processed?.inserts)]);
+    }, [JSON.stringify(inserts)]);
 
     useEffect(() => {
-        if (processed && processed.updates) {
-            setUpdateColumns((prev) => ({
-                ...prev,
-                person: uniq(
-                    processed.updates.person.flatMap((p) => Object.keys(p))
-                ).map((col) => ({
+        setUpdateColumns((prev) => ({
+            ...prev,
+            person: uniq(updates.person.flatMap((p) => Object.keys(p))).map(
+                (col) => ({
                     title: col,
                     render: (_, data) => {
                         let value = getOr("", col, data);
@@ -181,10 +173,10 @@ export default function GoDataPreview() {
                         return value;
                     },
                     key: col,
-                })),
-                lab: uniq(
-                    processed.updates.lab.flatMap((p) => Object.keys(p))
-                ).map((col) => ({
+                }),
+            ),
+            lab: uniq(updates.lab.flatMap((p) => Object.keys(p))).map(
+                (col) => ({
                     title: col,
                     render: (_, data) => {
                         const value = getOr("", col, data);
@@ -193,24 +185,22 @@ export default function GoDataPreview() {
                         return value;
                     },
                     key: col,
-                })),
-                epidemiology: uniq(
-                    processed.updates.epidemiology.flatMap((p) =>
-                        Object.keys(p)
-                    )
-                ).map((col) => ({
-                    title: col,
-                    render: (_, data) => {
-                        const value = getOr("", col, data);
-                        if (isArray(value)) return JSON.stringify(value);
-                        if (isObject(value)) return JSON.stringify(value);
-                        return value;
-                    },
-                    key: col,
-                })),
-                events: uniq(
-                    processed.updates.events.flatMap((p) => Object.keys(p))
-                ).map((col) => ({
+                }),
+            ),
+            epidemiology: uniq(
+                updates.epidemiology.flatMap((p) => Object.keys(p)),
+            ).map((col) => ({
+                title: col,
+                render: (_, data) => {
+                    const value = getOr("", col, data);
+                    if (isArray(value)) return JSON.stringify(value);
+                    if (isObject(value)) return JSON.stringify(value);
+                    return value;
+                },
+                key: col,
+            })),
+            events: uniq(updates.events.flatMap((p) => Object.keys(p))).map(
+                (col) => ({
                     title: col,
                     render: (text, data) => {
                         const value = getOr("", col, data);
@@ -219,39 +209,36 @@ export default function GoDataPreview() {
                         return value;
                     },
                     key: col,
-                })),
-                questionnaire: uniq(
-                    processed.updates.questionnaire.flatMap((p) =>
-                        Object.keys(p)
-                    )
-                ).map((col) => ({
-                    title: col,
-                    render: (text, data) => {
-                        const value = getOr("", col, data);
-                        if (isArray(value)) return JSON.stringify(value);
-                        if (isObject(value)) return JSON.stringify(value);
-                        return value;
-                    },
-                    key: col,
-                })),
-                relationships: uniq(
-                    processed.updates.relationships.flatMap((p) =>
-                        Object.keys(p)
-                    )
-                ).map((col) => ({
-                    title: col,
-                    render: (text, data) => {
-                        const value = getOr("", col, data);
-                        if (isArray(value)) return JSON.stringify(value);
-                        if (isObject(value)) return JSON.stringify(value);
-                        return value;
-                    },
-                    key: col,
-                })),
-            }));
-        }
+                }),
+            ),
+            questionnaire: uniq(
+                updates.questionnaire.flatMap((p) => Object.keys(p)),
+            ).map((col) => ({
+                title: col,
+                render: (text, data) => {
+                    const value = getOr("", col, data);
+                    if (isArray(value)) return JSON.stringify(value);
+                    if (isObject(value)) return JSON.stringify(value);
+                    return value;
+                },
+                key: col,
+            })),
+            relationships: uniq(
+                updates.relationships.flatMap((p) => Object.keys(p)),
+            ).map((col) => ({
+                title: col,
+                render: (text, data) => {
+                    const value = getOr("", col, data);
+                    if (isArray(value)) return JSON.stringify(value);
+                    if (isObject(value)) return JSON.stringify(value);
+                    return value;
+                },
+                key: col,
+            })),
+        }));
+
         return () => {};
-    }, [JSON.stringify(processed?.updates)]);
+    }, [JSON.stringify(updates)]);
 
     useEffect(() => {
         if (errors) {
@@ -267,7 +254,7 @@ export default function GoDataPreview() {
                             return value;
                         },
                         key: col,
-                    })
+                    }),
                 ),
                 lab: uniq(errors.lab.flatMap((p) => Object.keys(p))).map(
                     (col) => ({
@@ -279,10 +266,10 @@ export default function GoDataPreview() {
                             return value;
                         },
                         key: col,
-                    })
+                    }),
                 ),
                 epidemiology: uniq(
-                    errors.epidemiology.flatMap((p) => Object.keys(p))
+                    errors.epidemiology.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (_, data) => {
@@ -303,10 +290,10 @@ export default function GoDataPreview() {
                             return value;
                         },
                         key: col,
-                    })
+                    }),
                 ),
                 questionnaire: uniq(
-                    errors.questionnaire.flatMap((p) => Object.keys(p))
+                    errors.questionnaire.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (text, data) => {
@@ -318,7 +305,7 @@ export default function GoDataPreview() {
                     key: col,
                 })),
                 relationships: uniq(
-                    errors.relationships.flatMap((p) => Object.keys(p))
+                    errors.relationships.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (text, data) => {
@@ -339,7 +326,7 @@ export default function GoDataPreview() {
             setConflictColumns((prev) => ({
                 ...prev,
                 person: uniq(
-                    conflicts.person.flatMap((p) => Object.keys(p))
+                    conflicts.person.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (_, data) => {
@@ -360,10 +347,10 @@ export default function GoDataPreview() {
                             return value;
                         },
                         key: col,
-                    })
+                    }),
                 ),
                 epidemiology: uniq(
-                    conflicts.epidemiology.flatMap((p) => Object.keys(p))
+                    conflicts.epidemiology.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (_, data) => {
@@ -375,7 +362,7 @@ export default function GoDataPreview() {
                     key: col,
                 })),
                 events: uniq(
-                    conflicts.events.flatMap((p) => Object.keys(p))
+                    conflicts.events.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (text, data) => {
@@ -387,7 +374,7 @@ export default function GoDataPreview() {
                     key: col,
                 })),
                 questionnaire: uniq(
-                    conflicts.questionnaire.flatMap((p) => Object.keys(p))
+                    conflicts.questionnaire.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (text, data) => {
@@ -399,7 +386,7 @@ export default function GoDataPreview() {
                     key: col,
                 })),
                 relationships: uniq(
-                    conflicts.relationships.flatMap((p) => Object.keys(p))
+                    conflicts.relationships.flatMap((p) => Object.keys(p)),
                 ).map((col) => ({
                     title: col,
                     render: (text, data) => {
@@ -416,7 +403,7 @@ export default function GoDataPreview() {
     }, [JSON.stringify(conflicts)]);
 
     const innerTabs = (
-        data: GoResponse | undefined,
+        data: GoResponse,
         realColumns: {
             person: ColumnsType<any>;
             epidemiology: ColumnsType<any>;
@@ -425,49 +412,39 @@ export default function GoDataPreview() {
             lab: ColumnsType<any>;
             questionnaire: ColumnsType<any>;
         },
-        idField: string = mandatoryAttributes.join("")
     ) => (
         <Tabs>
             <TabList>
                 <Tab>
                     <Text>Person</Text>
-                    <Superscript
-                        value={data?.person?.length || 0}
-                        bg="green.500"
-                    />
+                    <Superscript value={data.person.length} bg="green.500" />
                 </Tab>
                 <Tab>
                     <Text>Epidemiology</Text>
                     <Superscript
-                        value={data?.epidemiology?.length || 0}
+                        value={data?.epidemiology.length}
                         bg="green.500"
                     />
                 </Tab>
                 <Tab>
                     <Text>Events</Text>
-                    <Superscript
-                        value={data?.events?.length || 0}
-                        bg="green.500"
-                    />
+                    <Superscript value={data?.events.length} bg="green.500" />
                 </Tab>
                 <Tab>
                     <Text>Questionnaire</Text>
                     <Superscript
-                        value={data?.questionnaire?.length || 0}
+                        value={data?.questionnaire.length}
                         bg="green.500"
                     />
                 </Tab>
                 <Tab>
                     <Text>Lab</Text>
-                    <Superscript
-                        value={data?.lab?.length || 0}
-                        bg="green.500"
-                    />
+                    <Superscript value={data?.lab.length} bg="green.500" />
                 </Tab>
                 <Tab>
                     <Text>Relationships</Text>
                     <Superscript
-                        value={data?.relationships?.length || 0}
+                        value={data?.relationships.length}
                         bg="green.500"
                     />
                 </Tab>
@@ -516,12 +493,12 @@ export default function GoDataPreview() {
                     <Text fontSize="18px">New Inserts</Text>
                     <Superscript
                         value={
-                            (processed?.inserts.person?.length || 0) +
-                            (processed?.inserts.epidemiology?.length || 0) +
-                            (processed?.inserts.events?.length || 0) +
-                            (processed?.inserts.lab?.length || 0) +
-                            (processed?.inserts.questionnaire?.length || 0) +
-                            (processed?.inserts.relationships?.length || 0)
+                            inserts.person.length +
+                            inserts.epidemiology.length +
+                            inserts.events.length +
+                            inserts.lab.length +
+                            inserts.questionnaire.length +
+                            inserts.relationships.length
                         }
                         bg="green.500"
                     />
@@ -530,12 +507,12 @@ export default function GoDataPreview() {
                     <Text fontSize="18px">Updates</Text>
                     <Superscript
                         value={
-                            (processed?.updates.person?.length || 0) +
-                            (processed?.updates.epidemiology?.length || 0) +
-                            (processed?.updates.events?.length || 0) +
-                            (processed?.updates.lab?.length || 0) +
-                            (processed?.updates.questionnaire?.length || 0) +
-                            (processed?.updates.relationships?.length || 0)
+                            updates.person.length +
+                            updates.epidemiology.length +
+                            updates.events.length +
+                            updates.lab.length +
+                            updates.questionnaire.length +
+                            updates.relationships.length
                         }
                         bg="green.500"
                     />
@@ -544,12 +521,12 @@ export default function GoDataPreview() {
                     <Text>Conflicts</Text>
                     <Superscript
                         value={
-                            (conflicts?.person?.length || 0) +
-                            (conflicts?.epidemiology?.length || 0) +
-                            (conflicts?.events?.length || 0) +
-                            (conflicts?.lab?.length || 0) +
-                            (conflicts?.questionnaire?.length || 0) +
-                            (conflicts?.relationships?.length || 0)
+                            conflicts?.person.length +
+                            conflicts?.epidemiology.length +
+                            conflicts?.events.length +
+                            conflicts?.lab.length +
+                            conflicts?.questionnaire.length +
+                            conflicts?.relationships.length
                         }
                         bg="blue.500"
                     />
@@ -558,26 +535,22 @@ export default function GoDataPreview() {
                     <Text>Errors</Text>
                     <Superscript
                         value={
-                            (errors?.person?.length || 0) +
-                            (errors?.epidemiology?.length || 0) +
-                            (errors?.events?.length || 0) +
-                            (errors?.lab?.length || 0) +
-                            (errors?.questionnaire?.length || 0) +
-                            (errors?.relationships?.length || 0)
+                            errors?.person.length +
+                            errors?.epidemiology.length +
+                            errors?.events.length +
+                            errors?.lab.length +
+                            errors?.questionnaire.length +
+                            errors?.relationships.length
                         }
                         bg="red.500"
                     />
                 </Tab>
             </TabList>
             <TabPanels>
-                <TabPanel>{innerTabs(processed?.inserts, columns)}</TabPanel>
-                <TabPanel>
-                    {innerTabs(processed?.updates, updateColumns)}
-                </TabPanel>
-                <TabPanel>
-                    {innerTabs(conflicts, conflictColumns, "id")}
-                </TabPanel>
-                <TabPanel>{innerTabs(errors, errorColumns, "id")}</TabPanel>
+                <TabPanel>{innerTabs(inserts, columns)}</TabPanel>
+                <TabPanel>{innerTabs(updates, updateColumns)}</TabPanel>
+                <TabPanel>{innerTabs(conflicts, conflictColumns)}</TabPanel>
+                <TabPanel>{innerTabs(errors, errorColumns)}</TabPanel>
             </TabPanels>
         </Tabs>
     );

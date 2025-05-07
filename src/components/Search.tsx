@@ -1,81 +1,131 @@
-import { SearchIcon } from "@chakra-ui/icons";
-import {
-    Box,
-    Checkbox,
-    Input,
-    InputGroup,
-    InputLeftElement,
-    Spacer,
-    Stack,
-} from "@chakra-ui/react";
+import { Box, Checkbox, Spacer, Stack } from "@chakra-ui/react";
+import { Button, Input, Modal, Table } from "antd";
+import { ColumnsType } from "antd/es/table";
 import { Mapping, Option } from "data-import-wizard-utils";
-import { ChangeEvent, useEffect, useState } from "react";
+import { orderBy } from "lodash";
+import { ChangeEvent, useEffect, useMemo, useState } from "react";
 export default function Search({
-    mapping,
     action,
-    options,
+    destinationOptions,
     setSearchString,
     searchString,
     label,
     label2,
     placeholder,
-    source,
+    mapping,
+    sourceOptions,
+    label3,
 }: {
-    mapping: Mapping;
-    options: Option[];
-    source: Option[];
+    destinationOptions: Option[];
+    sourceOptions: Option[];
     action: React.Dispatch<React.SetStateAction<Option[]>>;
     setSearchString: React.Dispatch<React.SetStateAction<string>>;
     searchString: string;
     placeholder: string;
     label: string;
     label2: string;
+    label3: string;
+    mapping: Mapping;
 }) {
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const columns: ColumnsType<Option> = useMemo(
+        () => [
+            {
+                title: "Label",
+                dataIndex: "label",
+                key: "label",
+            },
+        ],
+        [],
+    );
+
     const [includeMapped, setIncludeMapped] = useState<boolean>(false);
     const [includeUnmapped, setIncludeUnmapped] = useState<boolean>(false);
-    const filterUnits = () => {
-        const mapped = Object.entries(mapping).flatMap(([id, value]) => {
-            if (value.value && source.find((o) => o.value === value.value))
-                return id;
-            return [];
-        });
+    const mapped = Array.from(mapping.entries()).flatMap(([id, { source }]) => {
+        if (source && sourceOptions.find((o) => o.value === source)) return id;
+        return [];
+    });
+    const filterMapped = () => {
+        const mapped = Array.from(mapping.entries()).flatMap(
+            ([id, { source }]) => {
+                if (source && sourceOptions.find((o) => o.value === source))
+                    return id;
+                return [];
+            },
+        );
         action(() =>
-            options.filter(({ value }) => mapped.indexOf(value ?? "") !== -1)
+            destinationOptions.filter(
+                ({ value = "" }) => mapped.indexOf(value) !== -1,
+            ),
         );
     };
     const filterUnmapped = () => {
-        const mapped = Object.entries(mapping).flatMap(([id, value]) => {
-            if (value.value && source.find((o) => o.value === value.value))
-                return id;
-            return [];
-        });
         action(() =>
-            options.filter(({ value }) => mapped.indexOf(value ?? "") === -1)
+            destinationOptions.filter(
+                ({ value = "" }) => mapped.indexOf(value) === -1,
+            ),
         );
     };
 
-    const searchOus = (search: string) => {
+    const sourceUnMapped = () => {
+        const mapped = Array.from(mapping.entries()).flatMap(
+            ([_, { source }]) => {
+                if (source) {
+                    return source.trim().toLowerCase().replaceAll(" ", "");
+                }
+                return [];
+            },
+        );
+        return orderBy(
+            sourceOptions.filter(({ value = "" }) => {
+                const current = value.toLowerCase().replaceAll(" ", "");
+                return mapped.includes(current) === false;
+            }),
+            "value",
+        );
+    };
+
+    const searchDestination = (search: string) => {
         setSearchString(() => search);
         action(() =>
-            options.filter(({ value, label }) =>
-                label.toLowerCase().includes(search.toLowerCase())
-            )
+            destinationOptions.filter(({ value, label, path }) => {
+                if (path) {
+                    return path.toLowerCase().includes(search.toLowerCase());
+                }
+                return (
+                    label.toLowerCase().includes(search.toLowerCase()) ||
+                    value === search.toLowerCase()
+                );
+            }),
         );
     };
 
     useEffect(() => {
         if (includeMapped && !includeUnmapped) {
-            filterUnits();
+            filterMapped();
         } else if (!includeMapped && includeUnmapped) {
             filterUnmapped();
         } else {
-            action(() => options);
+            action(() => destinationOptions);
         }
         return () => {};
     }, [includeMapped, includeUnmapped]);
 
+    const showModal = () => {
+        setIsModalOpen(true);
+    };
+
+    const handleOk = () => {
+        setIsModalOpen(false);
+    };
+
+    const handleCancel = () => {
+        setIsModalOpen(false);
+    };
+
     return (
-        <Stack direction="row">
+        <Stack direction="row" flex={1}>
             <Checkbox
                 isChecked={includeMapped}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
@@ -94,21 +144,35 @@ export default function Search({
             >
                 {label2}
             </Checkbox>
+            <Button type="link" onClick={() => showModal()}>
+                {label3}
+            </Button>
             <Spacer />
-            <Box w="35%">
-                <InputGroup>
-                    <InputLeftElement>
-                        <SearchIcon color="gray.300" />
-                    </InputLeftElement>
-                    <Input
-                        placeholder={placeholder}
-                        value={searchString}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            searchOus(e.target.value)
-                        }
-                    />
-                </InputGroup>
+            <Box w="20%">
+                <Input.Search
+                    placeholder={placeholder}
+                    allowClear
+                    onSearch={(value) => searchDestination(value)}
+                    style={{ width: "100%" }}
+                    value={searchString}
+                    onChange={(e) => setSearchString(e.target.value)}
+                />
             </Box>
+            <Modal
+                title="Basic Modal"
+                open={isModalOpen}
+                onOk={handleOk}
+                onCancel={handleCancel}
+                width="50%"
+            >
+                <Table
+                    columns={columns}
+                    virtual={false}
+                    pagination={false}
+                    dataSource={sourceUnMapped()}
+                    rowKey="value"
+                />
+            </Modal>
         </Stack>
     );
 }

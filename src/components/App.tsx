@@ -4,10 +4,10 @@ import {
     Outlet,
     parseSearchWith,
     ReactLocation,
-    Route,
     Router,
     stringifySearchWith,
 } from "@tanstack/react-location";
+import { ConfigProvider } from "antd";
 import { LocationGenerics } from "../Interfaces";
 import { useInitials } from "../Queries";
 import { stepper } from "../Store";
@@ -25,92 +25,93 @@ const history = createHashHistory();
 const location = new ReactLocation<LocationGenerics>({
     history,
     parseSearch: parseSearchWith((value) =>
-        JSON.parse(decodeFromBinary(value))
+        JSON.parse(decodeFromBinary(value)),
     ),
     stringifySearch: stringifySearchWith((value) =>
-        encodeToBinary(JSON.stringify(value))
+        encodeToBinary(JSON.stringify(value)),
     ),
 });
 
-const routes: Route<LocationGenerics>[] = [
-    {
-        path: "/",
-        element: <Home />,
-        loader: async () => {
-            return {};
-        },
-    },
-    {
-        path: "/mappings",
-        children: [
-            {
-                path: "/",
-                element: <Mappings />,
-                loader: async () => {
-                    stepper.reset();
-                    return {};
-                },
-            },
-            {
-                path: "/individual",
-                element: <Program />,
-                loader: async () => {
-                    stepper.reset();
-                    return {};
-                },
-            },
-            {
-                path: "/aggregate",
-                element: <Aggregate />,
-                loader: async () => {
-                    stepper.reset();
-                    return {};
-                },
-            },
-        ],
-    },
-
-    {
-        path: "/schedules",
-        children: [
-            {
-                path: "/",
-                element: <Schedule />,
-            },
-        ],
-    },
-
-    {
-        path: "/delete",
-        children: [
-            {
-                path: "/",
-                element: <DeleteData />,
-            },
-        ],
-    },
-];
 const App = () => {
-    const { isLoading, isSuccess, isError, error } = useInitials();
+    const { isLoading, isSuccess, isError, error, data } = useInitials();
     return (
-        <Stack
-            h="calc(100vh - 48px)"
-            maxH="calc(100vh - 48px)"
-            minH="calc(100vh - 48px)"
-        >
-            {isLoading && <Loader message="Initializing..." />}
-            {isSuccess && (
-                <Router
-                    location={location}
-                    routes={routes}
-                    defaultPendingElement={<Spinner />}
-                >
-                    <NavBar />
-                    <Outlet />
-                </Router>
-            )}
-            {isError && <pre>{JSON.stringify(error)}</pre>}
-        </Stack>
+        <ConfigProvider componentSize="large">
+            <Stack
+                h="calc(100vh - 48px)"
+                maxH="calc(100vh - 48px)"
+                minH="calc(100vh - 48px)"
+            >
+                {isLoading && <Loader message="Initializing..." />}
+                {isSuccess && (
+                    <Router
+                        location={location}
+                        routes={[
+                            {
+                                path: "/",
+                                element: <Home />,
+                                loader: async () => {
+                                    return {};
+                                },
+                            },
+                            {
+                                path: "/mappings",
+                                children: [
+                                    {
+                                        path: "/",
+                                        element: <Mappings db={data} />,
+                                        loader: async () => {
+                                            stepper.reset();
+                                            return {};
+                                        },
+                                    },
+                                    {
+                                        path: "/individual",
+                                        element: <Program db={data} />,
+                                        loader: async () => {
+                                            stepper.reset();
+                                            return {};
+                                        },
+                                    },
+                                    {
+                                        path: "/aggregate",
+                                        element: <Aggregate db={data} />,
+                                        loader: async () => {
+                                            stepper.reset();
+                                            return {};
+                                        },
+                                    },
+                                ],
+                            },
+
+                            {
+                                path: "/schedules",
+                                children: [
+                                    {
+                                        path: "/",
+                                        element: <Schedule />,
+                                    },
+                                ],
+                            },
+
+                            {
+                                path: "/delete",
+                                children: [
+                                    {
+                                        path: "/",
+                                        element: <DeleteData db={data} />,
+                                    },
+                                ],
+                            },
+                        ]}
+                        defaultPendingElement={<Spinner />}
+                    >
+                        <NavBar />
+                        <Outlet />
+                    </Router>
+                )}
+                {isError && <pre>{JSON.stringify(error)}</pre>}
+            </Stack>
+        </ConfigProvider>
     );
 };
 

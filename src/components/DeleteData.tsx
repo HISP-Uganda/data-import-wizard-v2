@@ -1,18 +1,15 @@
-import { useDisclosure } from "@chakra-ui/react";
 import { useDataEngine } from "@dhis2/app-runtime";
 import {
     fetchTrackedEntityInstances,
     TrackedEntityInstance,
 } from "data-import-wizard-utils";
-import { useState } from "react";
+import { CQIDexie } from "../db";
 import ProgramSelect from "./program/ProgramSelect";
 
-export default function DeleteData() {
-    const { isOpen, onOpen, onClose } = useDisclosure();
-    const [message, setMessage] = useState<string>("");
+export default function DeleteData({ db }: { db: CQIDexie }) {
     const engine = useDataEngine();
     const withoutEnrollment = (
-        trackedEntityInstances: Array<Partial<TrackedEntityInstance>>
+        trackedEntityInstances: Array<Partial<TrackedEntityInstance>>,
     ) => {
         return trackedEntityInstances.flatMap(
             ({ trackedEntityInstance, enrollments }) => {
@@ -20,11 +17,10 @@ export default function DeleteData() {
                     return { trackedEntityInstance };
                 }
                 return [];
-            }
+            },
         );
     };
     const onProgramSelect = async (id?: string) => {
-        onOpen();
         await fetchTrackedEntityInstances(
             {
                 api: { engine },
@@ -34,30 +30,18 @@ export default function DeleteData() {
                 trackedEntityInstances: [],
                 uniqueAttributeValues: [],
                 fields: "trackedEntityInstance",
+                setMessage: () => {},
             },
-            async (tei, { pager }) => {
-                setMessage(
-                    () =>
-                        `Deleting from page ${pager?.page} of ${pager?.pageCount}`
-                );
+            async ({ trackedEntityInstances, pager }) => {
                 const response = await engine.mutate({
                     resource: "trackedEntityInstances",
-                    data: { trackedEntityInstances: tei },
+                    data: { trackedEntityInstances },
                     params: { strategy: "DELETE", async: "true" },
                     type: "create",
                 });
-            }
+            },
         );
-        onClose();
     };
 
-    return (
-        <ProgramSelect
-            isOpen={isOpen}
-            onClose={onClose}
-            onOpen={onOpen}
-            onProgramSelect={onProgramSelect}
-            message={message}
-        />
-    );
+    return <ProgramSelect db={db} />;
 }

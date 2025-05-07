@@ -1,28 +1,19 @@
 import { useStore } from "effector-react";
+import { CQIDexie } from "../db";
 import { $mapping } from "../Store";
 import AggregateDataPreview from "./previews/AggregateDataPreview";
-import TrackerDataPreview from "./previews/Preview";
+import ProgramDataPreview from "./previews/ProgramDataPreview";
 import SwitchComponent, { Case } from "./SwitchComponent";
 
-export default function DataPreview() {
+export default function DataPreview({ db }: { db: CQIDexie }) {
     const mapping = useStore($mapping);
     return (
         <SwitchComponent condition={mapping.type}>
             <Case value="aggregate">
-                <SwitchComponent condition={mapping.isSource}>
-                    <Case value={true}>No source Required</Case>
-                    <Case default>
-                        <AggregateDataPreview />
-                    </Case>
-                </SwitchComponent>
+                <AggregateDataPreview db={db} />
             </Case>
             <Case default>
-                <SwitchComponent condition={mapping.isSource}>
-                    <Case value={true}>No source Required</Case>
-                    <Case default>
-                        <TrackerDataPreview />
-                    </Case>
-                </SwitchComponent>
+                <ProgramDataPreview db={db} />
             </Case>
         </SwitchComponent>
     );

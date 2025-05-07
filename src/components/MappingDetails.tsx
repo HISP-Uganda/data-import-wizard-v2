@@ -1,25 +1,39 @@
 import { Box, Checkbox, Input, Stack, Text, Textarea } from "@chakra-ui/react";
-import { GroupBase, Select, SingleValue } from "chakra-react-select";
 import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
 import { ChangeEvent } from "react";
+import { CQIDexie } from "../db";
 import { mappingApi } from "../Events";
-import { $mapping } from "../Store";
+import { $mapping, $program } from "../Store";
 import { InitialMapping } from "./InitialMapping";
+import { Select } from "antd";
 
 export default function MappingDetails({
     importTypes,
 }: {
     importTypes: Option[];
+    db: CQIDexie;
 }) {
     const mapping = useStore($mapping);
-    const onSelect = (e: SingleValue<Option>) => {
+    const program = useStore($program);
+    const onSelect = (e: string | undefined) => {
         mappingApi.update({
             attribute: "dataSource",
-            value: e?.value,
+            value: e,
         });
-        if (e && e.value === "dhis2-program") {
-        } else if (e && e.value === "go-data") {
+        if (e && e === "dhis2-program") {
+        } else if (e && e === "go-data") {
+            if (process.env.NODE_ENV === "development") {
+                mappingApi.updateMany({
+                    authentication: {
+                        url: process.env.REACT_APP_GO_DATA_URL,
+                        username: process.env.REACT_APP_GO_DATA_USERNAME,
+                        password: process.env.REACT_APP_GO_DATA_PASSWORD,
+                        basicAuth: true,
+                    },
+                    prefetch: true,
+                });
+            }
             mappingApi.update({
                 attribute: "authentication",
                 value: true,
@@ -79,25 +93,25 @@ export default function MappingDetails({
             >
                 Current DHIS2 Instance is Source
             </Checkbox>
-            <Stack>
+            <Stack direction="row" alignItems="center">
                 <Text>
                     {mapping.isSource ? "Export Data To" : "Import From"}
                 </Text>
                 <Stack direction="row" w="30%" spacing="30px">
                     <Box flex={1}>
-                        <Select<Option, false, GroupBase<Option>>
-                            value={importTypes.find(
-                                (pt) => pt.value === mapping.dataSource
-                            )}
+                        <Select
+                            style={{ width: "100%" }}
+                            value={mapping.dataSource}
                             onChange={(e) => onSelect(e)}
                             options={importTypes}
-                            isClearable
+                            allowClear
                         />
                     </Box>
                     {mapping.dataSource &&
                         ["xlsx-line-list", "xlsx-tabular-data"].indexOf(
-                            mapping.dataSource
-                        ) !== -1 && (
+                            mapping.dataSource,
+                        ) !== -1 &&
+                        !mapping.isSource && (
                             <Checkbox
                                 isChecked={mapping.useColumnLetters}
                                 onChange={(e: ChangeEvent<HTMLInputElement>) =>
@@ -110,59 +124,118 @@ export default function MappingDetails({
                                 Use column letters
                             </Checkbox>
                         )}
+                    {mapping.dataSource &&
+                        [
+                            "dhis2-data-set",
+                            "dhis2-indicators",
+                            "dhis2-program-indicators",
+                            "manual-dhis2-program-indicators",
+                            "dhis2-program",
+                        ].indexOf(mapping.dataSource) !== -1 && (
+                            <Checkbox
+                                isChecked={mapping.isCurrentInstance}
+                                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                    mappingApi.update({
+                                        attribute: "isCurrentInstance",
+                                        value: e.target.checked,
+                                    })
+                                }
+                            >
+                                Use current DHIS2 Instance
+                            </Checkbox>
+                        )}
                 </Stack>
-                {mapping.dataSource &&
-                    [
-                        "dhis2-data-set",
-                        "dhis2-indicators",
-                        "dhis2-program-indicators",
-                        "manual-dhis2-program-indicators",
-                        "dhis2-program",
-                    ].indexOf(mapping.dataSource) !== -1 && (
+            </Stack>
+            {!mapping.isCurrentInstance && (
+                <InitialMapping
+                    dataSource={mapping.dataSource}
+                    extraction={mapping.useColumnLetters ? "column" : "json"}
+                />
+            )}
+
+            {mapping.type === "individual" && !mapping.isSource && (
+                <Stack spacing="20px">
+                    <Text>Preliminary Options</Text>
+                    <Stack direction="row" spacing="20px">
                         <Checkbox
-                            isChecked={mapping.isCurrentInstance}
+                            isChecked={mapping.program?.createEntities}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 mappingApi.update({
-                                    attribute: "isCurrentInstance",
+                                    attribute: "program",
+                                    path: "createEntities",
                                     value: e.target.checked,
                                 })
                             }
                         >
-                            Use current DHIS2 Instance
+                            Create Entities
                         </Checkbox>
-                    )}
-            </Stack>
-
-            <InitialMapping
-                isSource={mapping.isSource}
-                dataSource={
-                    mapping.isCurrentInstance &&
-                    [
-                        "dhis2-data-set",
-                        "dhis2-indicators",
-                        "dhis2-program-indicators",
-                        "manual-dhis2-program-indicators",
-                        "dhis2-program",
-                    ].indexOf(mapping.dataSource ?? "") !== -1
-                        ? undefined
-                        : mapping.dataSource
-                }
-                extraction={mapping.useColumnLetters ? "column" : undefined}
-            />
-
-            {/* {getData(
-                mapping.isCurrentInstance &&
-                    [
-                        "dhis2-data-set",
-                        "dhis2-indicators",
-                        "dhis2-program-indicators",
-                        "manual-dhis2-program-indicators",
-                        "dhis2-program",
-                    ].indexOf(mapping.dataSource ?? "") !== -1
-                    ? undefined
-                    : mapping.dataSource,
-                mapping.useColumnLetters ? "column" : undefined
-            )} */}
+                        <Checkbox
+                            isChecked={mapping.program?.updateEntities}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                mappingApi.update({
+                                    attribute: "program",
+                                    path: "updateEntities",
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Update Entities
+                        </Checkbox>
+                    </Stack>
+                    <Stack direction="row" spacing="20px">
+                        <Checkbox
+                            isChecked={mapping.program?.createEnrollments}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                mappingApi.update({
+                                    attribute: "program",
+                                    path: "createEnrollments",
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Create Enrollments
+                        </Checkbox>
+                        <Checkbox
+                            isChecked={mapping.program?.updateEnrollments}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                mappingApi.update({
+                                    attribute: "program",
+                                    path: "updateEnrollments",
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Update Enrollments
+                        </Checkbox>
+                    </Stack>
+                    <Stack direction="row" spacing="20px">
+                        <Checkbox
+                            isChecked={mapping.program?.createEvents}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                mappingApi.update({
+                                    attribute: "program",
+                                    path: "createEvents",
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Create Events
+                        </Checkbox>
+                        <Checkbox
+                            isChecked={mapping.program?.updateEvents}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                mappingApi.update({
+                                    attribute: "program",
+                                    path: "updateEvents",
+                                    value: e.target.checked,
+                                })
+                            }
+                        >
+                            Update Events
+                        </Checkbox>
+                    </Stack>
+                </Stack>
+            )}
         </Stack>
     );
 }

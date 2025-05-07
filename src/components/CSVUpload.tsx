@@ -1,7 +1,6 @@
 import { Button, Stack } from "@chakra-ui/react";
 import { fromPairs } from "lodash";
 import React, { CSSProperties } from "react";
-
 import { useCSVReader } from "react-papaparse";
 import { dataApi } from "../Events";
 

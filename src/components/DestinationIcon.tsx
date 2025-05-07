@@ -1,21 +1,8 @@
 import { Image, Stack } from "@chakra-ui/react";
-import { IMapping } from "data-import-wizard-utils";
+import { DataSource, IMapping } from "data-import-wizard-utils";
 import React from "react";
 
-export const available: {
-    "xlsx-line-list": React.ReactElement;
-    "xlsx-tabular-data": React.ReactElement;
-    "xlsx-form": React.ReactElement;
-    "dhis2-program": React.ReactElement;
-    "dhis2-indicators": React.ReactElement;
-    "dhis2-program-indicators": React.ReactElement;
-    "dhis2-data-set": React.ReactElement;
-    api: React.ReactElement;
-    json: React.ReactElement;
-    "csv-line-list": React.ReactElement;
-    "go-data": React.ReactElement;
-    "manual-dhis2-program-indicators": React.ReactElement;
-} = {
+export const available: Record<DataSource, React.ReactElement> = {
     "xlsx-line-list": (
         <Stack
             boxSize="25px"
@@ -148,6 +135,17 @@ export const available: {
             <Image src="./dhis2.svg" alt="dhis2" />
         </Stack>
     ),
+    fhir: (
+        <Stack
+            boxSize="25px"
+            alignItems="center"
+            justifyContent="center"
+            p="0"
+            m="0"
+        >
+            <Image src="./dhis2.svg" alt="dhis2" />
+        </Stack>
+    ),
 };
 
 export default function DestinationIcon({
@@ -155,7 +153,7 @@ export default function DestinationIcon({
 }: {
     mapping: Partial<IMapping>;
 }) {
-    if (mapping.isSource && mapping.dataSource) {
+    if (mapping && mapping.isSource && mapping.dataSource) {
         return available[mapping.dataSource];
     }
 

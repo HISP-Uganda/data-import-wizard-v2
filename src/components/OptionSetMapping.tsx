@@ -1,32 +1,18 @@
-import {
-    Button,
-    Input,
-    Modal,
-    ModalBody,
-    ModalCloseButton,
-    ModalContent,
-    ModalFooter,
-    ModalHeader,
-    ModalOverlay,
-    Stack,
-    Text,
-    useDisclosure,
-} from "@chakra-ui/react";
-import { Table } from "antd";
+import { Input, Stack, Text, useDisclosure } from "@chakra-ui/react";
+import { Table, Select, Modal, Button } from "antd";
 import { ColumnsType } from "antd/es/table";
-import { GroupBase, Select } from "chakra-react-select";
-import { Mapping, Option } from "data-import-wizard-utils";
+import { Option } from "data-import-wizard-utils";
 import { useStore } from "effector-react";
-import { getOr } from "lodash/fp";
+import { getOr, uniqBy } from "lodash/fp";
 import { ChangeEvent } from "react";
 import {
     $currentOptions,
     $currentSourceOptions,
     $data,
     $goDataOptions,
+    $mapping,
     $metadata,
     $optionMapping,
-    $mapping,
     $tokens,
 } from "../Store";
 
@@ -37,22 +23,23 @@ import {
 } from "../Events";
 import DestinationIcon from "./DestinationIcon";
 import SourceIcon from "./SourceIcon";
+import { mediumWidth } from "../constants";
 
 export default function OptionSetMapping({
     destinationOptions,
     value,
-    mapping,
+    disabled,
 }: {
     destinationOptions: Option[];
-    mapping: Mapping;
     value: string;
+    disabled: boolean;
 }) {
     const { isOpen, onOpen, onClose } = useDisclosure();
     const currentSourceOptions = useStore($currentSourceOptions);
     const currentOptions = useStore($currentOptions);
     const optionMapping = useStore($optionMapping);
     const data = useStore($data);
-    const currentMapping = useStore($mapping);
+    const mapping = useStore($mapping);
     const metadata = useStore($metadata);
     const allTokens = useStore($tokens);
     const goDataOptions = useStore($goDataOptions);
@@ -65,7 +52,8 @@ export default function OptionSetMapping({
                 </Stack>
             ),
             width: "50%",
-            render: (_, { label, code, value }) => `${label} (${value})`,
+            render: (_, { label, code, value }) =>
+                `${label || code} (${value})`,
             key: "destination",
         },
         {
@@ -79,34 +67,36 @@ export default function OptionSetMapping({
             render: (_, { label, code, value }) => {
                 if (currentSourceOptions.length > 0) {
                     return (
-                        <Select<Option, true, GroupBase<Option>>
-                            value={currentSourceOptions.filter(
-                                (val) =>
-                                    getOr(
-                                        "",
-                                        value || code || label || "",
-                                        optionMapping
-                                    )
-                                        .split(",")
-                                        .indexOf(val.value ?? "") !== -1
-                            )}
-                            isMulti
+                        <Select
                             options={currentSourceOptions}
-                            isClearable
-                            onChange={(e) =>
+                            style={{ width: "100%" }}
+                            mode="multiple"
+                            value={optionMapping
+                                .get(value || code || label || "")
+                                ?.split(",")
+                                .filter((a) => !!a)}
+                            showSearch
+                            allowClear
+                            filterOption={(input, option) =>
+                                (option?.label ?? "")
+                                    .toLowerCase()
+                                    .includes(input.toLowerCase()) ||
+                                (option?.value ?? "")
+                                    .toLowerCase()
+                                    .includes(input.toLowerCase())
+                            }
+                            onChange={(e) => {
                                 optionMappingApi.add({
                                     key: value || "",
-                                    value: e
-                                        .map((x) => x.value ?? "")
-                                        .join(","),
-                                })
-                            }
+                                    value: e.join(","),
+                                });
+                            }}
                         />
                     );
                 } else {
                     return (
                         <Input
-                            value={optionMapping[code || ""]}
+                            value={optionMapping.get(code || "")}
                             onChange={(e: ChangeEvent<HTMLInputElement>) =>
                                 optionMappingApi.add({
                                     key: code || "",
@@ -124,37 +114,40 @@ export default function OptionSetMapping({
     const openOptionSetDialog = (id: string, destinationOptions?: Option[]) => {
         if (
             ["xlsx-line-list", "json", "csv-line-list"].indexOf(
-                currentMapping.dataSource ?? ""
+                mapping.dataSource ?? "",
             ) !== -1
         ) {
             currentSourceOptionsApi.set(
-                data.flatMap((d) => {
-                    const value: string = getOr("", id, d);
-                    if (value) {
-                        const opt: Option = {
-                            value,
-                            label: value,
-                        };
-                        return opt;
-                    }
-                    return [];
-                })
+                uniqBy(
+                    "value",
+                    data.flatMap((d) => {
+                        const value: string = getOr("", id, d);
+                        if (value) {
+                            const opt: Option = {
+                                value,
+                                label: value,
+                            };
+                            return opt;
+                        }
+                        return [];
+                    }),
+                ),
             );
         } else if (id) {
             currentSourceOptionsApi.set(
                 metadata.sourceColumns.find(({ value }) => value === id)
-                    ?.availableOptions ?? []
+                    ?.availableOptions ?? [],
             );
-        } else if (currentMapping.dataSource === "go-data") {
+        } else if (mapping.dataSource === "go-data") {
             currentSourceOptionsApi.set(
                 goDataOptions.map(({ id }) => {
-                    return { label: allTokens[id] || id, value: id };
-                })
+                    return { label: allTokens.get(id) || id, value: id };
+                }),
             );
-        } else if (currentMapping.dataSource === "dhis2-program") {
+        } else if (mapping.dataSource === "dhis2-program") {
             currentSourceOptionsApi.set(
                 metadata.sourceColumns.find((curr) => value === curr.value)
-                    ?.availableOptions ?? []
+                    ?.availableOptions ?? [],
             );
         }
         currentOptionsApi.set(destinationOptions || []);
@@ -162,37 +155,34 @@ export default function OptionSetMapping({
     };
 
     return (
-        <Stack>
+        <Stack
+            w={`${mediumWidth}px`}
+            maxW={`${mediumWidth}px`}
+            minW={`${mediumWidth}px`}
+        >
             <Button
                 onClick={() => {
-                    openOptionSetDialog(
-                        String(getOr("", "value", getOr({}, value, mapping))),
-                        destinationOptions
-                    );
+                    openOptionSetDialog(value, destinationOptions);
                 }}
+                disabled={disabled}
             >
                 Map Options
             </Button>
-            <Modal isOpen={isOpen} onClose={onClose} size="6xl">
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Option Set Mapping</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        <Table
-                            columns={columns}
-                            dataSource={currentOptions}
-                            rowKey="value"
-                            pagination={{ pageSize: 7 }}
-                            size="small"
-                        />
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button colorScheme="blue" mr={3} onClick={onClose}>
-                            Close
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
+
+            <Modal
+                title="Option Mapping"
+                open={isOpen}
+                onOk={onClose}
+                onCancel={onClose}
+                width={1000}
+            >
+                <Table
+                    columns={columns}
+                    dataSource={currentOptions}
+                    rowKey="value"
+                    pagination={{ pageSize: 7 }}
+                    size="small"
+                />
             </Modal>
         </Stack>
     );

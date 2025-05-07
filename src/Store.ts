@@ -3,37 +3,29 @@ import {
     canQueryDHIS2,
     findColumns,
     flattenProgram,
+    getMandatoryAttributes,
+    getProgramStageUniqColumns,
+    getProgramStageUniqElements,
     GODataOption,
-    GoResponse,
     IDataSet,
     IGoData,
     IMapping,
     IProgram,
-    isDisabled,
     label,
     makeMetadata,
+    makeProgramTypes,
     makeRemoteApi,
-    makeValidation,
-    mandatoryAttributes,
     Mapping,
     Option,
-    OtherProcessed,
     Period,
     Processed,
-    programStageUniqColumns,
-    programStageUniqElements,
-    programUniqAttributes,
-    programUniqColumns,
     StageMapping,
     Step,
 } from "data-import-wizard-utils";
 import { combine, createApi } from "effector";
 import { Dictionary, isEmpty } from "lodash";
 import { WorkBook } from "xlsx";
-import { z } from "zod";
 import { domain } from "./Domain";
-
-const mySchema = z.string().url();
 
 export const $mapping = domain.createStore<Partial<IMapping>>({});
 export const $data = domain.createStore<any[]>([]);
@@ -43,6 +35,7 @@ export const $ous = domain.createStore<string[]>([]);
 export const $steps = domain.createStore<number>(0);
 export const $version = domain.createStore<number>(0);
 export const $hasError = domain.createStore<boolean>(false);
+export const $excel = domain.createStore<any[]>([]);
 
 export const stepper = createApi($steps, {
     next: (state) => state + 1,
@@ -62,6 +55,12 @@ export const actionApi = createApi($action, {
 });
 
 export const $workbook = domain.createStore<WorkBook | null>(null);
+
+export const $fhir = domain.createStore<{
+    concepts: any[];
+    labelColumn: string;
+    valueColumn: string;
+}>({ concepts: [], labelColumn: "", valueColumn: "" });
 
 export const workbookApi = createApi($workbook, {
     set: (_, workbook: WorkBook) => workbook,
@@ -94,7 +93,7 @@ export const $dataSet = domain.createStore<Partial<IDataSet>>({});
 export const $dhis2DataSet = domain.createStore<Partial<IDataSet>>({});
 export const $programIndicators = domain.createStore<Option[]>([]);
 export const $indicators = domain.createStore<Option[]>([]);
-export const $attributionMapping = domain.createStore<Mapping>({});
+export const $attributionMapping = domain.createStore<Mapping>(new Map());
 
 export const $otherName = $mapping.map((state) => {
     if (state.isSource) return "Destination";
@@ -102,6 +101,7 @@ export const $otherName = $mapping.map((state) => {
 });
 
 export const $processedData = domain.createStore<AggDataValue[]>([]);
+export const $invalidData = domain.createStore<any[]>([]);
 
 const all: { [key: string]: string[] } = {
     "csv-line-list": [
@@ -152,51 +152,93 @@ export const $configList = $mapping.map((state) => {
     return [];
 });
 
-export const $attributeMapping = domain.createStore<Mapping>({});
-export const $remoteMapping = domain.createStore<Mapping>({});
+export const $attributeMapping = domain.createStore<Mapping>(new Map());
+export const $enrollmentMapping = domain.createStore<Mapping>(new Map());
+export const $remoteMapping = domain.createStore<Mapping>(new Map());
 export const $remoteOrganisations = domain.createStore<any[]>([]);
-export const $programStageMapping = domain.createStore<StageMapping>({});
-export const $organisationUnitMapping = domain.createStore<Mapping>({});
+export const $programStageMapping = domain.createStore<StageMapping>(new Map());
+export const $organisationUnitMapping = domain.createStore<Mapping>(new Map());
 
 export const $columns = $data.map((state) => findColumns(state));
 
 export const $program = domain.createStore<Partial<IProgram>>({});
 
-export const $processed = domain.createStore<Partial<Processed>>({});
-export const $otherProcessed = domain.createStore<Partial<OtherProcessed>>({});
-export const $prevGoData = domain.createStore<Dictionary<string>>({});
-export const $processedGoDataData = domain.createStore<
-    Partial<{
-        errors: GoResponse;
-        conflicts: GoResponse;
-        processed: { updates: GoResponse; inserts: GoResponse };
-    }>
->({});
+export const $processed = domain.createStore<Processed>({
+    goData: {
+        conflicts: {
+            epidemiology: [],
+            events: [],
+            lab: [],
+            person: [],
+            questionnaire: [],
+            relationships: [],
+        },
+        errors: {
+            epidemiology: [],
+            events: [],
+            lab: [],
+            person: [],
+            questionnaire: [],
+            relationships: [],
+        },
+        inserts: {
+            epidemiology: [],
+            events: [],
+            lab: [],
+            person: [],
+            questionnaire: [],
+            relationships: [],
+        },
+        updates: {
+            epidemiology: [],
+            events: [],
+            lab: [],
+            person: [],
+            questionnaire: [],
+            relationships: [],
+        },
+    },
+    dhis2: {
+        trackedEntityInstances: [],
+        trackedEntityInstanceUpdates: [],
+        enrollments: [],
+        events: [],
+        enrollmentUpdates: [],
+        eventUpdates: [],
+        errors: [],
+        conflicts: [],
+    },
+    processedData: [],
+});
+export const $prevGoData = domain.createStore<Map<string, string>>(new Map());
 
-export const $programStageUniqueElements = $programStageMapping.map(
-    (programStageMapping) => programStageUniqElements(programStageMapping)
+export const $programStageUniqueElements = combine(
+    { programStageMapping: $programStageMapping, mapping: $mapping },
+    ({ programStageMapping, mapping }) => {
+        return getProgramStageUniqElements(
+            mapping.eventStageMapping ?? new Map(),
+            programStageMapping,
+        );
+    },
 );
 
-export const $programStageUniqueColumns = $programStageMapping.map(
-    (programStageMapping) => programStageUniqColumns(programStageMapping)
-);
-
-export const $programUniqAttributes = $attributeMapping.map(
-    (attributeMapping) => programUniqAttributes(attributeMapping)
+export const $programStageUniqueColumns = combine(
+    { programStageMapping: $programStageMapping, mapping: $mapping },
+    ({ programStageMapping, mapping }) =>
+        getProgramStageUniqColumns(
+            mapping.eventStageMapping ?? new Map(),
+            programStageMapping,
+        ),
 );
 
 export const $mandatoryAttribute = $attributeMapping.map((attributeMapping) =>
-    mandatoryAttributes(attributeMapping)
-);
-
-export const $programUniqColumns = $attributeMapping.map((attributeMapping) =>
-    programUniqColumns(attributeMapping)
+    getMandatoryAttributes(attributeMapping),
 );
 
 export const $canDHIS2 = $mapping.map((state) => canQueryDHIS2(state));
 
 export const $remoteAPI = $mapping.map((state) =>
-    makeRemoteApi(state.authentication)
+    makeRemoteApi(state.authentication),
 );
 export const $remoteOrganisationApi = $mapping.map((state) => {
     const axiosApi = makeRemoteApi(state.orgUnitApiAuthentication);
@@ -204,20 +246,22 @@ export const $remoteOrganisationApi = $mapping.map((state) => {
 });
 
 export const $metadataAuthApi = $mapping.map((state) =>
-    makeRemoteApi(state.program?.metadataApiAuthentication)
+    makeRemoteApi(state.program?.metadataApiAuthentication),
 );
 export const $dhis2Program = domain.createStore<Partial<IProgram>>({});
 
-export const $programTypes = $program.map((state) => makeValidation(state));
+export const $programTypes = $program.map((state) => makeProgramTypes(state));
 export const $goData = domain.createStore<Partial<IGoData>>({});
 
-export const $tokens = domain.createStore<Dictionary<string>>({});
+export const $tokens = domain.createStore<Map<string, string>>(new Map());
 export const $activeSteps = domain.createStore<Step[]>([]);
 export const $token = domain.createStore<string>("");
 
 export const $currentOptions = domain.createStore<Option[]>([]);
 
-export const $optionMapping = domain.createStore<Record<string, string>>({});
+export const $optionMapping = domain.createStore<Map<string, string>>(
+    new Map(),
+);
 export const $currentSourceOptions = domain.createStore<Option[]>([]);
 
 export const $errors = domain.createStore<any[]>([]);
@@ -229,8 +273,6 @@ export const $metadata = combine(
         program: $program,
         data: $data,
         dhis2Program: $dhis2Program,
-        programStageMapping: $programStageMapping,
-        attributeMapping: $attributeMapping,
         remoteOrganisations: $remoteOrganisations,
         goData: $goData,
         tokens: $tokens,
@@ -239,14 +281,18 @@ export const $metadata = combine(
         dhis2DataSet: $dhis2DataSet,
         programIndicators: $programIndicators,
         indicators: $indicators,
+
+        attributeMapping: $attributeMapping,
+        enrollmentMapping: $enrollmentMapping,
+        programStageMapping: $programStageMapping,
+        organisationUnitMapping: $organisationUnitMapping,
+        fhir: $fhir,
     },
     ({
         mapping,
         program,
         data,
         dhis2Program,
-        programStageMapping,
-        attributeMapping,
         remoteOrganisations,
         goData,
         tokens,
@@ -255,14 +301,17 @@ export const $metadata = combine(
         dhis2DataSet,
         programIndicators,
         indicators,
+        fhir,
+        enrollmentMapping,
+        programStageMapping,
+        attributeMapping,
+        organisationUnitMapping,
     }) => {
         return makeMetadata({
             program,
             mapping,
             data,
             dhis2Program,
-            programStageMapping,
-            attributeMapping,
             remoteOrganisations,
             goData,
             tokens,
@@ -271,56 +320,60 @@ export const $metadata = combine(
             dataSet,
             indicators,
             programIndicators,
+            previous: {
+                enrollmentMapping,
+                programStageMapping,
+                attributeMapping,
+                organisationUnitMapping,
+            },
+            fhir,
         });
-    }
+    },
 );
 
-// export const $disabled = combine(
-//     $mapping,
-//     $steps,
-//     (aggregateMapping, steps) => false
-// );
-
 export const $disabled = combine(
-    $program,
-    $mapping,
-    $activeSteps,
-    $steps,
-    $programStageMapping,
-    $attributeMapping,
-    $organisationUnitMapping,
-    $metadata,
-    $data,
-    $hasError,
-    (
+    {
+        program: $program,
+        mapping: $mapping,
+        activeSteps: $activeSteps,
+        steps: $steps,
+        programStageMapping: $programStageMapping,
+        attributeMapping: $attributeMapping,
+        organisationUnitMapping: $organisationUnitMapping,
+        enrollmentMapping: $enrollmentMapping,
+        metadata: $metadata,
+        data: $data,
+        hasError: $hasError,
+    },
+    ({
         program,
         mapping,
         activeSteps,
-        step,
+        steps,
         programStageMapping,
         attributeMapping,
+        enrollmentMapping,
         organisationUnitMapping,
         metadata,
         data,
-        hasError
-    ) => {
-        if (mapping.type === "aggregate") return false;
-        return isDisabled({
-            mapping,
-            programStageMapping,
-            attributeMapping,
-            organisationUnitMapping,
-            step: activeSteps.length > 0 ? activeSteps[step].id : 2,
-            mySchema: mySchema as any,
-            destinationFields: mapping.isSource
-                ? metadata.destinationColumns
-                : metadata.destinationAttributes,
-            data,
-            program,
-            metadata,
-            hasError,
-        });
-    }
+        hasError,
+    }) => {
+        // if (mapping.type === "aggregate") return false;
+        // return makeValidation({
+        //     mapping,
+        //     programStageMapping,
+        //     attributeMapping,
+        //     organisationUnitMapping,
+        //     step: activeSteps.length > 0 ? activeSteps[steps].id : 2,
+        //     mySchema: mySchema as any,
+        //     data,
+        //     program,
+        //     metadata,
+        //     hasError,
+        //     enrollmentMapping,
+        // });
+        return false;
+    },
 );
 export const $flattenedProgram = $program.map((state) => {
     if (!isEmpty(state)) {
@@ -341,7 +394,7 @@ export const $flattenedProgramKeys = $mapping.map((state) => {
                     value: column,
                 };
                 return option;
-            }
+            },
         );
     }
     return [];
@@ -360,7 +413,7 @@ export const $names = combine(
         dataSet,
         goData,
         destinationProgram,
-        destinationDataSet
+        destinationDataSet,
     ) => {
         let result: { source: string; destination: string } = {
             source: String(mapping.dataSource ?? "")
@@ -400,7 +453,7 @@ export const $names = combine(
             }
         }
         return result;
-    }
+    },
 );
 
 export const $name = $mapping.map((state) => {
@@ -413,7 +466,7 @@ export const $allNames = $program.map((state) => {
     state.programTrackedEntityAttributes?.forEach(
         ({ trackedEntityAttribute: { id, name } }) => {
             names[id] = name;
-        }
+        },
     );
     state.programStages?.forEach(({ programStageDataElements, id, name }) => {
         names[id] = name;
@@ -425,4 +478,40 @@ export const $allNames = $program.map((state) => {
         names[id] = name;
     });
     return names;
+});
+
+export const $additionalParams = $mapping.map((mapping) => {
+    let additionalParams = {};
+    if (mapping.dhis2SourceOptions?.ous) {
+        additionalParams = {
+            ...additionalParams,
+            ou: mapping.dhis2SourceOptions.ous,
+        };
+    }
+
+    if (
+        mapping.dhis2SourceOptions &&
+        mapping.dhis2SourceOptions.period &&
+        mapping.dhis2SourceOptions.period.length > 0 &&
+        mapping.dhis2SourceOptions.period[0].startDate &&
+        mapping.dhis2SourceOptions.period[0].endDate &&
+        mapping.dhis2SourceOptions.searchPeriod === "enrollmentDate"
+    ) {
+        const programStartDate = mapping.dhis2SourceOptions.period[0].startDate;
+        const programEndDate = mapping.dhis2SourceOptions.period[0].endDate;
+
+        additionalParams = {
+            ...additionalParams,
+            programEndDate,
+            programStartDate,
+        };
+    }
+    return additionalParams;
+});
+
+export const $conceptColumns = $fhir.map((fhir) => {
+    if (fhir.concepts.length > 0) {
+        return Object.keys(fhir.concepts[0]);
+    }
+    return [];
 });
